@@ -36,6 +36,7 @@ try:
         GAMMA_BASE,
         NORMALIZED_BOOK_ALGORITHM_VERSION,
         AdapterError,
+        HttpResult,
         PublicAdapter,
         calculate_fee,
         clob_token_pairs,
@@ -55,8 +56,10 @@ try:
         parse_temperature_bucket,
         parse_temperature_bucket_info,
         parse_weather_market,
+        persist_http_result,
         stable_json,
         validate_token_mapping,
+        verify_http_evidence_file,
         write_json,
     )
 except ModuleNotFoundError:
@@ -68,6 +71,7 @@ except ModuleNotFoundError:
         GAMMA_BASE,
         NORMALIZED_BOOK_ALGORITHM_VERSION,
         AdapterError,
+        HttpResult,
         PublicAdapter,
         calculate_fee,
         clob_token_pairs,
@@ -87,8 +91,10 @@ except ModuleNotFoundError:
         parse_temperature_bucket,
         parse_temperature_bucket_info,
         parse_weather_market,
+        persist_http_result,
         stable_json,
         validate_token_mapping,
+        verify_http_evidence_file,
         write_json,
     )
 
@@ -3381,12 +3387,335 @@ def fetch_resolved_weather_evidence(root: Path, adapter: PublicAdapter, config: 
     return result
 
 
-def live_integration(root: Path, config_path: Path, iterations: int, interval_seconds: Decimal, run_id: str | None = None) -> dict[str, Any]:
+def _append_live_audit(out_dir: Path, rid: str, event_type: str, **extra: Any) -> None:
+    with (out_dir / "audit_log.jsonl").open("a", encoding="utf-8") as f:
+        f.write(stable_json({"run_id": rid, "created_at_utc": now_iso(), "event_type": event_type, **extra}) + "\n")
+
+
+def _count_live_audit_errors(out_dir: Path) -> int:
+    path = out_dir / "audit_log.jsonl"
+    if not path.exists():
+        return 0
+    return len([ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()])
+
+
+def live_run_dir_from_manifest(root: Path, live_manifest: dict[str, Any], config: dict[str, Any] | None = None) -> Path | None:
+    run_id = str(live_manifest.get("run_id") or "")
+    if not run_id:
+        return None
+    cfg = config or {}
+    base = data_dir(root, LIVE, cfg) if cfg else (root / "data/forward_v5_1_8/live_integration")
+    path = base / run_id
+    return path if path.exists() else None
+
+
+def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | None, live_signal: dict[str, Any] | None, config: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Hard-gate checks for durable same-run live evidence."""
+    live_manifest = live_manifest or {}
+    live_signal = live_signal or {}
+    blocked: list[str] = []
+    selected_markets = int(live_manifest.get("selected_market_count") or 0)
+    selected_tokens = int(live_manifest.get("selected_token_count") or 0)
+    snapshot_count = int(live_manifest.get("snapshot_count") or 0)
+    error_count = int(live_manifest.get("error_count") or 0)
+    if error_count != 0:
+        blocked.append(f"error_count={error_count}")
+    if selected_markets <= 0:
+        blocked.append("selected_market_count_not_positive")
+    if selected_tokens <= 0:
+        blocked.append("selected_token_count_not_positive")
+    if snapshot_count <= 0:
+        blocked.append("snapshot_count_not_positive")
+
+    out_dir = live_run_dir_from_manifest(root, live_manifest, config)
+    if out_dir is None:
+        blocked.append("live_run_directory_missing")
+        return {
+            "ok": False,
+            "blocked_reasons": blocked,
+            "raw_market_evidence_count": 0,
+            "raw_orderbook_evidence_count": 0,
+            "raw_evidence_hash_result": "fail",
+            "snapshot_replay_result": "fail",
+            "same_run_evidence_chain": False,
+        }
+
+    market_indexes = sorted((out_dir / "raw_markets").glob("*_index.json")) if (out_dir / "raw_markets").exists() else []
+    orderbook_indexes = sorted((out_dir / "raw_orderbooks").glob("*_index.json")) if (out_dir / "raw_orderbooks").exists() else []
+    raw_market_evidence_count = len(market_indexes)
+    raw_orderbook_evidence_count = len(orderbook_indexes)
+    if raw_market_evidence_count < selected_markets:
+        blocked.append(f"raw_market_evidence_count={raw_market_evidence_count}<selected_market_count={selected_markets}")
+    if raw_orderbook_evidence_count != snapshot_count:
+        blocked.append(f"raw_orderbook_evidence_count={raw_orderbook_evidence_count}!=snapshot_count={snapshot_count}")
+
+    snapshots_path = out_dir / "orderbook_snapshots.jsonl"
+    snapshots: list[dict[str, Any]] = []
+    if snapshots_path.exists():
+        for line in snapshots_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                snapshots.append(json.loads(line))
+    if len(snapshots) != snapshot_count:
+        blocked.append("snapshot_jsonl_count_mismatch")
+
+    hash_ok = True
+    replay_ok = True
+    snapshot_by_id = {str(s.get("snapshot_id") or ""): s for s in snapshots}
+
+    for idx_path in market_indexes:
+        try:
+            index = json.loads(idx_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            blocked.append(f"market_index_unreadable:{idx_path.name}:{exc}")
+            hash_ok = False
+            continue
+        for kind in ("gamma", "clob"):
+            meta_rel = str(index.get(f"{kind}_evidence_path") or "")
+            if not meta_rel:
+                blocked.append(f"missing_market_{kind}_evidence_path:{idx_path.name}")
+                hash_ok = False
+                continue
+            meta_path = root / meta_rel
+            if not meta_path.exists():
+                blocked.append(f"missing_evidence_file:{meta_rel}")
+                hash_ok = False
+                continue
+            verified = verify_http_evidence_file(root, meta_path)
+            if not verified["ok"]:
+                blocked.append(f"market_{kind}_hash_fail:{meta_rel}:{','.join(verified['errors'])}")
+                hash_ok = False
+
+    for idx_path in orderbook_indexes:
+        try:
+            index = json.loads(idx_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            blocked.append(f"orderbook_index_unreadable:{idx_path.name}:{exc}")
+            hash_ok = False
+            continue
+        for kind in ("gamma", "clob", "orderbook"):
+            meta_rel = str(index.get(f"{kind}_evidence_path") or "")
+            if not meta_rel:
+                blocked.append(f"missing_{kind}_evidence_path:{idx_path.name}")
+                hash_ok = False
+                continue
+            meta_path = root / meta_rel
+            if not meta_path.exists():
+                blocked.append(f"missing_evidence_file:{meta_rel}")
+                hash_ok = False
+                continue
+            verified = verify_http_evidence_file(root, meta_path)
+            if not verified["ok"]:
+                blocked.append(f"{kind}_hash_fail:{meta_rel}:{','.join(verified['errors'])}")
+                hash_ok = False
+        snap_id = str(index.get("snapshot_id") or "")
+        snap = snapshot_by_id.get(snap_id)
+        if snap is None:
+            blocked.append(f"snapshot_missing_for_index:{idx_path.name}")
+            replay_ok = False
+            continue
+        try:
+            book_meta_path = root / str(index["orderbook_evidence_path"])
+            gamma_meta_path = root / str(index["gamma_evidence_path"])
+            book_v = verify_http_evidence_file(root, book_meta_path)
+            gamma_v = verify_http_evidence_file(root, gamma_meta_path)
+            if not book_v["ok"] or not gamma_v["ok"]:
+                replay_ok = False
+                continue
+            normalized = normalize_orderbook(
+                book_v["meta"]["payload"],
+                str(snap.get("token_id") or ""),
+                str(snap.get("condition_id") or ""),
+                gamma_v["meta"]["payload"],
+            )
+            if normalized["content_hash"] != snap.get("content_hash"):
+                blocked.append(f"snapshot_replay_hash_mismatch:{snap_id}")
+                replay_ok = False
+        except Exception as exc:
+            blocked.append(f"snapshot_replay_error:{snap_id}:{exc}")
+            replay_ok = False
+
+    for snap in snapshots:
+        for key in ("gamma_evidence_path", "clob_evidence_path", "orderbook_evidence_path"):
+            rel = str(snap.get(key) or "")
+            if not rel or not (root / rel).exists():
+                blocked.append(f"snapshot_missing_{key}:{snap.get('snapshot_id')}")
+                hash_ok = False
+
+    run_id = str(live_manifest.get("run_id") or "")
+    same_run = True
+    if live_signal.get("validation_source") != "live_readonly_saved_evidence":
+        blocked.append("validation_source_not_saved_evidence")
+        same_run = False
+    if str(live_signal.get("run_id") or "") != run_id:
+        blocked.append("signal_validation_run_id_mismatch")
+        same_run = False
+    snap_id = str(live_signal.get("snapshot_id") or "")
+    if snap_id and snap_id not in snapshot_by_id:
+        blocked.append("signal_validation_snapshot_not_in_run")
+        same_run = False
+    elif snap_id:
+        snap = snapshot_by_id[snap_id]
+        for key in ("gamma_evidence_path", "clob_evidence_path", "orderbook_evidence_path"):
+            if str(live_signal.get(key) or "") != str(snap.get(key) or ""):
+                blocked.append(f"signal_validation_{key}_mismatch")
+                same_run = False
+        for key in ("gamma_raw_bytes_sha256", "clob_raw_bytes_sha256", "orderbook_raw_bytes_sha256"):
+            if live_signal.get(key) and snap.get(key) and live_signal.get(key) != snap.get(key):
+                blocked.append(f"signal_validation_{key}_mismatch")
+                same_run = False
+        if live_signal.get("normalized_snapshot_content_hash") and live_signal.get("normalized_snapshot_content_hash") != snap.get("content_hash"):
+            blocked.append("signal_validation_content_hash_mismatch")
+            same_run = False
+    if live_signal.get("status") != "pass":
+        blocked.append(f"real_signal_to_fill_status={live_signal.get('status')}")
+    if live_signal.get("uses_formal_ledger") is not False:
+        blocked.append("uses_formal_ledger_not_false")
+    if live_signal.get("uses_wallet_or_real_order") is not False:
+        blocked.append("uses_wallet_or_real_order_not_false")
+
+    # Deduplicate while preserving order
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for reason in blocked:
+        if reason not in seen:
+            deduped.append(reason)
+            seen.add(reason)
+    return {
+        "ok": not deduped,
+        "blocked_reasons": deduped,
+        "raw_market_evidence_count": raw_market_evidence_count,
+        "raw_orderbook_evidence_count": raw_orderbook_evidence_count,
+        "raw_evidence_hash_result": "pass" if hash_ok and not any("hash" in r for r in deduped) else "fail",
+        "snapshot_replay_result": "pass" if replay_ok and not any("replay" in r for r in deduped) else "fail",
+        "same_run_evidence_chain": same_run and not any("run_id" in r or "snapshot_not" in r or "signal_validation" in r for r in deduped),
+        "live_run_dir": repository_relative_path(root, out_dir),
+    }
+
+
+def build_signal_to_fill_from_saved_evidence(root: Path, rid: str, selected: list[dict[str, Any]], snapshots: list[dict[str, Any]]) -> dict[str, Any]:
+    if not selected or not snapshots:
+        return {
+            "status": "not_run",
+            "reason": "no_selected_market" if not selected else "no_orderbook_snapshots",
+            "validation_source": "live_readonly_saved_evidence",
+            "uses_formal_ledger": False,
+            "uses_wallet_or_real_order": False,
+        }
+    first = selected[0]
+    first_snap = next((s for s in snapshots if s.get("token_id") == first["token_id"]), None)
+    if first_snap is None:
+        return {
+            "status": "not_run",
+            "reason": "no_matching_snapshot",
+            "validation_source": "live_readonly_saved_evidence",
+            "run_id": rid,
+            "uses_formal_ledger": False,
+            "uses_wallet_or_real_order": False,
+        }
+    try:
+        gamma_v = verify_http_evidence_file(root, root / str(first_snap["gamma_evidence_path"]))
+        clob_v = verify_http_evidence_file(root, root / str(first_snap["clob_evidence_path"]))
+        book_v = verify_http_evidence_file(root, root / str(first_snap["orderbook_evidence_path"]))
+        if not (gamma_v["ok"] and clob_v["ok"] and book_v["ok"]):
+            return {
+                "status": "blocked",
+                "reason": "saved_evidence_hash_failed",
+                "validation_source": "live_readonly_saved_evidence",
+                "run_id": rid,
+                "snapshot_id": first_snap.get("snapshot_id"),
+                "hash_errors": {
+                    "gamma": gamma_v.get("errors"),
+                    "clob": clob_v.get("errors"),
+                    "orderbook": book_v.get("errors"),
+                },
+                "uses_formal_ledger": False,
+                "uses_wallet_or_real_order": False,
+            }
+        gamma_payload = gamma_v["meta"]["payload"]
+        clob_payload = clob_v["meta"]["payload"]
+        book_payload = book_v["meta"]["payload"]
+        normalized = normalize_orderbook(book_payload, first["token_id"], first["condition_id"], gamma_payload)
+        if normalized["content_hash"] != first_snap.get("content_hash"):
+            return {
+                "status": "blocked",
+                "reason": "saved_snapshot_replay_mismatch",
+                "validation_source": "live_readonly_saved_evidence",
+                "run_id": rid,
+                "snapshot_id": first_snap.get("snapshot_id"),
+                "expected_content_hash": first_snap.get("content_hash"),
+                "replayed_content_hash": normalized["content_hash"],
+                "uses_formal_ledger": False,
+                "uses_wallet_or_real_order": False,
+            }
+        signal = {
+            "city": first["semantic"]["city"],
+            "weather_date_local": first["semantic"]["weather_date_local"],
+            "weather_metric": first["semantic"]["weather_metric"],
+            "temperature_bucket": first["semantic"]["canonical_label"],
+            "condition_id": first["condition_id"],
+            "token_id": first["token_id"],
+            "outcome": first["outcome"],
+        }
+        validation = validate_token_mapping(signal, gamma_payload, clob_payload, normalized)
+        buy = consume_buy_depth(normalized, Decimal("10"), normalized["best_ask"] if normalized["best_ask"] is not None else Decimal("1"))
+        status_val = "pass" if validation["mapping_valid"] and buy["filled_shares"] > ZERO else "blocked"
+        return {
+            "status": status_val,
+            "validation_source": "live_readonly_saved_evidence",
+            "run_id": rid,
+            "snapshot_id": first_snap.get("snapshot_id"),
+            "market_slug": first["market_slug"],
+            "condition_id": first["condition_id"],
+            "token_id": first["token_id"],
+            "event_key": first["semantic"]["event_key"],
+            "canonical_label": first["semantic"]["canonical_label"],
+            "mapping_valid": validation["mapping_valid"],
+            "mapping_errors": validation["errors"],
+            "entry_vwap": None if buy["vwap"] is None else dstr(buy["vwap"]),
+            "filled_shares": dstr(buy["filled_shares"]),
+            "filled_usd": dstr(buy["filled_usd"]),
+            "gamma_evidence_path": first_snap.get("gamma_evidence_path"),
+            "clob_evidence_path": first_snap.get("clob_evidence_path"),
+            "orderbook_evidence_path": first_snap.get("orderbook_evidence_path"),
+            "gamma_raw_bytes_sha256": first_snap.get("gamma_raw_bytes_sha256"),
+            "clob_raw_bytes_sha256": first_snap.get("clob_raw_bytes_sha256"),
+            "orderbook_raw_bytes_sha256": first_snap.get("orderbook_raw_bytes_sha256"),
+            "normalized_snapshot_content_hash": first_snap.get("content_hash"),
+            "uses_formal_ledger": False,
+            "uses_wallet_or_real_order": False,
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "validation_source": "live_readonly_saved_evidence",
+            "run_id": rid,
+            "error": str(exc),
+            "uses_formal_ledger": False,
+            "uses_wallet_or_real_order": False,
+        }
+
+
+def live_integration(
+    root: Path,
+    config_path: Path,
+    iterations: int,
+    interval_seconds: Decimal,
+    run_id: str | None = None,
+    adapter: PublicAdapter | None = None,
+) -> dict[str, Any]:
     config = load_config(config_path)
-    adapter = PublicAdapter(config["public_api"].get("gamma_base", GAMMA_BASE), config["public_api"].get("clob_base", CLOB_BASE), config["public_api"].get("timeout_seconds", 10), int(config["public_api"].get("max_retries", 2)), config["public_api"].get("backoff_seconds", Decimal("0.5")))
+    adapter = adapter or PublicAdapter(
+        config["public_api"].get("gamma_base", GAMMA_BASE),
+        config["public_api"].get("clob_base", CLOB_BASE),
+        config["public_api"].get("timeout_seconds", 10),
+        int(config["public_api"].get("max_retries", 2)),
+        config["public_api"].get("backoff_seconds", Decimal("0.5")),
+    )
     rid = run_id or make_run_id("live_integration")
     out_dir = data_dir(root, LIVE, config) / rid
     out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "raw_markets").mkdir(parents=True, exist_ok=True)
+    (out_dir / "raw_orderbooks").mkdir(parents=True, exist_ok=True)
     preferred_slugs = [str(x) for x in config.get("live_integration", {}).get("preferred_weather_slugs", []) if str(x)]
     discovered = [{"slug": slug, "_event_title": ""} for slug in preferred_slugs] if preferred_slugs else discover_weather_markets(adapter, config)
     candidates: list[dict[str, Any]] = []
@@ -3407,12 +3736,49 @@ def live_integration(root: Path, config_path: Path, iterations: int, interval_se
             token_id = str(chosen.get("token_id") or "")
             if not token_id or token_id in seen_tokens:
                 continue
-            candidates.append({"market_slug": slug, "condition_id": condition_id, "token_id": token_id, "outcome": chosen.get("outcome", ""), "market_question": gamma.payload.get("question") or gamma.payload.get("title") or "", "semantic": parsed, "market_state": state})
+            seq = len(candidates) + 1
+            prefix = f"{seq:02d}_{slug}"
+            gamma_meta = persist_http_result(
+                root,
+                out_dir / "raw_markets" / f"{prefix}_gamma.json",
+                out_dir / "raw_markets" / f"{prefix}_gamma.bin",
+                gamma,
+            )
+            clob_meta = persist_http_result(
+                root,
+                out_dir / "raw_markets" / f"{prefix}_clob.json",
+                out_dir / "raw_markets" / f"{prefix}_clob.bin",
+                clob,
+            )
+            index = {
+                "market_slug": slug,
+                "condition_id": condition_id,
+                "token_id": token_id,
+                "outcome": chosen.get("outcome", ""),
+                "semantic": parsed,
+                "market_state": state,
+                "gamma_evidence_path": repository_relative_path(root, out_dir / "raw_markets" / f"{prefix}_gamma.json"),
+                "clob_evidence_path": repository_relative_path(root, out_dir / "raw_markets" / f"{prefix}_clob.json"),
+                "gamma_raw_bytes_sha256": gamma_meta["raw_bytes_sha256"],
+                "clob_raw_bytes_sha256": clob_meta["raw_bytes_sha256"],
+            }
+            write_json(out_dir / "raw_markets" / f"{prefix}_index.json", index)
+            candidates.append(
+                {
+                    "market_slug": slug,
+                    "condition_id": condition_id,
+                    "token_id": token_id,
+                    "outcome": chosen.get("outcome", ""),
+                    "market_question": gamma.payload.get("question") or gamma.payload.get("title") or "",
+                    "semantic": parsed,
+                    "market_state": state,
+                    "gamma_evidence_path": index["gamma_evidence_path"],
+                    "clob_evidence_path": index["clob_evidence_path"],
+                }
+            )
             seen_tokens.add(token_id)
-            write_json(out_dir / "raw_markets" / f"{len(candidates):02d}_{slug}.json", {"gamma": gamma.payload, "clob": clob.payload, "gamma_endpoint": gamma.url, "clob_endpoint": clob.url, "semantic": parsed, "market_state": state})
         except Exception as exc:
-            with (out_dir / "audit_log.jsonl").open("a", encoding="utf-8") as f:
-                f.write(stable_json({"run_id": rid, "created_at_utc": now_iso(), "event_type": "live_market_selection_error", "error": str(exc), "market": market.get("slug")}) + "\n")
+            _append_live_audit(out_dir, rid, "live_market_selection_error", error=str(exc), market=market.get("slug"))
     selected: list[dict[str, Any]] = []
     selected_tokens: set[str] = set()
     selected_events: set[str] = set()
@@ -3452,10 +3818,35 @@ def live_integration(root: Path, config_path: Path, iterations: int, interval_se
                 clob = adapter.clob_market_info(condition_id)
                 token = str(target["token_id"])
                 book = adapter.orderbook(token)
+                # Persist raw HTTP evidence BEFORE accepting the snapshot.
+                seq = len(snapshots) + 1
+                prefix = f"{seq:05d}_{token}"
+                gamma_meta = persist_http_result(
+                    root,
+                    out_dir / "raw_orderbooks" / f"{prefix}_gamma.json",
+                    out_dir / "raw_orderbooks" / f"{prefix}_gamma.bin",
+                    gamma,
+                )
+                clob_meta = persist_http_result(
+                    root,
+                    out_dir / "raw_orderbooks" / f"{prefix}_clob.json",
+                    out_dir / "raw_orderbooks" / f"{prefix}_clob.bin",
+                    clob,
+                )
+                book_meta = persist_http_result(
+                    root,
+                    out_dir / "raw_orderbooks" / f"{prefix}_orderbook.json",
+                    out_dir / "raw_orderbooks" / f"{prefix}_orderbook.bin",
+                    book,
+                )
                 normalized = normalize_orderbook(book.payload, token, condition_id, gamma.payload)
                 buy_probe = consume_buy_depth(normalized, Decimal("10"), normalized["best_ask"] if normalized["best_ask"] is not None else Decimal("1"))
                 sell_probe = consume_sell_depth(normalized, normalized["min_order_size"])
                 fee_policy = extract_fee_policy(gamma.payload, clob.payload)
+                gamma_path = repository_relative_path(root, out_dir / "raw_orderbooks" / f"{prefix}_gamma.json")
+                clob_path = repository_relative_path(root, out_dir / "raw_orderbooks" / f"{prefix}_clob.json")
+                book_path = repository_relative_path(root, out_dir / "raw_orderbooks" / f"{prefix}_orderbook.json")
+                snapshot_id = id_for("live", {"run_id": rid, "token": token, "content": normalized["content_hash"]})
                 row = {
                     "run_id": rid,
                     "iteration": i + 1,
@@ -3471,7 +3862,7 @@ def live_integration(root: Path, config_path: Path, iterations: int, interval_se
                     "bucket_type": target.get("semantic", {}).get("bucket_type", ""),
                     "canonical_label": target.get("semantic", {}).get("canonical_label", ""),
                     "parsing_status": target.get("semantic", {}).get("parsing_status", ""),
-                    "snapshot_id": id_for("live", {"run_id": rid, "token": token, "content": normalized["content_hash"]}),
+                    "snapshot_id": snapshot_id,
                     "content_hash": normalized["content_hash"],
                     "best_bid": normalized["best_bid"],
                     "best_ask": normalized["best_ask"],
@@ -3490,63 +3881,66 @@ def live_integration(root: Path, config_path: Path, iterations: int, interval_se
                     "no_bid": not bool(normalized["bids"]),
                     "no_ask": not bool(normalized["asks"]),
                     "endpoint": book.url,
+                    "gamma_evidence_path": gamma_path,
+                    "clob_evidence_path": clob_path,
+                    "orderbook_evidence_path": book_path,
+                    "gamma_raw_bytes_sha256": gamma_meta["raw_bytes_sha256"],
+                    "clob_raw_bytes_sha256": clob_meta["raw_bytes_sha256"],
+                    "orderbook_raw_bytes_sha256": book_meta["raw_bytes_sha256"],
                 }
+                capture_index = {
+                    "run_id": rid,
+                    "snapshot_id": snapshot_id,
+                    "market_slug": slug,
+                    "condition_id": condition_id,
+                    "token_id": token,
+                    "content_hash": normalized["content_hash"],
+                    "gamma_evidence_path": gamma_path,
+                    "clob_evidence_path": clob_path,
+                    "orderbook_evidence_path": book_path,
+                    "gamma_raw_bytes_sha256": gamma_meta["raw_bytes_sha256"],
+                    "clob_raw_bytes_sha256": clob_meta["raw_bytes_sha256"],
+                    "orderbook_raw_bytes_sha256": book_meta["raw_bytes_sha256"],
+                    "payload_sha256": {
+                        "gamma": gamma_meta["payload_sha256"],
+                        "clob": clob_meta["payload_sha256"],
+                        "orderbook": book_meta["payload_sha256"],
+                    },
+                }
+                write_json(out_dir / "raw_orderbooks" / f"{prefix}_index.json", capture_index)
                 snapshots.append(row)
-                write_json(out_dir / "raw_orderbooks" / f"{len(snapshots):05d}_{token}.json", {"http": json_safe(book.__dict__), "raw": book.payload})
             except Exception as exc:
-                with (out_dir / "audit_log.jsonl").open("a", encoding="utf-8") as f:
-                    f.write(stable_json({"run_id": rid, "created_at_utc": now_iso(), "event_type": "live_orderbook_error", "error": str(exc), "market": target.get("market_slug"), "token_id": target.get("token_id")}) + "\n")
+                _append_live_audit(
+                    out_dir,
+                    rid,
+                    "live_orderbook_error",
+                    error=str(exc),
+                    market=target.get("market_slug"),
+                    token_id=target.get("token_id"),
+                )
         if i < iterations - 1 and interval_seconds > ZERO:
             time.sleep(float(interval_seconds))
     with (out_dir / "orderbook_snapshots.jsonl").open("w", encoding="utf-8") as f:
         for row in snapshots:
             f.write(stable_json(row) + "\n")
     evidence = fetch_resolved_weather_evidence(root, adapter, config, out_dir)
-    signal_to_fill: dict[str, Any] = {"status": "not_run", "reason": "no_selected_market"}
-    if selected and snapshots:
-        first = selected[0]
-        first_snap = next((s for s in snapshots if s.get("token_id") == first["token_id"]), None)
-        if first_snap:
-            signal = {
-                "city": first["semantic"]["city"],
-                "weather_date_local": first["semantic"]["weather_date_local"],
-                "weather_metric": first["semantic"]["weather_metric"],
-                "temperature_bucket": first["semantic"]["canonical_label"],
-                "condition_id": first["condition_id"],
-                "token_id": first["token_id"],
-                "outcome": first["outcome"],
-            }
-            try:
-                gamma = adapter.market_by_slug(first["market_slug"])
-                clob = adapter.clob_market_info(first["condition_id"])
-                book = adapter.orderbook(first["token_id"])
-                normalized = normalize_orderbook(book.payload, first["token_id"], first["condition_id"], gamma.payload)
-                validation = validate_token_mapping(signal, gamma.payload, clob.payload, normalized)
-                buy = consume_buy_depth(normalized, Decimal("10"), normalized["best_ask"] if normalized["best_ask"] is not None else Decimal("1"))
-                signal_to_fill = {
-                    "status": "pass" if validation["mapping_valid"] and buy["filled_shares"] > ZERO else "blocked",
-                    "validation_source": "live_readonly_public_api",
-                    "market_slug": first["market_slug"],
-                    "event_key": first["semantic"]["event_key"],
-                    "canonical_label": first["semantic"]["canonical_label"],
-                    "mapping_valid": validation["mapping_valid"],
-                    "mapping_errors": validation["errors"],
-                    "entry_vwap": None if buy["vwap"] is None else dstr(buy["vwap"]),
-                    "filled_shares": dstr(buy["filled_shares"]),
-                    "filled_usd": dstr(buy["filled_usd"]),
-                    "uses_formal_ledger": False,
-                    "uses_wallet_or_real_order": False,
-                }
-            except Exception as exc:
-                signal_to_fill = {"status": "error", "validation_source": "live_readonly_public_api", "error": str(exc), "uses_formal_ledger": False, "uses_wallet_or_real_order": False}
-    elif selected and not snapshots:
-        signal_to_fill = {"status": "not_run", "reason": "no_orderbook_snapshots", "validation_source": "live_readonly_public_api"}
-    else:
-        signal_to_fill = {"status": "not_run", "reason": "no_selected_market", "validation_source": "live_readonly_public_api"}
+    signal_to_fill = build_signal_to_fill_from_saved_evidence(root, rid, selected, snapshots)
     ended = utcnow()
     event_keys = sorted({str(s.get("event_key", "")) for s in snapshots if s.get("event_key")})
     city_date_keys = sorted({"|".join([str(s.get("city", "")).lower(), str(s.get("weather_date_local", ""))]) for s in snapshots if s.get("city") and s.get("weather_date_local")})
     formal_counts = status(root, FORMAL, config_path)
+    evidence_check = verify_live_readonly_evidence(
+        root,
+        {
+            "run_id": rid,
+            "selected_market_count": len({str(s.get("market_slug", "")) for s in snapshots}),
+            "selected_token_count": len({str(s.get("token_id", "")) for s in snapshots}),
+            "snapshot_count": len(snapshots),
+            "error_count": _count_live_audit_errors(out_dir),
+        },
+        signal_to_fill,
+        config,
+    )
     manifest = {
         "run_id": rid,
         "started_at_utc": started.isoformat(),
@@ -3562,18 +3956,25 @@ def live_integration(root: Path, config_path: Path, iterations: int, interval_se
         "snapshots_per_token": {token: len([s for s in snapshots if s.get("token_id") == token]) for token in sorted({str(s.get("token_id", "")) for s in snapshots})},
         "bucket_types": sorted({str(s.get("bucket_type", "")) for s in snapshots if s.get("bucket_type")}),
         "snapshot_count": len(snapshots),
-        "error_count": len([1 for _ in (out_dir / "audit_log.jsonl").read_text(encoding="utf-8").splitlines()]) if (out_dir / "audit_log.jsonl").exists() else 0,
+        "error_count": _count_live_audit_errors(out_dir),
+        "raw_market_evidence_count": evidence_check.get("raw_market_evidence_count"),
+        "raw_orderbook_evidence_count": evidence_check.get("raw_orderbook_evidence_count"),
+        "raw_evidence_hash_result": evidence_check.get("raw_evidence_hash_result"),
+        "snapshot_replay_result": evidence_check.get("snapshot_replay_result"),
+        "same_run_evidence_chain": evidence_check.get("same_run_evidence_chain"),
+        "evidence_blocked_reasons": evidence_check.get("blocked_reasons"),
         "adapter_version": ADAPTER_VERSION,
         "actual_endpoints": adapter.visited_endpoints,
         "resolved_evidence_status": evidence.get("evidence", {}).get("settlement_status", evidence.get("error", "")),
         "formal_signal_fill_position_counts": formal_counts,
         "code_hash": current_hashes(root, config_path),
         "real_signal_to_fill_validation": signal_to_fill,
-        "validation_source": "live_readonly_public_api",
+        "validation_source": "live_readonly_saved_evidence",
     }
     write_json(out_dir / "run_manifest.json", manifest)
     write_json(rc7_dir(root) / "live_run_manifest.json", manifest)
     write_json(rc7_dir(root) / "real_signal_to_fill_validation.json", signal_to_fill)
+    write_json(out_dir / "evidence_verification.json", evidence_check)
     return manifest
 
 

@@ -1,6 +1,6 @@
 # Weather Forward Simulation v5.1.8-RC7
 
-Generated at: 2026-07-24T03:19:58.906076+00:00
+Generated at: 2026-07-24T05:48:44.725540+00:00
 
 Status: PASS_FOR_FORMAL_START
 
@@ -11,12 +11,19 @@ This release extends replay from raw orderbook-to-fill evidence into end-to-end 
 - current live readonly selection: pass
 - selected_market_count: 3
 - selected_token_count: 3
+- snapshot_count: 3
+- error_count: 0
+- raw_orderbook_evidence_count: 3
+- raw_evidence_hash_result: pass
+- snapshot_replay_result: pass
+- same_run_evidence_chain: True
+- blocked_reasons: []
 - formal start: ALLOWED_BUT_NOT_STARTED
 
 ## Formal Status
 ```json
 {
-  "generated_at_utc": "2026-07-24T03:19:58.905558+00:00",
+  "generated_at_utc": "2026-07-24T05:48:44.721210+00:00",
   "formal_started_at_utc": null,
   "signals": 0,
   "snapshots": 0,
@@ -33,12 +40,19 @@ This release extends replay from raw orderbook-to-fill evidence into end-to-end 
 {
   "release_status": "PASS_FOR_FORMAL_START",
   "formal_start": "ALLOWED_BUT_NOT_STARTED",
+  "blocked_reasons": [],
   "live_readonly_status": "pass",
   "live_readonly_reason": null,
   "saved_public_response_replay_status": "pass",
   "selected_market_count": 3,
   "selected_token_count": 3,
   "snapshot_count": 3,
+  "error_count": 0,
+  "raw_market_evidence_count": 3,
+  "raw_orderbook_evidence_count": 3,
+  "raw_evidence_hash_result": "pass",
+  "snapshot_replay_result": "pass",
+  "same_run_evidence_chain": true,
   "quick_audit_ok": true,
   "full_replay_ok": true,
   "negative_detected": 30,

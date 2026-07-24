@@ -641,38 +641,82 @@ def write_rc7_validation_files(root: Path, full: dict[str, Any], negative: list[
     return {"files": list(validations), "statuses": {name: payload["status"] for name, payload in validations.items()}, "demo_saved_pipeline_status": real.get("status"), "full_replay_ok": full.get("ok")}
 
 
-def compute_release_status(live_manifest: dict[str, Any] | None, live_signal: dict[str, Any] | None, saved_replay: dict[str, Any] | None, quick: dict[str, Any], full: dict[str, Any], formal: dict[str, Any], negative_detected: int) -> dict[str, Any]:
+def compute_release_status(
+    live_manifest: dict[str, Any] | None,
+    live_signal: dict[str, Any] | None,
+    saved_replay: dict[str, Any] | None,
+    quick: dict[str, Any],
+    full: dict[str, Any],
+    formal: dict[str, Any],
+    negative_detected: int,
+    root: Path | None = None,
+    evidence_check: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     live_manifest = live_manifest or {}
     live_signal = live_signal or {"status": "not_run", "reason": "missing_live_evidence"}
     saved_replay = saved_replay or {"status": "missing"}
     selected_markets = int(live_manifest.get("selected_market_count") or 0)
     selected_tokens = int(live_manifest.get("selected_token_count") or 0)
     snapshots = int(live_manifest.get("snapshot_count") or 0)
-    live_pass = (
-        live_signal.get("status") == "pass"
-        and selected_markets > 0
-        and selected_tokens > 0
-        and snapshots > 0
-        and live_signal.get("validation_source") == "live_readonly_public_api"
-    )
+    error_count = int(live_manifest.get("error_count") or 0)
+
+    if evidence_check is None and root is not None:
+        try:
+            from src.forward_simulation_v5_1_8 import verify_live_readonly_evidence
+        except ModuleNotFoundError:
+            from forward_simulation_v5_1_8 import verify_live_readonly_evidence
+        evidence_check = verify_live_readonly_evidence(Path(root), live_manifest, live_signal)
+    evidence_check = evidence_check or {"ok": False, "blocked_reasons": ["evidence_check_missing"], "raw_market_evidence_count": 0, "raw_orderbook_evidence_count": 0, "raw_evidence_hash_result": "fail", "snapshot_replay_result": "fail", "same_run_evidence_chain": False}
+
+    blocked_reasons: list[str] = list(evidence_check.get("blocked_reasons") or [])
+    if error_count != 0 and f"error_count={error_count}" not in blocked_reasons:
+        blocked_reasons.append(f"error_count={error_count}")
+
     formal_empty = bool(formal.get("ok")) and formal.get("formal_started_at_utc") in (None, "", "null")
     audits_ok = bool(quick.get("ok")) and bool(full.get("ok")) and negative_detected == 30
     saved_ok = saved_replay.get("status") == "pass"
-    if live_pass and audits_ok and formal_empty and saved_ok:
+    if not formal_empty:
+        blocked_reasons.append("formal_not_empty")
+    if not bool(quick.get("ok")):
+        blocked_reasons.append("quick_audit_failed")
+    if not bool(full.get("ok")):
+        blocked_reasons.append("full_replay_audit_failed")
+    if negative_detected != 30:
+        blocked_reasons.append(f"negative_detected={negative_detected}")
+    if not saved_ok:
+        blocked_reasons.append("saved_public_response_replay_not_pass")
+
+    # Deduplicate
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for reason in blocked_reasons:
+        if reason not in seen:
+            deduped.append(reason)
+            seen.add(reason)
+
+    live_pass = bool(evidence_check.get("ok")) and live_signal.get("status") == "pass" and live_signal.get("validation_source") == "live_readonly_saved_evidence" and error_count == 0 and selected_markets > 0 and selected_tokens > 0 and snapshots > 0
+    if live_pass and audits_ok and formal_empty and saved_ok and not deduped:
         release_status = "PASS_FOR_FORMAL_START"
         formal_start = "ALLOWED_BUT_NOT_STARTED"
     else:
-        release_status = "BLOCKED_PENDING_LIVE_READONLY_VALIDATION" if not live_pass else "BLOCKED_PENDING_AUDIT"
+        release_status = "BLOCKED_PENDING_LIVE_EVIDENCE"
         formal_start = "BLOCKED"
     return {
         "release_status": release_status,
         "formal_start": formal_start,
+        "blocked_reasons": deduped,
         "live_readonly_status": live_signal.get("status", "not_run"),
         "live_readonly_reason": live_signal.get("reason"),
         "saved_public_response_replay_status": saved_replay.get("status"),
         "selected_market_count": selected_markets,
         "selected_token_count": selected_tokens,
         "snapshot_count": snapshots,
+        "error_count": error_count,
+        "raw_market_evidence_count": evidence_check.get("raw_market_evidence_count"),
+        "raw_orderbook_evidence_count": evidence_check.get("raw_orderbook_evidence_count"),
+        "raw_evidence_hash_result": evidence_check.get("raw_evidence_hash_result"),
+        "snapshot_replay_result": evidence_check.get("snapshot_replay_result"),
+        "same_run_evidence_chain": evidence_check.get("same_run_evidence_chain"),
         "quick_audit_ok": bool(quick.get("ok")),
         "full_replay_ok": bool(full.get("ok")),
         "negative_detected": negative_detected,
@@ -697,8 +741,14 @@ RC7 把订单簿到成交的证据链扩展为端到端账本重建：信号登�
 - live-readonly selection: `{release["live_readonly_status"]}`{f" ({release['live_readonly_reason']})" if release.get("live_readonly_reason") else ""}
 - selected_market_count: `{release["selected_market_count"]}`
 - selected_token_count: `{release["selected_token_count"]}`
+- snapshot_count: `{release.get("snapshot_count")}`
+- error_count: `{release.get("error_count")}`
+- raw_orderbook_evidence_count: `{release.get("raw_orderbook_evidence_count")}`
+- raw_evidence_hash_result: `{release.get("raw_evidence_hash_result")}`
+- snapshot_replay_result: `{release.get("snapshot_replay_result")}`
+- blocked_reasons: `{release.get("blocked_reasons")}`
 
-保存响应重放 PASS 不等于当前实时 live-readonly PASS。
+保存响应重放 PASS 不等于当前实时 live-readonly PASS。live-readonly 必须把原始 HTTP bytes 以 sidecar `.bin` 持久化，并用同一 run 的已保存证据生成 `real_signal_to_fill_validation`；`error_count>0`、缺原始证据、hash/replay 失败时发布状态为 `BLOCKED_PENDING_LIVE_EVIDENCE`。
 
 ## 安装
 
@@ -803,9 +853,16 @@ This release extends replay from raw orderbook-to-fill evidence into end-to-end 
 - current live readonly selection: {release["live_readonly_status"]}{f" ({release['live_readonly_reason']})" if release.get("live_readonly_reason") else ""}
 - selected_market_count: {release["selected_market_count"]}
 - selected_token_count: {release["selected_token_count"]}
+- snapshot_count: {release.get("snapshot_count")}
+- error_count: {release.get("error_count")}
+- raw_orderbook_evidence_count: {release.get("raw_orderbook_evidence_count")}
+- raw_evidence_hash_result: {release.get("raw_evidence_hash_result")}
+- snapshot_replay_result: {release.get("snapshot_replay_result")}
+- same_run_evidence_chain: {release.get("same_run_evidence_chain")}
+- blocked_reasons: {release.get("blocked_reasons")}
 - formal start: {release["formal_start"]}
 """
-    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_FIX_REPORT.md").write_text(common + "\n## Fixes\n- Exact HTTP response bytes are stored in `http_evidence.raw_http_bytes`.\n- Signal canonical hashes are rebuilt from registration evidence.\n- Fees are recalculated from Gamma/CLOB evidence, not fill cache fields.\n- Entry state is rebuilt from signal plus entry fills before any extra buy.\n- Strategy lots, exit allocations, settlement allocations, event results, strategy totals, and ledger totals are replayed from fills and settlement evidence.\n- Release status separates saved-response replay from current live-readonly selection.\n", encoding="utf-8")
+    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_FIX_REPORT.md").write_text(common + "\n## Fixes\n- Exact HTTP response bytes are stored in `http_evidence.raw_http_bytes`.\n- Live-readonly persists Gamma/CLOB/orderbook evidence as JSON metadata plus sidecar `.bin` raw bytes; snapshots are accepted only after durable writes succeed.\n- `real_signal_to_fill_validation` is derived from same-run saved evidence (`validation_source=live_readonly_saved_evidence`), not a second unsaved network fetch.\n- Release gate requires `error_count==0`, raw evidence presence/hash integrity, snapshot replay from saved bytes, and same-run linkage; otherwise `BLOCKED_PENDING_LIVE_EVIDENCE`.\n- Signal canonical hashes are rebuilt from registration evidence.\n- Fees are recalculated from Gamma/CLOB evidence, not fill cache fields.\n- Entry state is rebuilt from signal plus entry fills before any extra buy.\n- Strategy lots, exit allocations, settlement allocations, event results, strategy totals, and ledger totals are replayed from fills and settlement evidence.\n- Release status separates saved-response replay from current live-readonly selection.\n", encoding="utf-8")
     (reports / "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_AUDIT.md").write_text(common + f"\n## Audit\n- quick audit: {validations['quick_audit']['ok']}\n- full-replay audit: {validations['full_replay']['ok']}\n- negative tests detected: {validations['negative_detected']}/30\n- live-readonly pass gate: {release['live_pass']}\n", encoding="utf-8")
     checklist_live = "x" if release["live_pass"] else " "
     (reports / "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_CHECKLIST.md").write_text(common + f"\n- [x] Formal ledger empty\n- [x] No wallet/signing/order code\n- [x] ZIP self-contained target prepared\n- [x] 30 direct end-to-end corruptions detected\n- [x] incomplete_take_profit uses latest trigger state\n- [x] Saved-response replay reported separately from live-readonly\n- [{checklist_live}] Live-readonly selected markets and signal-to-fill pass\n", encoding="utf-8")
@@ -876,13 +933,22 @@ def package_file_list(root: Path) -> list[str]:
             if path.is_file():
                 files.append(path.relative_to(root).as_posix())
     # RC7 evidence and demo/negative work needed for package self-containment.
-    for base in [
+    live_bases = [
         root / "data/forward_v5_1_8/demo",
         root / "data/forward_v5_1_8/rc7",
         root / "data/forward_v5_1_8/formal_empty_proof.json",
         root / "data/forward_v5_1_8/live_integration/real_saved_response_replay_work",
         root / "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_readonly_final",
-    ]:
+    ]
+    live_manifest = root / "data/forward_v5_1_8/rc7/live_run_manifest.json"
+    if live_manifest.exists():
+        try:
+            rid = str(json.loads(live_manifest.read_text(encoding="utf-8")).get("run_id") or "")
+            if rid:
+                live_bases.append(root / "data/forward_v5_1_8/live_integration" / rid)
+        except Exception:
+            pass
+    for base in live_bases:
         if base.is_file():
             files.append(base.relative_to(root).as_posix())
         elif base.exists():
@@ -971,11 +1037,20 @@ def finalize_release(root: Path, config_path: Path, preserve_live_evidence: bool
     if preserved_resolved is not None:
         write_json(resolved_path, preserved_resolved)
 
-    live_signal = load_json_if_exists(live_signal_path) or {"status": "not_run", "reason": "missing_live_evidence", "validation_source": "live_readonly_public_api"}
+    live_signal = load_json_if_exists(live_signal_path) or {"status": "not_run", "reason": "missing_live_evidence", "validation_source": "live_readonly_saved_evidence"}
     live_manifest = load_json_if_exists(live_manifest_path) or {}
     saved_replay = load_json_if_exists(rc7_dir(root) / "real_saved_response_replay.json") or {}
 
-    release = compute_release_status(live_manifest, live_signal, saved_replay, quick, full, formal, sum(row["detected"] == "true" for row in negative))
+    release = compute_release_status(
+        live_manifest,
+        live_signal,
+        saved_replay,
+        quick,
+        full,
+        formal,
+        sum(row["detected"] == "true" for row in negative),
+        root=root,
+    )
     validations = {
         "quick_audit": quick,
         "full_replay": full,
@@ -991,6 +1066,9 @@ def finalize_release(root: Path, config_path: Path, preserve_live_evidence: bool
             "selected_market_count": live_manifest.get("selected_market_count"),
             "selected_token_count": live_manifest.get("selected_token_count"),
             "snapshot_count": live_manifest.get("snapshot_count"),
+            "error_count": live_manifest.get("error_count"),
+            "raw_market_evidence_count": release.get("raw_market_evidence_count"),
+            "raw_orderbook_evidence_count": release.get("raw_orderbook_evidence_count"),
             "run_id": live_manifest.get("run_id"),
         },
         "formal_empty": formal,

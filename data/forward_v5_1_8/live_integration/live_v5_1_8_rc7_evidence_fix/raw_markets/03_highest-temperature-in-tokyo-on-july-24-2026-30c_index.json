@@ -1,0 +1,61 @@
+{
+  "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/03_highest-temperature-in-tokyo-on-july-24-2026-30c_clob.json",
+  "clob_raw_bytes_sha256": "7c9d7d580fc29c539a5e131cafafc4d085f10701853a7c3fd1baf709cd463d6d",
+  "condition_id": "0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec",
+  "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/03_highest-temperature-in-tokyo-on-july-24-2026-30c_gamma.json",
+  "gamma_raw_bytes_sha256": "be14f94d46e640fc8c8b8deb644831f56caa07ff412145d97b4055a28fde2e10",
+  "market_slug": "highest-temperature-in-tokyo-on-july-24-2026-30c",
+  "market_state": {
+    "accepting_orders": true,
+    "accepting_orders_fields": {
+      "acceptingOrders": true,
+      "enableOrderBook": true
+    },
+    "accepting_orders_status": "true",
+    "active": true,
+    "closed": false,
+    "disputed": false,
+    "market_status": "active_trading",
+    "raw_status": "[]",
+    "resolution_pending": false,
+    "resolved": false,
+    "status_conflicts": []
+  },
+  "outcome": "Yes",
+  "semantic": {
+    "bucket_type": "exact",
+    "canonical_label": "exact:30C",
+    "city": "Tokyo",
+    "event_key": "tokyo|2026-07-24|high",
+    "parsing_errors": [],
+    "parsing_status": "ok",
+    "question_parse": {
+      "bucket_type": "exact",
+      "canonical_label": "exact:30C",
+      "city": "Tokyo",
+      "missing_fields": [],
+      "parsing_status": "ok",
+      "threshold_value": "30",
+      "unit": "C",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "high"
+    },
+    "slug_parse": {
+      "bucket_type": "exact",
+      "canonical_label": "exact:30C",
+      "city": "Tokyo",
+      "missing_fields": [],
+      "parsing_status": "ok",
+      "threshold_value": "30",
+      "unit": "C",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "high"
+    },
+    "temperature_bucket": "exact:30C",
+    "threshold_value": "30",
+    "unit": "C",
+    "weather_date_local": "2026-07-24",
+    "weather_metric": "high"
+  },
+  "token_id": "6094395765953775377135625759757528195867795146166655179651317929732556431320"
+}

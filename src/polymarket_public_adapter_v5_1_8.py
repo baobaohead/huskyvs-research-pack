@@ -107,6 +107,8 @@ def canonical_temp_decimal(value: Any) -> str:
 def json_safe(value: Any) -> Any:
     if isinstance(value, Decimal):
         return dstr(value)
+    if isinstance(value, bytes):
+        raise TypeError("Object of type bytes is not JSON serializable; persist raw_bytes via persist_http_result()")
     if isinstance(value, dict):
         return {k: json_safe(v) for k, v in value.items()}
     if isinstance(value, list):
@@ -120,6 +122,97 @@ def stable_json(value: Any) -> str:
 
 def content_hash(value: Any) -> str:
     return sha256(stable_json(value).encode("utf-8")).hexdigest()
+
+
+def http_result_hashes(result: "HttpResult") -> dict[str, Any]:
+    raw_bytes = bytes(getattr(result, "raw_bytes", b"") or b"")
+    if not raw_bytes and getattr(result, "raw_text", ""):
+        raw_bytes = str(result.raw_text).encode("utf-8")
+    raw_text = getattr(result, "raw_text", "") or raw_bytes.decode("utf-8", "replace")
+    payload = getattr(result, "payload", None)
+    return {
+        "payload_sha256": content_hash(payload),
+        "raw_text_sha256": sha256(raw_text.encode("utf-8")).hexdigest(),
+        "raw_bytes_sha256": sha256(raw_bytes).hexdigest(),
+        "raw_bytes_length": len(raw_bytes),
+        "raw_bytes": raw_bytes,
+        "raw_text": raw_text,
+    }
+
+
+def http_result_metadata(result: "HttpResult", raw_bytes_relpath: str) -> dict[str, Any]:
+    hashes = http_result_hashes(result)
+    return {
+        "method": str(getattr(result, "method", "GET")),
+        "url": str(getattr(result, "url", "")),
+        "status_code": int(getattr(result, "status_code", 0) or 0),
+        "latency_ms": dstr(dec(getattr(result, "latency_ms", 0))),
+        "started_at_utc": str(getattr(result, "started_at_utc", "")),
+        "received_at_utc": str(getattr(result, "received_at_utc", "")),
+        "content_type": str(getattr(result, "content_type", "") or ""),
+        "payload": getattr(result, "payload", None),
+        "payload_sha256": hashes["payload_sha256"],
+        "raw_text_sha256": hashes["raw_text_sha256"],
+        "raw_bytes_sha256": hashes["raw_bytes_sha256"],
+        "raw_bytes_length": hashes["raw_bytes_length"],
+        "raw_bytes_path": raw_bytes_relpath,
+        "raw_bytes_storage": "sidecar_bin",
+    }
+
+
+def persist_http_result(root: Path, meta_path: Path, bin_path: Path, result: "HttpResult") -> dict[str, Any]:
+    """Persist HttpResult with sidecar .bin for exact raw bytes (scheme A)."""
+    root_res = Path(root).resolve()
+    meta_path = Path(meta_path)
+    bin_path = Path(bin_path)
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    bin_path.parent.mkdir(parents=True, exist_ok=True)
+    hashes = http_result_hashes(result)
+    bin_path.write_bytes(hashes["raw_bytes"])
+    try:
+        rel = bin_path.resolve().relative_to(root_res).as_posix()
+    except Exception:
+        rel = str(bin_path)
+    meta = http_result_metadata(result, rel)
+    # Recompute hashes from written bytes to prove durability.
+    written = bin_path.read_bytes()
+    if sha256(written).hexdigest() != meta["raw_bytes_sha256"]:
+        raise RuntimeError("raw bytes hash mismatch after sidecar write")
+    if len(written) != meta["raw_bytes_length"]:
+        raise RuntimeError("raw bytes length mismatch after sidecar write")
+    write_json(meta_path, meta)
+    return meta
+
+
+def load_http_evidence(root: Path, meta_path: Path) -> dict[str, Any]:
+    meta = json.loads(Path(meta_path).read_text(encoding="utf-8"))
+    rel = str(meta.get("raw_bytes_path") or "")
+    bin_path = Path(root) / rel if rel and not Path(rel).is_absolute() else Path(rel)
+    if not bin_path.exists():
+        raise FileNotFoundError(f"missing raw bytes sidecar: {bin_path}")
+    raw = bin_path.read_bytes()
+    meta = dict(meta)
+    meta["_loaded_raw_bytes"] = raw
+    meta["_loaded_raw_bytes_sha256"] = sha256(raw).hexdigest()
+    meta["_loaded_payload_sha256"] = content_hash(meta.get("payload"))
+    return meta
+
+
+def verify_http_evidence_file(root: Path, meta_path: Path) -> dict[str, Any]:
+    try:
+        meta = load_http_evidence(root, meta_path)
+    except FileNotFoundError as exc:
+        return {"ok": False, "errors": [f"missing_raw_bytes_file:{exc}"], "meta": {}, "raw_bytes": b""}
+    except Exception as exc:
+        return {"ok": False, "errors": [f"evidence_load_error:{exc}"], "meta": {}, "raw_bytes": b""}
+    errors: list[str] = []
+    if meta["_loaded_raw_bytes_sha256"] != meta.get("raw_bytes_sha256"):
+        errors.append("raw_bytes_sha256_mismatch")
+    if len(meta["_loaded_raw_bytes"]) != int(meta.get("raw_bytes_length") or -1):
+        errors.append("raw_bytes_length_mismatch")
+    if meta["_loaded_payload_sha256"] != meta.get("payload_sha256"):
+        errors.append("payload_sha256_mismatch")
+    return {"ok": not errors, "errors": errors, "meta": {k: v for k, v in meta.items() if not k.startswith("_loaded")}, "raw_bytes": meta["_loaded_raw_bytes"]}
 
 
 class AdapterError(RuntimeError):

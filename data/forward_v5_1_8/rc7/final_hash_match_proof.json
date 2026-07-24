@@ -2,29 +2,29 @@
   "adapter": "PolymarketPublicAdapterV5_1_8",
   "all_hashes_match": true,
   "build_hash": {
-    "adapter_code_sha256": "28072d207cfb0e68427c2505e306ab38439c8dc2317fbb7f144c140b32e3acfa",
-    "api_contract_sha256": "634eeb6847a8751fe700ee2ca91864aa2dbc3e67f520bf9885728d5f33a33e0d",
+    "adapter_code_sha256": "7dcca765ae34c6a2abdab795592cf61e10847b344df835f1e4b7e5ecd5ece0b2",
+    "api_contract_sha256": "7920a38262c25773831e12c644db5a3d7254d5d9717c53118a47b847eed8cb9c",
     "config_sha256": "e972ba8b831ec42d576980dc5b6c42f6e54e51338c6bf40722b71c1aa2266895",
-    "core_code_sha256": "baea656671113c1857d9f6da65cb6a7d473a2ce57d411f02e17c0fd9bf1233c1",
-    "fee_contract_sha256": "bac54877917451956dcdabbd9ef4d64bd0a0481491489446c5de52cd25956925",
-    "preregistration_sha256": "9605fa8034e5dd40dc1c87eb1077e0279c646b139360ce8dd44223b514cf7d63",
-    "reporting_code_sha256": "0031a570e22b1e9938c43c367bbc126684e4203a69b97c597bd7d1addbe3509b",
+    "core_code_sha256": "9c4861a2b9c512f7e361831ebefdba07289451509a211aa412c748657936e753",
+    "fee_contract_sha256": "030fbd00f7779d57d0d44e92eac62e652668c114931ea1dadf671dc22e90533a",
+    "preregistration_sha256": "6e60ca954cf77fda141556cba209cbc42ebed3dfe1735b087836b5bb78d7e85c",
+    "reporting_code_sha256": "3dd1eae14f525b9a70463cc3605f55dc26079ffd91a7bfd781e24ecf41507bce",
     "schema_sha256": "cb65f81da51e4d7e685e4b41338a19ddb7bd54cd829a871a85e0b8128dbe19dc",
-    "settlement_finality_contract_sha256": "1718d3fa4e0a3ce84809dbf597cb6b601e84dfbe2c0e2455ab93399b97a02004"
+    "settlement_finality_contract_sha256": "58f001398b66fc969834cb15a0c3b673d47bfa9fa74eaac98cda85e913649137"
   },
   "fill_algorithm_version": "depth_replay_v5_1_8_rc7",
   "final_build_hash_matches_live_run": true,
-  "generated_at_utc": "2026-07-24T03:19:58.907841+00:00",
+  "generated_at_utc": "2026-07-24T05:48:44.727162+00:00",
   "live_run_build_hash": {
-    "adapter_code_sha256": "28072d207cfb0e68427c2505e306ab38439c8dc2317fbb7f144c140b32e3acfa",
-    "api_contract_sha256": "634eeb6847a8751fe700ee2ca91864aa2dbc3e67f520bf9885728d5f33a33e0d",
+    "adapter_code_sha256": "7dcca765ae34c6a2abdab795592cf61e10847b344df835f1e4b7e5ecd5ece0b2",
+    "api_contract_sha256": "7920a38262c25773831e12c644db5a3d7254d5d9717c53118a47b847eed8cb9c",
     "config_sha256": "e972ba8b831ec42d576980dc5b6c42f6e54e51338c6bf40722b71c1aa2266895",
-    "core_code_sha256": "baea656671113c1857d9f6da65cb6a7d473a2ce57d411f02e17c0fd9bf1233c1",
-    "fee_contract_sha256": "bac54877917451956dcdabbd9ef4d64bd0a0481491489446c5de52cd25956925",
-    "preregistration_sha256": "9605fa8034e5dd40dc1c87eb1077e0279c646b139360ce8dd44223b514cf7d63",
-    "reporting_code_sha256": "0031a570e22b1e9938c43c367bbc126684e4203a69b97c597bd7d1addbe3509b",
+    "core_code_sha256": "9c4861a2b9c512f7e361831ebefdba07289451509a211aa412c748657936e753",
+    "fee_contract_sha256": "030fbd00f7779d57d0d44e92eac62e652668c114931ea1dadf671dc22e90533a",
+    "preregistration_sha256": "6e60ca954cf77fda141556cba209cbc42ebed3dfe1735b087836b5bb78d7e85c",
+    "reporting_code_sha256": "3dd1eae14f525b9a70463cc3605f55dc26079ffd91a7bfd781e24ecf41507bce",
     "schema_sha256": "cb65f81da51e4d7e685e4b41338a19ddb7bd54cd829a871a85e0b8128dbe19dc",
-    "settlement_finality_contract_sha256": "1718d3fa4e0a3ce84809dbf597cb6b601e84dfbe2c0e2455ab93399b97a02004"
+    "settlement_finality_contract_sha256": "58f001398b66fc969834cb15a0c3b673d47bfa9fa74eaac98cda85e913649137"
   },
   "normalization_algorithm_version": "orderbook_normalize_v5_1_8_rc7"
 }

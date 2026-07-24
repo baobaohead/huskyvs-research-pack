@@ -1,0 +1,186 @@
+[
+  {
+    "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/01_highest-temperature-in-tokyo-on-july-24-2026-27corbelow_clob.json",
+    "condition_id": "0xc500edd6e919687664691d0915fc5cd05a3dfe62c8079592a19c115c984da2ca",
+    "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/01_highest-temperature-in-tokyo-on-july-24-2026-27corbelow_gamma.json",
+    "market_question": "Will the highest temperature in Tokyo be 27°C or below on July 24?",
+    "market_slug": "highest-temperature-in-tokyo-on-july-24-2026-27corbelow",
+    "market_state": {
+      "accepting_orders": true,
+      "accepting_orders_fields": {
+        "acceptingOrders": true,
+        "enableOrderBook": true
+      },
+      "accepting_orders_status": "true",
+      "active": true,
+      "closed": false,
+      "disputed": false,
+      "market_status": "active_trading",
+      "raw_status": "[]",
+      "resolution_pending": false,
+      "resolved": false,
+      "status_conflicts": []
+    },
+    "outcome": "Yes",
+    "semantic": {
+      "bucket_type": "or_below",
+      "canonical_label": "or_below:27C",
+      "city": "Tokyo",
+      "event_key": "tokyo|2026-07-24|high",
+      "parsing_errors": [],
+      "parsing_status": "ok",
+      "question_parse": {
+        "bucket_type": "or_below",
+        "canonical_label": "or_below:27C",
+        "city": "Tokyo",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "27",
+        "unit": "C",
+        "weather_date_local": "2026-07-24",
+        "weather_metric": "high"
+      },
+      "slug_parse": {
+        "bucket_type": "",
+        "canonical_label": "",
+        "city": "Tokyo",
+        "missing_fields": [
+          "temperature_bucket"
+        ],
+        "parsing_status": "unknown",
+        "threshold_value": null,
+        "unit": "",
+        "weather_date_local": "2026-07-24",
+        "weather_metric": "high"
+      },
+      "temperature_bucket": "or_below:27C",
+      "threshold_value": "27",
+      "unit": "C",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "high"
+    },
+    "token_id": "29689394072085070274755567550554311025670307511907197535579092692882017688125"
+  },
+  {
+    "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/02_highest-temperature-in-beijing-on-july-24-2026-24corbelow_clob.json",
+    "condition_id": "0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802",
+    "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/02_highest-temperature-in-beijing-on-july-24-2026-24corbelow_gamma.json",
+    "market_question": "Will the highest temperature in Beijing be 24°C or below on July 24?",
+    "market_slug": "highest-temperature-in-beijing-on-july-24-2026-24corbelow",
+    "market_state": {
+      "accepting_orders": true,
+      "accepting_orders_fields": {
+        "acceptingOrders": true,
+        "enableOrderBook": true
+      },
+      "accepting_orders_status": "true",
+      "active": true,
+      "closed": false,
+      "disputed": false,
+      "market_status": "active_trading",
+      "raw_status": "[]",
+      "resolution_pending": false,
+      "resolved": false,
+      "status_conflicts": []
+    },
+    "outcome": "Yes",
+    "semantic": {
+      "bucket_type": "or_below",
+      "canonical_label": "or_below:24C",
+      "city": "Beijing",
+      "event_key": "beijing|2026-07-24|high",
+      "parsing_errors": [],
+      "parsing_status": "ok",
+      "question_parse": {
+        "bucket_type": "or_below",
+        "canonical_label": "or_below:24C",
+        "city": "Beijing",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "24",
+        "unit": "C",
+        "weather_date_local": "2026-07-24",
+        "weather_metric": "high"
+      },
+      "slug_parse": {
+        "bucket_type": "",
+        "canonical_label": "",
+        "city": "Beijing",
+        "missing_fields": [
+          "temperature_bucket"
+        ],
+        "parsing_status": "unknown",
+        "threshold_value": null,
+        "unit": "",
+        "weather_date_local": "2026-07-24",
+        "weather_metric": "high"
+      },
+      "temperature_bucket": "or_below:24C",
+      "threshold_value": "24",
+      "unit": "C",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "high"
+    },
+    "token_id": "20531586829453250137861025863290033762971932642718477504791605877665947766208"
+  },
+  {
+    "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/03_highest-temperature-in-tokyo-on-july-24-2026-30c_clob.json",
+    "condition_id": "0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec",
+    "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/03_highest-temperature-in-tokyo-on-july-24-2026-30c_gamma.json",
+    "market_question": "Will the highest temperature in Tokyo be 30°C on July 24?",
+    "market_slug": "highest-temperature-in-tokyo-on-july-24-2026-30c",
+    "market_state": {
+      "accepting_orders": true,
+      "accepting_orders_fields": {
+        "acceptingOrders": true,
+        "enableOrderBook": true
+      },
+      "accepting_orders_status": "true",
+      "active": true,
+      "closed": false,
+      "disputed": false,
+      "market_status": "active_trading",
+      "raw_status": "[]",
+      "resolution_pending": false,
+      "resolved": false,
+      "status_conflicts": []
+    },
+    "outcome": "Yes",
+    "semantic": {
+      "bucket_type": "exact",
+      "canonical_label": "exact:30C",
+      "city": "Tokyo",
+      "event_key": "tokyo|2026-07-24|high",
+      "parsing_errors": [],
+      "parsing_status": "ok",
+      "question_parse": {
+        "bucket_type": "exact",
+        "canonical_label": "exact:30C",
+        "city": "Tokyo",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "30",
+        "unit": "C",
+        "weather_date_local": "2026-07-24",
+        "weather_metric": "high"
+      },
+      "slug_parse": {
+        "bucket_type": "exact",
+        "canonical_label": "exact:30C",
+        "city": "Tokyo",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "30",
+        "unit": "C",
+        "weather_date_local": "2026-07-24",
+        "weather_metric": "high"
+      },
+      "temperature_bucket": "exact:30C",
+      "threshold_value": "30",
+      "unit": "C",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "high"
+    },
+    "token_id": "6094395765953775377135625759757528195867795146166655179651317929732556431320"
+  }
+]

@@ -1056,3 +1056,219 @@ def test_v518_latest_trigger_state_controls_incomplete_report(tmp_path):
         conn.close()
     audit = audit_integrity(tmp_path, DEMO, CONFIG, "full-replay")
     assert audit["checks"]["INCOMPLETE_TAKE_PROFIT_MISMATCH"] > 0
+
+
+def _live_fixture_config(tmp_path: Path, slug: str) -> Path:
+    text = CONFIG.read_text(encoding="utf-8")
+    out = []
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() == "preferred_weather_slugs:":
+            out.append("  preferred_weather_slugs:")
+            out.append(f"    - {slug}")
+            i += 1
+            while i < len(lines) and lines[i].startswith("    - "):
+                i += 1
+            continue
+        if line.strip() == "resolved_weather_slugs:":
+            out.append("  resolved_weather_slugs: []")
+            i += 1
+            while i < len(lines) and lines[i].startswith("    - "):
+                i += 1
+            continue
+        out.append(line)
+        i += 1
+    cfg = tmp_path / "config" / "forward_simulation_v5_1_8.yaml"
+    cfg.parent.mkdir(parents=True, exist_ok=True)
+    cfg.write_text("\n".join(out) + "\n", encoding="utf-8")
+    return cfg
+
+
+def _run_fixture_live(tmp_path: Path):
+    market_data, clob_data, books, _ = demo_fixture()
+    slug = market_data["slug"]
+    cfg = _live_fixture_config(tmp_path, slug)
+    adapter = FixtureAdapter(market_data, clob_data, books)
+    manifest = sim.live_integration(tmp_path, cfg, iterations=1, interval_seconds=Decimal("0"), run_id="live_fixture_rc7", adapter=adapter)
+    signal = json.loads((tmp_path / "data/forward_v5_1_8/rc7/real_signal_to_fill_validation.json").read_text(encoding="utf-8"))
+    return manifest, signal, cfg
+
+
+def test_persist_http_result_roundtrip_with_raw_bytes(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import HttpResult, persist_http_result, verify_http_evidence_file, iso
+    from decimal import Decimal as D
+
+    payload = {"asks": [{"price": "0.1", "size": "10"}], "bids": []}
+    raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    result = HttpResult(
+        method="GET",
+        url="https://example.test/book",
+        status_code=200,
+        latency_ms=D("1.5"),
+        started_at_utc=iso(),
+        received_at_utc=iso(),
+        payload=payload,
+        raw_text=raw.decode("utf-8"),
+        raw_bytes=raw,
+        content_type="application/json",
+    )
+    meta = persist_http_result(tmp_path, tmp_path / "e.json", tmp_path / "e.bin", result)
+    assert (tmp_path / "e.bin").read_bytes() == raw
+    assert meta["raw_bytes_sha256"] == __import__("hashlib").sha256(raw).hexdigest()
+    verified = verify_http_evidence_file(tmp_path, tmp_path / "e.json")
+    assert verified["ok"]
+    assert verified["raw_bytes"] == raw
+
+
+def test_live_fixture_writes_durable_raw_evidence(tmp_path):
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    assert manifest["error_count"] == 0
+    assert manifest["snapshot_count"] > 0
+    assert manifest["raw_orderbook_evidence_count"] == manifest["snapshot_count"]
+    assert signal["status"] == "pass"
+    assert signal["validation_source"] == "live_readonly_saved_evidence"
+    assert signal["uses_formal_ledger"] is False
+    assert signal["uses_wallet_or_real_order"] is False
+    out_dir = tmp_path / "data/forward_v5_1_8/live_integration" / manifest["run_id"]
+    indexes = sorted((out_dir / "raw_orderbooks").glob("*_index.json"))
+    assert len(indexes) == manifest["snapshot_count"]
+    for idx in indexes:
+        data = json.loads(idx.read_text(encoding="utf-8"))
+        for key in ("gamma_evidence_path", "clob_evidence_path", "orderbook_evidence_path"):
+            meta_path = tmp_path / data[key]
+            assert meta_path.exists()
+            bin_rel = json.loads(meta_path.read_text(encoding="utf-8"))["raw_bytes_path"]
+            assert (tmp_path / bin_rel).exists()
+            from src.polymarket_public_adapter_v5_1_8 import verify_http_evidence_file
+
+            assert verify_http_evidence_file(tmp_path, meta_path)["ok"]
+    # No formal ledger created by live-readonly.
+    assert not (tmp_path / "data/forward_v5_1_8/formal").exists()
+
+
+def test_release_blocked_when_raw_orderbook_evidence_deleted(tmp_path):
+    from src.forward_reporting_v5_1_8 import compute_release_status
+
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    out_dir = tmp_path / "data/forward_v5_1_8/live_integration" / manifest["run_id"]
+    target = next((out_dir / "raw_orderbooks").glob("*_orderbook.bin"))
+    target.unlink()
+    release = compute_release_status(
+        manifest,
+        signal,
+        {"status": "pass"},
+        {"ok": True},
+        {"ok": True},
+        {"ok": True, "formal_started_at_utc": None},
+        30,
+        root=tmp_path,
+    )
+    assert release["release_status"] == "BLOCKED_PENDING_LIVE_EVIDENCE"
+    assert release["blocked_reasons"]
+
+
+def test_release_blocked_when_error_count_forged(tmp_path):
+    from src.forward_reporting_v5_1_8 import compute_release_status
+
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    forged = dict(manifest)
+    forged["error_count"] = 1
+    release = compute_release_status(
+        forged,
+        signal,
+        {"status": "pass"},
+        {"ok": True},
+        {"ok": True},
+        {"ok": True, "formal_started_at_utc": None},
+        30,
+        root=tmp_path,
+    )
+    assert release["release_status"] == "BLOCKED_PENDING_LIVE_EVIDENCE"
+    assert any("error_count" in r for r in release["blocked_reasons"])
+
+
+def test_release_blocked_when_raw_bytes_tampered(tmp_path):
+    from src.forward_reporting_v5_1_8 import compute_release_status
+
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    out_dir = tmp_path / "data/forward_v5_1_8/live_integration" / manifest["run_id"]
+    target = next((out_dir / "raw_orderbooks").glob("*_orderbook.bin"))
+    target.write_bytes(b'{"tampered":true}')
+    release = compute_release_status(
+        manifest,
+        signal,
+        {"status": "pass"},
+        {"ok": True},
+        {"ok": True},
+        {"ok": True, "formal_started_at_utc": None},
+        30,
+        root=tmp_path,
+    )
+    assert release["release_status"] == "BLOCKED_PENDING_LIVE_EVIDENCE"
+    assert any("hash" in r for r in release["blocked_reasons"])
+
+
+def test_release_blocked_when_normalized_snapshot_tampered(tmp_path):
+    from src.forward_reporting_v5_1_8 import compute_release_status
+
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    out_dir = tmp_path / "data/forward_v5_1_8/live_integration" / manifest["run_id"]
+    snap_path = out_dir / "orderbook_snapshots.jsonl"
+    rows = [json.loads(line) for line in snap_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    rows[0]["content_hash"] = "0" * 64
+    snap_path.write_text("\n".join(json.dumps(r, sort_keys=True) for r in rows) + "\n", encoding="utf-8")
+    release = compute_release_status(
+        manifest,
+        signal,
+        {"status": "pass"},
+        {"ok": True},
+        {"ok": True},
+        {"ok": True, "formal_started_at_utc": None},
+        30,
+        root=tmp_path,
+    )
+    assert release["release_status"] == "BLOCKED_PENDING_LIVE_EVIDENCE"
+    assert any("replay" in r for r in release["blocked_reasons"])
+
+
+def test_release_blocked_when_signal_references_other_run(tmp_path):
+    from src.forward_reporting_v5_1_8 import compute_release_status
+
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    bad = dict(signal)
+    bad["run_id"] = "some_other_run"
+    release = compute_release_status(
+        manifest,
+        bad,
+        {"status": "pass"},
+        {"ok": True},
+        {"ok": True},
+        {"ok": True, "formal_started_at_utc": None},
+        30,
+        root=tmp_path,
+    )
+    assert release["release_status"] == "BLOCKED_PENDING_LIVE_EVIDENCE"
+    assert any("run_id" in r for r in release["blocked_reasons"])
+
+
+def test_release_pass_with_complete_same_run_evidence_chain(tmp_path):
+    from src.forward_reporting_v5_1_8 import compute_release_status
+
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    release = compute_release_status(
+        manifest,
+        signal,
+        {"status": "pass"},
+        {"ok": True},
+        {"ok": True},
+        {"ok": True, "formal_started_at_utc": None},
+        30,
+        root=tmp_path,
+    )
+    assert release["release_status"] == "PASS_FOR_FORMAL_START"
+    assert release["blocked_reasons"] == []
+    assert release["raw_evidence_hash_result"] == "pass"
+    assert release["snapshot_replay_result"] == "pass"
+    assert release["same_run_evidence_chain"] is True
