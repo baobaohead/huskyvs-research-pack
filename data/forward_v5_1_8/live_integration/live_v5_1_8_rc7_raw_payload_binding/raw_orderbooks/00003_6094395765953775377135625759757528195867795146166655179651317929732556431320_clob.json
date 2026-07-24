@@ -1,0 +1,47 @@
+{
+  "content_type": "application/json",
+  "latency_ms": "3591.4663750008913",
+  "method": "GET",
+  "payload": {
+    "ao": true,
+    "aot": "2026-07-22T04:03:00Z",
+    "c": "0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec",
+    "fd": {
+      "e": 1,
+      "r": 0.05,
+      "to": true
+    },
+    "gst": "2026-07-23T15:00:00Z",
+    "ibce": true,
+    "mbf": 1000,
+    "mos": 5,
+    "mts": 0.001,
+    "nr": true,
+    "r": {
+      "ma": 4.5,
+      "mi": 20,
+      "moas": 30
+    },
+    "t": [
+      {
+        "o": "Yes",
+        "t": "6094395765953775377135625759757528195867795146166655179651317929732556431320"
+      },
+      {
+        "o": "No",
+        "t": "37894476441081214479694348801475431654242809461190859003826426456788892755286"
+      }
+    ],
+    "tbf": 1000
+  },
+  "payload_sha256": "3e970e2a04fa87d1ed9230493807e02d22c70cc80d55932bfd23576d4c60aac8",
+  "raw_bytes_length": 468,
+  "raw_bytes_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00003_6094395765953775377135625759757528195867795146166655179651317929732556431320_clob.bin",
+  "raw_bytes_sha256": "7c9d7d580fc29c539a5e131cafafc4d085f10701853a7c3fd1baf709cd463d6d",
+  "raw_bytes_storage": "sidecar_bin",
+  "raw_text_sha256": "7c9d7d580fc29c539a5e131cafafc4d085f10701853a7c3fd1baf709cd463d6d",
+  "received_at_utc": "2026-07-24T06:13:42.132044+00:00",
+  "started_at_utc": "2026-07-24T06:13:38.540551+00:00",
+  "status_code": 200,
+  "url": "https://clob.polymarket.com/clob-markets/0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec"
+}

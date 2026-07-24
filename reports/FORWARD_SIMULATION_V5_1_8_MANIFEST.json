@@ -1,9 +1,40 @@
 {
-  "generated_at_utc": "2026-07-23T05:38:54.309541+00:00",
+  "generated_at_utc": "2026-07-24T06:13:47.425429+00:00",
+  "release": {
+    "blocked_reasons": [],
+    "error_count": 0,
+    "formal_empty_ok": true,
+    "formal_start": "ALLOWED_BUT_NOT_STARTED",
+    "full_replay_ok": true,
+    "live_pass": true,
+    "live_readonly_reason": null,
+    "live_readonly_status": "pass",
+    "negative_detected": 30,
+    "quick_audit_ok": true,
+    "raw_evidence_hash_result": "pass",
+    "raw_market_evidence_count": 3,
+    "raw_orderbook_evidence_count": 3,
+    "raw_payload_binding_checked_count": 15,
+    "raw_payload_binding_failed_count": 0,
+    "raw_payload_binding_result": "pass",
+    "release_status": "PASS_FOR_FORMAL_START",
+    "same_run_evidence_chain": true,
+    "saved_ok": true,
+    "saved_public_response_replay_status": "pass",
+    "selected_market_count": 3,
+    "selected_token_count": 3,
+    "snapshot_count": 3,
+    "snapshot_replay_result": "pass"
+  },
+  "release_status": "PASS_FOR_FORMAL_START",
   "validations": {
     "completed_signal_polling": {
       "before": {
-        "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_8.yaml",
+        "config_path": "config/forward_simulation_v5_1_8.yaml",
+        "config_path_meta": {
+          "historical_local_path_nonportable": false,
+          "repository_relative_path": "config/forward_simulation_v5_1_8.yaml"
+        },
         "entry_fills": 1,
         "event_results": 4,
         "exit_fills": 2,
@@ -12,18 +43,22 @@
           "heartbeat_at_utc": "2099-01-03T00:00:00+00:00",
           "hostname": "baobaotoudeMac-mini.local",
           "mode": "demo",
-          "pid": 62890,
-          "process_start_time": "2026-07-23T05:38:52+00:00",
+          "pid": 44196,
+          "process_start_time": "2026-07-24T06:13:45+00:00",
           "run_id": "demo_run_settlement",
           "status": "running",
           "version": "forward_simulation_v5.1.8-rc7"
         },
-        "ledger_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/demo/ledger.sqlite3",
+        "ledger_path": "data/forward_v5_1_8/demo/ledger.sqlite3",
+        "ledger_path_meta": {
+          "historical_local_path_nonportable": false,
+          "repository_relative_path": "data/forward_v5_1_8/demo/ledger.sqlite3"
+        },
         "lock_held": false,
         "lock_info": {},
         "mode": "demo",
         "paused": "false",
-        "runs": 3,
+        "runs": 4,
         "settlements": 4,
         "signals": 1,
         "snapshots": 2,
@@ -37,6 +72,32 @@
       "new_run_count": 1,
       "new_snapshot_count": 0,
       "status": "pass"
+    },
+    "demo_and_saved_signal_pipeline": {
+      "audit_ok": true,
+      "demo_result": {
+        "results": [],
+        "run_id": "demo_run_fixture"
+      },
+      "entry_fills": 1,
+      "exact_and_boundary_bucket_examples": {
+        "exact_demo": "exact:30C",
+        "or_below_demo": "or_below:25C"
+      },
+      "exit_fills": 2,
+      "note": "This file is demo/saved-response evidence only. Live-readonly status is recorded by live_integration into real_signal_to_fill_validation.json.",
+      "saved_public_response_replay": {
+        "audit_ok": true,
+        "entry_fills": 3,
+        "snapshots": 9,
+        "source": "saved_public_gamma_clob_orderbook_responses_from_v5_1_6_rc5",
+        "status": "pass",
+        "token_count": 3
+      },
+      "snapshots": 2,
+      "status": "pass",
+      "uses_formal_ledger": false,
+      "validation_source": "demo_and_saved_public_response_replay"
     },
     "demo_end_to_end": {
       "entry_fills": 3,
@@ -270,14 +331,14 @@
       "settlements": 12,
       "status": "pass",
       "strategy_lots": 12,
-      "work_root": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/demo/three_entry_work"
+      "work_root": "data/forward_v5_1_8/demo/three_entry_work"
     },
     "formal_empty": {
       "entry_fills": 0,
       "event_results": 0,
       "exit_fills": 0,
       "formal_started_at_utc": null,
-      "generated_at_utc": "2026-07-23T05:38:54.308857+00:00",
+      "generated_at_utc": "2026-07-24T06:13:47.417845+00:00",
       "ok": true,
       "settlements": 0,
       "signals": 0,
@@ -445,6 +506,44 @@
       "status": "pass",
       "stored_signal_count": 0
     },
+    "live_readonly": {
+      "canonical_label": "or_below:27C",
+      "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00001_29689394072085070274755567550554311025670307511907197535579092692882017688125_clob.json",
+      "clob_parsed_raw_payload_sha256": "eed0fad5d69c89012cd63eee3e5199ce1891c010dc4178a2fd1a1e584b1e672b",
+      "clob_raw_bytes_sha256": "0454a54c0ef76619d88c64730ef06fc82170bc61b62671c12289c829a7717da3",
+      "condition_id": "0xc500edd6e919687664691d0915fc5cd05a3dfe62c8079592a19c115c984da2ca",
+      "entry_vwap": "0.001",
+      "event_key": "tokyo|2026-07-24|high",
+      "filled_shares": "10000",
+      "filled_usd": "10",
+      "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00001_29689394072085070274755567550554311025670307511907197535579092692882017688125_gamma.json",
+      "gamma_parsed_raw_payload_sha256": "c4acb622c3021f541960825b42e6a5e56d259c910ca1bf805bb5d2cd408fea52",
+      "gamma_raw_bytes_sha256": "556b2101ab937502b8129a98d787d3c1f82323f25876f92119d9a5fe1d3ff1cf",
+      "mapping_errors": [],
+      "mapping_valid": true,
+      "market_slug": "highest-temperature-in-tokyo-on-july-24-2026-27corbelow",
+      "normalized_snapshot_content_hash": "368d75d9f135f0485764b66a51415a6bf7b328be1256980de0104ce246ca1fbf",
+      "orderbook_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00001_29689394072085070274755567550554311025670307511907197535579092692882017688125_orderbook.json",
+      "orderbook_parsed_raw_payload_sha256": "c7480c3aed150e06998af2356807fe838d4059c7c6fb4cd08abbc3e4656e08fb",
+      "orderbook_raw_bytes_sha256": "9a55a9719cf8558af598cd26e182307edb7651002c50144efeca08dfc6fa21af",
+      "run_id": "live_v5_1_8_rc7_raw_payload_binding",
+      "snapshot_id": "live_6bfd7cd11e5ef081ce2c12e5",
+      "status": "pass",
+      "token_id": "29689394072085070274755567550554311025670307511907197535579092692882017688125",
+      "uses_formal_ledger": false,
+      "uses_parsed_payload_from_raw": true,
+      "uses_wallet_or_real_order": false,
+      "validation_source": "live_readonly_saved_evidence"
+    },
+    "live_run_manifest_summary": {
+      "error_count": 0,
+      "raw_market_evidence_count": 3,
+      "raw_orderbook_evidence_count": 3,
+      "run_id": "live_v5_1_8_rc7_raw_payload_binding",
+      "selected_market_count": 3,
+      "selected_token_count": 3,
+      "snapshot_count": 3
+    },
     "negative_detected": 30,
     "negative_temperature": [
       {
@@ -552,6 +651,7 @@
       }
     },
     "rc7_validations": {
+      "demo_saved_pipeline_status": "pass",
       "files": [
         "fee_source_replay_validation.json",
         "signal_registration_validation.json",
@@ -561,7 +661,6 @@
         "state_preflight_validation.json"
       ],
       "full_replay_ok": true,
-      "real_replay_status": "pass",
       "statuses": {
         "entry_state_rebuild_validation.json": "pass",
         "fee_source_replay_validation.json": "pass",
@@ -571,308 +670,36 @@
         "state_preflight_validation.json": "pass"
       }
     },
-    "real_signal_to_fill": {
+    "release": {
+      "blocked_reasons": [],
+      "error_count": 0,
+      "formal_empty_ok": true,
+      "formal_start": "ALLOWED_BUT_NOT_STARTED",
+      "full_replay_ok": true,
+      "live_pass": true,
+      "live_readonly_reason": null,
+      "live_readonly_status": "pass",
+      "negative_detected": 30,
+      "quick_audit_ok": true,
+      "raw_evidence_hash_result": "pass",
+      "raw_market_evidence_count": 3,
+      "raw_orderbook_evidence_count": 3,
+      "raw_payload_binding_checked_count": 15,
+      "raw_payload_binding_failed_count": 0,
+      "raw_payload_binding_result": "pass",
+      "release_status": "PASS_FOR_FORMAL_START",
+      "same_run_evidence_chain": true,
+      "saved_ok": true,
+      "saved_public_response_replay_status": "pass",
+      "selected_market_count": 3,
+      "selected_token_count": 3,
+      "snapshot_count": 3,
+      "snapshot_replay_result": "pass"
+    },
+    "saved_public_response_replay": {
       "audit_ok": true,
-      "demo_result": {
-        "results": [
-          {
-            "filled_shares": "200",
-            "signal_id": "demo-signal-1",
-            "snapshot_id": "ob_f312d8b2ce72bc65b3b66fc4",
-            "status": "filled"
-          },
-          {
-            "signal_id": "demo-signal-1",
-            "status": "not_triggered",
-            "strategy_id": "tp_2x_sell_50pct",
-            "threshold": "0.209",
-            "vwap": "0.09"
-          },
-          {
-            "signal_id": "demo-signal-1",
-            "status": "not_triggered",
-            "strategy_id": "tp_2x_sell_75pct",
-            "threshold": "0.209",
-            "vwap": "0.09"
-          },
-          {
-            "signal_id": "demo-signal-1",
-            "status": "not_triggered",
-            "strategy_id": "tp_5x_sell_25pct",
-            "threshold": "0.5225",
-            "vwap": "0.09"
-          }
-        ],
-        "run_id": "demo_run_fixture"
-      },
-      "entry_fills": 1,
-      "exact_and_boundary_bucket_examples": {
-        "exact_demo": "exact:30C",
-        "or_below_demo": "or_below:25C"
-      },
-      "exit_fills": 2,
-      "saved_public_response_replay": {
-        "audit_ok": true,
-        "bucket_types": [
-          "exact",
-          "or_below"
-        ],
-        "build_hash": {
-          "adapter_code_sha256": "28072d207cfb0e68427c2505e306ab38439c8dc2317fbb7f144c140b32e3acfa",
-          "api_contract_sha256": "c3aad42ff053f078f3b699e72dee05aa3d3c33f8619c69d6f9dd975869697bfb",
-          "config_sha256": "f7775bebdce3fa57f52cae912d1166243351f626a8cea655fde20e84842c93f6",
-          "core_code_sha256": "9407ee87504b4116711d9159839247db98535c87667a056b10fe2c6c7979d75e",
-          "fee_contract_sha256": "32ed4f8251643f224ee12e2a70983257b5236850eff7d18363da7b6266340b55",
-          "preregistration_sha256": "e862b2287539e1e19dc66b3155cf90ef63c2a427caa4be5ba25cb66522fed4a2",
-          "reporting_code_sha256": "c042ddc3f8e883f50abd64b962a9b63ad2d149041de70417e7ee0596fe3f6bfa",
-          "schema_sha256": "cb65f81da51e4d7e685e4b41338a19ddb7bd54cd829a871a85e0b8128dbe19dc",
-          "settlement_finality_contract_sha256": "e41d816d1d705293cfe184f8beb46bf9c73e73b702c3dc3e8b23518160892c2c"
-        },
-        "entry_fills": 3,
-        "monitor_rounds": [
-          {
-            "results": [
-              {
-                "filled_shares": "10000",
-                "signal_id": "real-saved-1",
-                "snapshot_id": "ob_b3a3d536899bd1adb1f3c64e",
-                "status": "filled"
-              },
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              },
-              {
-                "filled_shares": "10000",
-                "signal_id": "real-saved-2",
-                "snapshot_id": "ob_c2d3abae23991676d29f02a4",
-                "status": "filled"
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              },
-              {
-                "filled_shares": "10000",
-                "signal_id": "real-saved-3",
-                "snapshot_id": "ob_717614a7613147943abf6c52",
-                "status": "filled"
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              }
-            ],
-            "run_id": "real_saved_response_replay_round_1"
-          },
-          {
-            "results": [
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              }
-            ],
-            "run_id": "real_saved_response_replay_round_2"
-          },
-          {
-            "results": [
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-1",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-2",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_50pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_2x_sell_75pct",
-                "threshold": "0.0020999",
-                "vwap": null
-              },
-              {
-                "signal_id": "real-saved-3",
-                "status": "not_triggered",
-                "strategy_id": "tp_5x_sell_25pct",
-                "threshold": "0.00524975",
-                "vwap": null
-              }
-            ],
-            "run_id": "real_saved_response_replay_round_3"
-          }
-        ],
-        "replay_root": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/live_integration/real_saved_response_replay_work",
-        "signal_count": 3,
-        "simulated_duration_seconds": 120,
-        "snapshots": 9,
-        "snapshots_by_token": {
-          "109644598776046108708215544048760195529874448367370183373343350346816220605264": 3,
-          "57405213645557461549191886203867858953892828891706620093356332496034092608597": 3,
-          "94748732915349195546448713444722756080968626922653917934033369521339618987721": 3
-        },
-        "source": "saved_public_gamma_clob_orderbook_responses_from_v5_1_6_rc5",
-        "status": "pass",
-        "token_count": 3,
-        "weather_events": [
-          "beijing|2026-07-22|high",
-          "tokyo|2026-07-22|high"
-        ]
-      },
-      "snapshots": 2,
-      "status": "pass",
-      "uses_formal_ledger": false
+      "source": "saved_public_gamma_clob_orderbook_responses_from_v5_1_6_rc5",
+      "status": "pass"
     }
   },
   "version": "forward_simulation_v5.1.8-rc7"

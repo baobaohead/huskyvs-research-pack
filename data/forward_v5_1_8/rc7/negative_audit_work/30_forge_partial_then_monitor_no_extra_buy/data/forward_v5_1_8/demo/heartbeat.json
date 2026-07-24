@@ -2,8 +2,8 @@
   "heartbeat_at_utc": "2099-01-01T00:00:04+00:00",
   "hostname": "baobaotoudeMac-mini.local",
   "mode": "demo",
-  "pid": 62890,
-  "process_start_time": "2026-07-23T05:38:52+00:00",
+  "pid": 44196,
+  "process_start_time": "2026-07-24T06:13:45+00:00",
   "run_id": "rc7_followup_after_corrupt_entry_state",
   "status": "running",
   "version": "forward_simulation_v5.1.8-rc7"

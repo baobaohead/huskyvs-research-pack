@@ -1,0 +1,47 @@
+{
+  "content_type": "application/json",
+  "latency_ms": "711.0682499915129",
+  "method": "GET",
+  "payload": {
+    "ao": true,
+    "aot": "2026-07-22T04:03:30Z",
+    "c": "0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802",
+    "fd": {
+      "e": 1,
+      "r": 0.05,
+      "to": true
+    },
+    "gst": "2026-07-23T16:00:00Z",
+    "ibce": true,
+    "mbf": 1000,
+    "mos": 5,
+    "mts": 0.001,
+    "nr": true,
+    "r": {
+      "ma": 4.5,
+      "mi": 20,
+      "moas": 30
+    },
+    "t": [
+      {
+        "o": "Yes",
+        "t": "20531586829453250137861025863290033762971932642718477504791605877665947766208"
+      },
+      {
+        "o": "No",
+        "t": "32836179977499569288475646910913915815366629435287210352843321223873815907229"
+      }
+    ],
+    "tbf": 1000
+  },
+  "payload_sha256": "6c240172f885b5fb2d7a07d3c755803d75ec812a5713f0f6de0d1901c749c5c3",
+  "raw_bytes_length": 469,
+  "raw_bytes_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_markets/02_highest-temperature-in-beijing-on-july-24-2026-24corbelow_clob.bin",
+  "raw_bytes_sha256": "521fa7a5fea86835c2e1d7087ed5f0fdcca5f4ab7dce8b00e8742e6ef38e6655",
+  "raw_bytes_storage": "sidecar_bin",
+  "raw_text_sha256": "521fa7a5fea86835c2e1d7087ed5f0fdcca5f4ab7dce8b00e8742e6ef38e6655",
+  "received_at_utc": "2026-07-24T05:48:28.670570+00:00",
+  "started_at_utc": "2026-07-24T05:48:27.959473+00:00",
+  "status_code": 200,
+  "url": "https://clob.polymarket.com/clob-markets/0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802"
+}

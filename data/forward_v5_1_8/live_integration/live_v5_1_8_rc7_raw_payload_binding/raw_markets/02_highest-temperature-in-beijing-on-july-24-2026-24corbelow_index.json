@@ -1,0 +1,63 @@
+{
+  "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_markets/02_highest-temperature-in-beijing-on-july-24-2026-24corbelow_clob.json",
+  "clob_raw_bytes_sha256": "521fa7a5fea86835c2e1d7087ed5f0fdcca5f4ab7dce8b00e8742e6ef38e6655",
+  "condition_id": "0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802",
+  "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_markets/02_highest-temperature-in-beijing-on-july-24-2026-24corbelow_gamma.json",
+  "gamma_raw_bytes_sha256": "c5462bf4da818fb3eda32f369bbf114bbed938b2c5b4a89a96dc0ed1358903ad",
+  "market_slug": "highest-temperature-in-beijing-on-july-24-2026-24corbelow",
+  "market_state": {
+    "accepting_orders": true,
+    "accepting_orders_fields": {
+      "acceptingOrders": true,
+      "enableOrderBook": true
+    },
+    "accepting_orders_status": "true",
+    "active": true,
+    "closed": false,
+    "disputed": false,
+    "market_status": "active_trading",
+    "raw_status": "[]",
+    "resolution_pending": false,
+    "resolved": false,
+    "status_conflicts": []
+  },
+  "outcome": "Yes",
+  "semantic": {
+    "bucket_type": "or_below",
+    "canonical_label": "or_below:24C",
+    "city": "Beijing",
+    "event_key": "beijing|2026-07-24|high",
+    "parsing_errors": [],
+    "parsing_status": "ok",
+    "question_parse": {
+      "bucket_type": "or_below",
+      "canonical_label": "or_below:24C",
+      "city": "Beijing",
+      "missing_fields": [],
+      "parsing_status": "ok",
+      "threshold_value": "24",
+      "unit": "C",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "high"
+    },
+    "slug_parse": {
+      "bucket_type": "",
+      "canonical_label": "",
+      "city": "Beijing",
+      "missing_fields": [
+        "temperature_bucket"
+      ],
+      "parsing_status": "unknown",
+      "threshold_value": null,
+      "unit": "",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "high"
+    },
+    "temperature_bucket": "or_below:24C",
+    "threshold_value": "24",
+    "unit": "C",
+    "weather_date_local": "2026-07-24",
+    "weather_metric": "high"
+  },
+  "token_id": "20531586829453250137861025863290033762971932642718477504791605877665947766208"
+}

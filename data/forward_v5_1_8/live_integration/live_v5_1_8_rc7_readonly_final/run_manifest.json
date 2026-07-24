@@ -1,84 +1,167 @@
 {
   "actual_endpoints": [
     {
-      "latency_ms": "1972.1897909985273",
+      "latency_ms": "954.9005419976311",
       "method": "GET",
       "status_code": 200,
-      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-27corbelow"
     },
     {
-      "latency_ms": "1573.2327919995441",
+      "latency_ms": "680.6992500060005",
       "method": "GET",
       "status_code": 200,
-      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+      "url": "https://clob.polymarket.com/clob-markets/0xc500edd6e919687664691d0915fc5cd05a3dfe62c8079592a19c115c984da2ca"
     },
     {
-      "latency_ms": "1180.9817499997735",
+      "latency_ms": "679.2534589912975",
       "method": "GET",
       "status_code": 200,
-      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-24-2026-24corbelow"
     },
     {
-      "latency_ms": "1871.9937080004456",
+      "latency_ms": "677.811000001384",
       "method": "GET",
       "status_code": 200,
-      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+      "url": "https://clob.polymarket.com/clob-markets/0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802"
     },
     {
-      "latency_ms": "1887.0030830003088",
+      "latency_ms": "685.9291669970844",
       "method": "GET",
       "status_code": 200,
-      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-30c"
     },
     {
-      "latency_ms": "648.6684579995199",
+      "latency_ms": "949.4852500065463",
       "method": "GET",
       "status_code": 200,
-      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+      "url": "https://clob.polymarket.com/clob-markets/0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec"
     },
     {
-      "latency_ms": "670.904624999821",
+      "latency_ms": "651.7821659945184",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-27corbelow"
+    },
+    {
+      "latency_ms": "682.3350409977138",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc500edd6e919687664691d0915fc5cd05a3dfe62c8079592a19c115c984da2ca"
+    },
+    {
+      "latency_ms": "676.3333749986487",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=29689394072085070274755567550554311025670307511907197535579092692882017688125"
+    },
+    {
+      "latency_ms": "658.5106249985984",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-24-2026-24corbelow"
+    },
+    {
+      "latency_ms": "673.6991250072606",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802"
+    },
+    {
+      "latency_ms": "677.2478749917354",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=20531586829453250137861025863290033762971932642718477504791605877665947766208"
+    },
+    {
+      "latency_ms": "655.3012910007965",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-30c"
+    },
+    {
+      "latency_ms": "677.4980829941342",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec"
+    },
+    {
+      "latency_ms": "887.1910000016214",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=6094395765953775377135625759757528195867795146166655179651317929732556431320"
+    },
+    {
+      "latency_ms": "683.3985419943929",
       "method": "GET",
       "status_code": 200,
       "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-hong-kong-on-july-20-2026-31c"
     },
     {
-      "latency_ms": "918.3842499987804",
+      "latency_ms": "886.3397089880891",
       "method": "GET",
       "status_code": 200,
       "url": "https://clob.polymarket.com/clob-markets/0xffefd886a73174e57a57b5683ffa5897555e0ed1d718198ef1bb7c1a7414d501"
     },
     {
-      "latency_ms": "649.3749170003866",
+      "latency_ms": "679.9586660054047",
       "method": "GET",
       "status_code": 200,
       "url": "https://clob.polymarket.com/markets/0xffefd886a73174e57a57b5683ffa5897555e0ed1d718198ef1bb7c1a7414d501"
+    },
+    {
+      "latency_ms": "932.0629169960739",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-27corbelow"
+    },
+    {
+      "latency_ms": "1357.5337919901358",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc500edd6e919687664691d0915fc5cd05a3dfe62c8079592a19c115c984da2ca"
+    },
+    {
+      "latency_ms": "675.9702090057544",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=29689394072085070274755567550554311025670307511907197535579092692882017688125"
     }
   ],
   "adapter_version": "polymarket_public_adapter_v5.1.8-rc7",
-  "bucket_types": [],
+  "bucket_types": [
+    "exact",
+    "or_below"
+  ],
   "code_hash": {
     "adapter_code_sha256": "28072d207cfb0e68427c2505e306ab38439c8dc2317fbb7f144c140b32e3acfa",
     "api_contract_sha256": "4408d35474136cc9b6571416ae40087313137350d0ee83575931d1144f155907",
-    "config_sha256": "f7775bebdce3fa57f52cae912d1166243351f626a8cea655fde20e84842c93f6",
-    "core_code_sha256": "9407ee87504b4116711d9159839247db98535c87667a056b10fe2c6c7979d75e",
+    "config_sha256": "e972ba8b831ec42d576980dc5b6c42f6e54e51338c6bf40722b71c1aa2266895",
+    "core_code_sha256": "2c5e4f76d823b5c1a7bfa76d30ce68251a84f8d38fa9a100b00e99f1799797ad",
     "fee_contract_sha256": "b9a2675c74f622ba6b04fa1350acf05bbfec2164422eb757b8dc120dfaf111af",
     "preregistration_sha256": "378285d54a2b3b7c27d9e3dcf1e09d03b2964fa11bcc9f4c3d4617dae68ee888",
-    "reporting_code_sha256": "c042ddc3f8e883f50abd64b962a9b63ad2d149041de70417e7ee0596fe3f6bfa",
+    "reporting_code_sha256": "7bf249c6d6891727ac30db366be7806d6867573389b60f55e43337582c695750",
     "schema_sha256": "cb65f81da51e4d7e685e4b41338a19ddb7bd54cd829a871a85e0b8128dbe19dc",
     "settlement_finality_contract_sha256": "448aaf9111f2bc03530f03f9e2c31f46eec80bc758651473e7a81bc8fa57635f"
   },
-  "duration_seconds": "2.243633",
-  "ended_at_utc": "2026-07-23T05:40:56.958881+00:00",
-  "error_count": 0,
+  "duration_seconds": "11.479175",
+  "ended_at_utc": "2026-07-24T03:18:34.693396+00:00",
+  "error_count": 3,
   "formal_signal_fill_position_counts": {
-    "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_8.yaml",
+    "config_path": "config/forward_simulation_v5_1_8.yaml",
+    "config_path_meta": {
+      "historical_local_path_nonportable": false,
+      "repository_relative_path": "config/forward_simulation_v5_1_8.yaml"
+    },
     "entry_fills": 0,
     "event_results": 0,
     "exit_fills": 0,
     "formal_started_at_utc": null,
     "heartbeat": {},
-    "ledger_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/formal/ledger.sqlite3",
+    "ledger_path": "data/forward_v5_1_8/formal/ledger.sqlite3",
+    "ledger_path_meta": {
+      "historical_local_path_nonportable": false,
+      "repository_relative_path": "data/forward_v5_1_8/formal/ledger.sqlite3"
+    },
     "lock_held": false,
     "lock_info": {},
     "mode": "formal",
@@ -89,19 +172,44 @@
     "version": "forward_simulation_v5.1.8-rc7"
   },
   "real_signal_to_fill_validation": {
-    "reason": "no_selected_market",
-    "status": "not_run"
+    "canonical_label": "or_below:27C",
+    "entry_vwap": "0.001",
+    "event_key": "tokyo|2026-07-24|high",
+    "filled_shares": "10000",
+    "filled_usd": "10",
+    "mapping_errors": [],
+    "mapping_valid": true,
+    "market_slug": "highest-temperature-in-tokyo-on-july-24-2026-27corbelow",
+    "status": "pass",
+    "uses_formal_ledger": false,
+    "uses_wallet_or_real_order": false,
+    "validation_source": "live_readonly_public_api"
   },
   "resolved_evidence_status": "final",
   "run_id": "live_v5_1_8_rc7_readonly_final",
-  "selected_city_date_count": 0,
-  "selected_city_date_keys": [],
-  "selected_event_count": 0,
-  "selected_event_keys": [],
-  "selected_market_count": 0,
-  "selected_token_count": 0,
-  "selected_tokens": [],
-  "snapshot_count": 0,
-  "snapshots_per_token": {},
-  "started_at_utc": "2026-07-23T05:40:54.715248+00:00"
+  "selected_city_date_count": 2,
+  "selected_city_date_keys": [
+    "beijing|2026-07-24",
+    "tokyo|2026-07-24"
+  ],
+  "selected_event_count": 2,
+  "selected_event_keys": [
+    "beijing|2026-07-24|high",
+    "tokyo|2026-07-24|high"
+  ],
+  "selected_market_count": 3,
+  "selected_token_count": 3,
+  "selected_tokens": [
+    "20531586829453250137861025863290033762971932642718477504791605877665947766208",
+    "29689394072085070274755567550554311025670307511907197535579092692882017688125",
+    "6094395765953775377135625759757528195867795146166655179651317929732556431320"
+  ],
+  "snapshot_count": 3,
+  "snapshots_per_token": {
+    "20531586829453250137861025863290033762971932642718477504791605877665947766208": 1,
+    "29689394072085070274755567550554311025670307511907197535579092692882017688125": 1,
+    "6094395765953775377135625759757528195867795146166655179651317929732556431320": 1
+  },
+  "started_at_utc": "2026-07-24T03:18:23.214221+00:00",
+  "validation_source": "live_readonly_public_api"
 }

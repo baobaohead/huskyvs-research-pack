@@ -1,0 +1,214 @@
+{
+  "actual_endpoints": [
+    {
+      "latency_ms": "1429.1623330063885",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-27corbelow"
+    },
+    {
+      "latency_ms": "711.4883329923032",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc500edd6e919687664691d0915fc5cd05a3dfe62c8079592a19c115c984da2ca"
+    },
+    {
+      "latency_ms": "2708.086957994965",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-24-2026-24corbelow"
+    },
+    {
+      "latency_ms": "711.0682499915129",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802"
+    },
+    {
+      "latency_ms": "1840.6147079949733",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-30c"
+    },
+    {
+      "latency_ms": "702.2992499987595",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec"
+    },
+    {
+      "latency_ms": "901.103583004442",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-27corbelow"
+    },
+    {
+      "latency_ms": "708.8367919932352",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc500edd6e919687664691d0915fc5cd05a3dfe62c8079592a19c115c984da2ca"
+    },
+    {
+      "latency_ms": "704.6368750015972",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=29689394072085070274755567550554311025670307511907197535579092692882017688125"
+    },
+    {
+      "latency_ms": "682.690375004313",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-24-2026-24corbelow"
+    },
+    {
+      "latency_ms": "703.7970829987898",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802"
+    },
+    {
+      "latency_ms": "714.2567499977304",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=20531586829453250137861025863290033762971932642718477504791605877665947766208"
+    },
+    {
+      "latency_ms": "1126.3512919977074",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-24-2026-30c"
+    },
+    {
+      "latency_ms": "1998.5063750064",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec"
+    },
+    {
+      "latency_ms": "707.6827910059365",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=6094395765953775377135625759757528195867795146166655179651317929732556431320"
+    },
+    {
+      "latency_ms": "1294.677915997454",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-hong-kong-on-july-20-2026-31c"
+    },
+    {
+      "latency_ms": "704.9241249915212",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xffefd886a73174e57a57b5683ffa5897555e0ed1d718198ef1bb7c1a7414d501"
+    },
+    {
+      "latency_ms": "1433.3129580045352",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/markets/0xffefd886a73174e57a57b5683ffa5897555e0ed1d718198ef1bb7c1a7414d501"
+    }
+  ],
+  "adapter_version": "polymarket_public_adapter_v5.1.8-rc7",
+  "bucket_types": [
+    "exact",
+    "or_below"
+  ],
+  "code_hash": {
+    "adapter_code_sha256": "7dcca765ae34c6a2abdab795592cf61e10847b344df835f1e4b7e5ecd5ece0b2",
+    "api_contract_sha256": "7920a38262c25773831e12c644db5a3d7254d5d9717c53118a47b847eed8cb9c",
+    "config_sha256": "e972ba8b831ec42d576980dc5b6c42f6e54e51338c6bf40722b71c1aa2266895",
+    "core_code_sha256": "9c4861a2b9c512f7e361831ebefdba07289451509a211aa412c748657936e753",
+    "fee_contract_sha256": "030fbd00f7779d57d0d44e92eac62e652668c114931ea1dadf671dc22e90533a",
+    "preregistration_sha256": "6e60ca954cf77fda141556cba209cbc42ebed3dfe1735b087836b5bb78d7e85c",
+    "reporting_code_sha256": "3dd1eae14f525b9a70463cc3605f55dc26079ffd91a7bfd781e24ecf41507bce",
+    "schema_sha256": "cb65f81da51e4d7e685e4b41338a19ddb7bd54cd829a871a85e0b8128dbe19dc",
+    "settlement_finality_contract_sha256": "58f001398b66fc969834cb15a0c3b673d47bfa9fa74eaac98cda85e913649137"
+  },
+  "duration_seconds": "11.712062",
+  "ended_at_utc": "2026-07-24T05:48:42.936100+00:00",
+  "error_count": 0,
+  "evidence_blocked_reasons": [],
+  "formal_signal_fill_position_counts": {
+    "config_path": "config/forward_simulation_v5_1_8.yaml",
+    "config_path_meta": {
+      "historical_local_path_nonportable": false,
+      "repository_relative_path": "config/forward_simulation_v5_1_8.yaml"
+    },
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "heartbeat": {},
+    "ledger_path": "data/forward_v5_1_8/formal/ledger.sqlite3",
+    "ledger_path_meta": {
+      "historical_local_path_nonportable": false,
+      "repository_relative_path": "data/forward_v5_1_8/formal/ledger.sqlite3"
+    },
+    "lock_held": false,
+    "lock_info": {},
+    "mode": "formal",
+    "runs": 0,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0,
+    "version": "forward_simulation_v5.1.8-rc7"
+  },
+  "raw_evidence_hash_result": "pass",
+  "raw_market_evidence_count": 3,
+  "raw_orderbook_evidence_count": 3,
+  "real_signal_to_fill_validation": {
+    "canonical_label": "or_below:27C",
+    "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_orderbooks/00001_29689394072085070274755567550554311025670307511907197535579092692882017688125_clob.json",
+    "clob_raw_bytes_sha256": "0454a54c0ef76619d88c64730ef06fc82170bc61b62671c12289c829a7717da3",
+    "condition_id": "0xc500edd6e919687664691d0915fc5cd05a3dfe62c8079592a19c115c984da2ca",
+    "entry_vwap": "0.001",
+    "event_key": "tokyo|2026-07-24|high",
+    "filled_shares": "10000",
+    "filled_usd": "10",
+    "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_orderbooks/00001_29689394072085070274755567550554311025670307511907197535579092692882017688125_gamma.json",
+    "gamma_raw_bytes_sha256": "918e39f17b09b1d4b0bb9b32ebdde47988462632c795cef6f9c3cd38fe771be2",
+    "mapping_errors": [],
+    "mapping_valid": true,
+    "market_slug": "highest-temperature-in-tokyo-on-july-24-2026-27corbelow",
+    "normalized_snapshot_content_hash": "30d7916f276e30925e9067e8fb22ad4d6300d64f5a5e704cd79f141715dc73a9",
+    "orderbook_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_evidence_fix/raw_orderbooks/00001_29689394072085070274755567550554311025670307511907197535579092692882017688125_orderbook.json",
+    "orderbook_raw_bytes_sha256": "fc433db4f7e57f5f334d6d7f6981f0edd0309caa0344b57380e0899ad0230c0d",
+    "run_id": "live_v5_1_8_rc7_evidence_fix",
+    "snapshot_id": "live_929a6e8770f77bb2f0d1fae8",
+    "status": "pass",
+    "token_id": "29689394072085070274755567550554311025670307511907197535579092692882017688125",
+    "uses_formal_ledger": false,
+    "uses_wallet_or_real_order": false,
+    "validation_source": "live_readonly_saved_evidence"
+  },
+  "resolved_evidence_status": "final",
+  "run_id": "live_v5_1_8_rc7_evidence_fix",
+  "same_run_evidence_chain": true,
+  "selected_city_date_count": 2,
+  "selected_city_date_keys": [
+    "beijing|2026-07-24",
+    "tokyo|2026-07-24"
+  ],
+  "selected_event_count": 2,
+  "selected_event_keys": [
+    "beijing|2026-07-24|high",
+    "tokyo|2026-07-24|high"
+  ],
+  "selected_market_count": 3,
+  "selected_token_count": 3,
+  "selected_tokens": [
+    "20531586829453250137861025863290033762971932642718477504791605877665947766208",
+    "29689394072085070274755567550554311025670307511907197535579092692882017688125",
+    "6094395765953775377135625759757528195867795146166655179651317929732556431320"
+  ],
+  "snapshot_count": 3,
+  "snapshot_replay_result": "pass",
+  "snapshots_per_token": {
+    "20531586829453250137861025863290033762971932642718477504791605877665947766208": 1,
+    "29689394072085070274755567550554311025670307511907197535579092692882017688125": 1,
+    "6094395765953775377135625759757528195867795146166655179651317929732556431320": 1
+  },
+  "started_at_utc": "2026-07-24T05:48:31.224038+00:00",
+  "validation_source": "live_readonly_saved_evidence"
+}

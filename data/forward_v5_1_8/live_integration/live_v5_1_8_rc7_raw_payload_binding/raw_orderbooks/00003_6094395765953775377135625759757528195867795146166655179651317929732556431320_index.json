@@ -1,0 +1,19 @@
+{
+  "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00003_6094395765953775377135625759757528195867795146166655179651317929732556431320_clob.json",
+  "clob_raw_bytes_sha256": "7c9d7d580fc29c539a5e131cafafc4d085f10701853a7c3fd1baf709cd463d6d",
+  "condition_id": "0xeddf4a2fd7afa704b663f30edb3c287276562fe24a19f2f8e849099cacc100ec",
+  "content_hash": "ec610a9301b05da271378370e6a241cfabb8db63c736e1260fbac1d24b3ba2a8",
+  "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00003_6094395765953775377135625759757528195867795146166655179651317929732556431320_gamma.json",
+  "gamma_raw_bytes_sha256": "f3a8472f5b8c5f35981ae77c8e687f474933c0cba2f6f2af37578428aeadf9ab",
+  "market_slug": "highest-temperature-in-tokyo-on-july-24-2026-30c",
+  "orderbook_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00003_6094395765953775377135625759757528195867795146166655179651317929732556431320_orderbook.json",
+  "orderbook_raw_bytes_sha256": "b10fea7a7455fa78efcfa65f277913f8c5bc849632b6a58ed923dae6c7c8bb8a",
+  "payload_sha256": {
+    "clob": "3e970e2a04fa87d1ed9230493807e02d22c70cc80d55932bfd23576d4c60aac8",
+    "gamma": "d3caea8bb26da79e592d4dfcf9f28d2da56d05e1880bc42ba1cd7ccace10e39e",
+    "orderbook": "3895f720adc951bada3eb5181a6242cf25d58f13a003b7c73682f21bff4d5b68"
+  },
+  "run_id": "live_v5_1_8_rc7_raw_payload_binding",
+  "snapshot_id": "live_31e05e162064ac2310dff2db",
+  "token_id": "6094395765953775377135625759757528195867795146166655179651317929732556431320"
+}

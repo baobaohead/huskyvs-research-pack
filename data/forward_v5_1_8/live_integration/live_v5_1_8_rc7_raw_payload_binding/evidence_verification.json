@@ -1,0 +1,13 @@
+{
+  "blocked_reasons": [],
+  "live_run_dir": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding",
+  "ok": true,
+  "raw_evidence_hash_result": "pass",
+  "raw_market_evidence_count": 3,
+  "raw_orderbook_evidence_count": 3,
+  "raw_payload_binding_checked_count": 15,
+  "raw_payload_binding_failed_count": 0,
+  "raw_payload_binding_result": "pass",
+  "same_run_evidence_chain": true,
+  "snapshot_replay_result": "pass"
+}
