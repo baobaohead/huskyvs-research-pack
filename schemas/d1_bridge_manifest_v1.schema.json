@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "d1_bridge_manifest_v1.schema.json",
+  "title": "D1BridgeManifestV1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "bridge_version",
+    "generated_at_utc",
+    "forecast_run_id",
+    "model_version",
+    "rules_version",
+    "station",
+    "weather_date_local",
+    "as_of_time_utc",
+    "data_status",
+    "converted_signal_count",
+    "rejected_signal_count",
+    "rejection_reasons",
+    "formal_ledger_used",
+    "wallet_or_real_order_used",
+    "files"
+  ],
+  "properties": {
+    "bridge_version": { "type": "string" },
+    "generated_at_utc": { "type": "string" },
+    "forecast_run_id": { "type": "string" },
+    "model_version": { "type": "string" },
+    "rules_version": { "type": "string" },
+    "station": { "type": "string" },
+    "weather_date_local": { "type": "string" },
+    "as_of_time_utc": { "type": "string" },
+    "data_status": { "type": "string" },
+    "converted_signal_count": { "type": "integer", "minimum": 0 },
+    "rejected_signal_count": { "type": "integer", "minimum": 0 },
+    "rejection_reasons": { "type": "array", "items": { "type": "string" } },
+    "formal_ledger_used": { "type": "boolean", "const": false },
+    "wallet_or_real_order_used": { "type": "boolean", "const": false },
+    "files": { "type": "object" }
+  }
+}

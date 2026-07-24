@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "d1_value_signal_v1.schema.json",
+  "title": "D1ValueSignalBundleV1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "forecast_run_id",
+    "model_version",
+    "rules_version",
+    "station",
+    "city",
+    "weather_date_local",
+    "weather_metric",
+    "data_status",
+    "weather_bundle_sha256",
+    "candidates"
+  ],
+  "properties": {
+    "forecast_run_id": { "type": "string", "minLength": 1 },
+    "model_version": { "type": "string", "minLength": 1 },
+    "rules_version": { "type": "string", "minLength": 1 },
+    "station": { "type": "string", "enum": ["ZSPD", "ZBAA"] },
+    "city": { "type": "string", "minLength": 1 },
+    "weather_date_local": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "weather_metric": { "type": "string", "minLength": 1 },
+    "data_status": {
+      "type": "string",
+      "enum": ["COMPLETE", "PARTIAL", "CONFLICTING", "STALE", "LEAKAGE_INVALID"]
+    },
+    "weather_bundle_sha256": { "type": "string", "minLength": 1 },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "temperature_bucket",
+          "forecast_probability",
+          "market_slug",
+          "condition_id",
+          "token_id",
+          "outcome",
+          "market_ask_price",
+          "edge",
+          "recommended_max_price",
+          "intended_usd",
+          "reason",
+          "data_status",
+          "orderbook_snapshot_id",
+          "orderbook_snapshot_sha256",
+          "orderbook_captured_at_utc"
+        ],
+        "properties": {
+          "temperature_bucket": { "type": "string" },
+          "forecast_probability": { "type": ["number", "string"] },
+          "market_slug": { "type": "string", "minLength": 1 },
+          "condition_id": { "type": "string", "minLength": 1 },
+          "token_id": { "type": "string", "minLength": 1 },
+          "outcome": { "type": "string", "minLength": 1 },
+          "market_ask_price": { "type": ["number", "string"] },
+          "edge": { "type": ["number", "string"] },
+          "recommended_max_price": { "type": ["number", "string"] },
+          "intended_usd": { "type": ["number", "string"] },
+          "reason": { "type": "string" },
+          "data_status": { "type": "string" },
+          "orderbook_snapshot_id": { "type": "string", "minLength": 1 },
+          "orderbook_snapshot_sha256": { "type": "string", "minLength": 1 },
+          "orderbook_captured_at_utc": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

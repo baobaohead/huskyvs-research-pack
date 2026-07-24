@@ -1,0 +1,39 @@
+{
+  "forecast_run_id": "d1_1500_zspd_20260724_example",
+  "model_version": "D1_1500",
+  "rules_version": "D1_manual_v1.0",
+  "station": "ZSPD",
+  "city": "Shanghai",
+  "weather_date_local": "2026-07-24",
+  "weather_metric": "highest_temperature",
+  "as_of_time_utc": "2026-07-23T07:00:00+00:00",
+  "as_of_time_cst": "2026-07-23T15:00:00+08:00",
+  "generated_at_utc": "2026-07-23T07:02:00+00:00",
+  "data_status": "COMPLETE",
+  "confidence": 0.72,
+  "source_snapshot_sha256": "REPLACE_WITH_REAL_SOURCE_SNAPSHOT_SHA256",
+  "source_snapshot_manifest": {
+    "sources": [
+      {
+        "name": "GFS",
+        "acquired_at_utc": "2026-07-23T06:50:00+00:00",
+        "released_at_utc": "2026-07-23T06:40:00+00:00"
+      },
+      {
+        "name": "ICON",
+        "acquired_at_utc": "2026-07-23T06:52:00+00:00",
+        "released_at_utc": "2026-07-23T06:45:00+00:00"
+      }
+    ]
+  },
+  "explanation": "Example formal D1_1500 weather probability bundle for ZSPD. Probabilities are illustrative only.",
+  "integer_temperature_probabilities": [
+    { "temperature_bucket": "30C or below", "forecast_probability": 0.05 },
+    { "temperature_bucket": "31C", "forecast_probability": 0.12 },
+    { "temperature_bucket": "32C", "forecast_probability": 0.28 },
+    { "temperature_bucket": "33C", "forecast_probability": 0.25 },
+    { "temperature_bucket": "34C", "forecast_probability": 0.15 },
+    { "temperature_bucket": "35C or higher", "forecast_probability": 0.10 },
+    { "temperature_bucket": "其他", "forecast_probability": 0.05 }
+  ]
+}
