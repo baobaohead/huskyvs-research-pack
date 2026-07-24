@@ -1,4 +1,14 @@
 {
-  "reason": "no_selected_market",
-  "status": "not_run"
+  "canonical_label": "or_below:27C",
+  "entry_vwap": "0.001",
+  "event_key": "tokyo|2026-07-24|high",
+  "filled_shares": "10000",
+  "filled_usd": "10",
+  "mapping_errors": [],
+  "mapping_valid": true,
+  "market_slug": "highest-temperature-in-tokyo-on-july-24-2026-27corbelow",
+  "status": "pass",
+  "uses_formal_ledger": false,
+  "uses_wallet_or_real_order": false,
+  "validation_source": "live_readonly_public_api"
 }

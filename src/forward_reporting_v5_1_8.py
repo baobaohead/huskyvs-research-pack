@@ -30,6 +30,7 @@ try:
         monitor_once,
         parse_utc,
         register_signals,
+        repository_relative_path,
         run_loop,
         status,
         temperature_bucket_from_signal,
@@ -62,6 +63,7 @@ except ModuleNotFoundError:
         monitor_once,
         parse_utc,
         register_signals,
+        repository_relative_path,
         run_loop,
         status,
         temperature_bucket_from_signal,
@@ -290,7 +292,7 @@ def write_negative_tests_csv(root: Path, config_path: Path) -> list[dict[str, An
                 "actual_error_codes": ",".join(actual),
                 "followup_monitor_attempted": str(followup_monitor_attempted).lower(),
                 "followup_extra_fill_created": str(followup_extra_fill_created).lower(),
-                "evidence_path": str(db),
+                "evidence_path": repository_relative_path(root, db),
             }
         )
     path = out / "end_to_end_negative_tests.csv"
@@ -428,7 +430,7 @@ def run_saved_real_response_replay(root: Path, config_path: Path) -> dict[str, A
     payload = {
         "status": "pass" if audit["ok"] and len(event_keys) >= 2 and len(chosen) >= 3 and entry_count >= 3 and all(v >= 3 for v in snapshots_by_token.values()) and {"exact", "or_below"}.issubset(set(bucket_types)) else "fail",
         "source": "saved_public_gamma_clob_orderbook_responses_from_v5_1_6_rc5",
-        "replay_root": str(replay_root),
+        "replay_root": "data/forward_v5_1_8/live_integration/real_saved_response_replay_work",
         "weather_events": event_keys,
         "token_count": len(chosen),
         "bucket_types": bucket_types,
@@ -446,6 +448,12 @@ def run_saved_real_response_replay(root: Path, config_path: Path) -> dict[str, A
 
 
 def write_real_signal_to_fill_validation(root: Path, config_path: Path) -> dict[str, Any]:
+    """Demo + saved-response pipeline proof.
+
+    This is NOT the live-readonly gate. Live evidence is owned by
+    `live_integration()` and stored separately in
+    `real_signal_to_fill_validation.json` only after a live run.
+    """
     result = demo_run(root, config_path)
     audit = audit_integrity(root, DEMO, config_path, "full-replay")
     db = db_path(root, DEMO, load_config(config_path))
@@ -463,16 +471,25 @@ def write_real_signal_to_fill_validation(root: Path, config_path: Path) -> dict[
     real_replay = run_saved_real_response_replay(root, config_path)
     payload = {
         "status": "pass" if audit["ok"] and entry_count > 0 and exit_count > 0 and real_replay["status"] == "pass" else "fail",
+        "validation_source": "demo_and_saved_public_response_replay",
         "uses_formal_ledger": False,
         "snapshots": snap_count,
         "entry_fills": entry_count,
         "exit_fills": exit_count,
         "audit_ok": audit["ok"],
         "exact_and_boundary_bucket_examples": exact_and_boundary,
-        "saved_public_response_replay": real_replay,
+        "saved_public_response_replay": {
+            "status": real_replay.get("status"),
+            "source": real_replay.get("source"),
+            "audit_ok": real_replay.get("audit_ok"),
+            "token_count": real_replay.get("token_count"),
+            "entry_fills": real_replay.get("entry_fills"),
+            "snapshots": real_replay.get("snapshots"),
+        },
         "demo_result": result["monitor"],
+        "note": "This file is demo/saved-response evidence only. Live-readonly status is recorded by live_integration into real_signal_to_fill_validation.json.",
     }
-    write_json(rc7_dir(root) / "real_signal_to_fill_validation.json", payload)
+    write_json(rc7_dir(root) / "demo_and_saved_signal_pipeline_validation.json", payload)
     return payload
 
 
@@ -516,7 +533,7 @@ def write_demo_end_to_end_validation(root: Path, config_path: Path) -> dict[str,
         conn.close()
     payload = {
         "status": "pass" if entry_fills >= 3 and audit["ok"] else "fail",
-        "work_root": str(work),
+        "work_root": "data/forward_v5_1_8/demo/three_entry_work",
         "entry_fills": entry_fills,
         "exit_fills": exit_fills,
         "settlements": settlements,
@@ -579,6 +596,8 @@ def write_hash_match(root: Path, config_path: Path) -> dict[str, Any]:
         real_payload = json.loads(real_path.read_text(encoding="utf-8"))
         real_payload["build_hash"] = hashes
         real_payload["build_hash_recorded_after_release_reports"] = True
+        if "replay_root" in real_payload:
+            real_payload["replay_root"] = "data/forward_v5_1_8/live_integration/real_saved_response_replay_work"
         write_json(real_path, real_payload)
         live_hash = hashes
     payload = {"generated_at_utc": now_utc(), "all_hashes_match": True, "build_hash": hashes, "live_run_build_hash": live_hash, "final_build_hash_matches_live_run": hashes == live_hash, "adapter": ADAPTER_NAME, "normalization_algorithm_version": NORMALIZED_BOOK_ALGORITHM_VERSION, "fill_algorithm_version": FILL_ALGORITHM_VERSION}
@@ -619,23 +638,177 @@ def write_rc7_validation_files(root: Path, full: dict[str, Any], negative: list[
     }
     for name, payload in validations.items():
         write_json(out / name, payload)
-    return {"files": list(validations), "statuses": {name: payload["status"] for name, payload in validations.items()}, "real_replay_status": real.get("status"), "full_replay_ok": full.get("ok")}
+    return {"files": list(validations), "statuses": {name: payload["status"] for name, payload in validations.items()}, "demo_saved_pipeline_status": real.get("status"), "full_replay_ok": full.get("ok")}
 
 
-def write_reports(root: Path, config_path: Path, validations: dict[str, Any]) -> None:
+def compute_release_status(live_manifest: dict[str, Any] | None, live_signal: dict[str, Any] | None, saved_replay: dict[str, Any] | None, quick: dict[str, Any], full: dict[str, Any], formal: dict[str, Any], negative_detected: int) -> dict[str, Any]:
+    live_manifest = live_manifest or {}
+    live_signal = live_signal or {"status": "not_run", "reason": "missing_live_evidence"}
+    saved_replay = saved_replay or {"status": "missing"}
+    selected_markets = int(live_manifest.get("selected_market_count") or 0)
+    selected_tokens = int(live_manifest.get("selected_token_count") or 0)
+    snapshots = int(live_manifest.get("snapshot_count") or 0)
+    live_pass = (
+        live_signal.get("status") == "pass"
+        and selected_markets > 0
+        and selected_tokens > 0
+        and snapshots > 0
+        and live_signal.get("validation_source") == "live_readonly_public_api"
+    )
+    formal_empty = bool(formal.get("ok")) and formal.get("formal_started_at_utc") in (None, "", "null")
+    audits_ok = bool(quick.get("ok")) and bool(full.get("ok")) and negative_detected == 30
+    saved_ok = saved_replay.get("status") == "pass"
+    if live_pass and audits_ok and formal_empty and saved_ok:
+        release_status = "PASS_FOR_FORMAL_START"
+        formal_start = "ALLOWED_BUT_NOT_STARTED"
+    else:
+        release_status = "BLOCKED_PENDING_LIVE_READONLY_VALIDATION" if not live_pass else "BLOCKED_PENDING_AUDIT"
+        formal_start = "BLOCKED"
+    return {
+        "release_status": release_status,
+        "formal_start": formal_start,
+        "live_readonly_status": live_signal.get("status", "not_run"),
+        "live_readonly_reason": live_signal.get("reason"),
+        "saved_public_response_replay_status": saved_replay.get("status"),
+        "selected_market_count": selected_markets,
+        "selected_token_count": selected_tokens,
+        "snapshot_count": snapshots,
+        "quick_audit_ok": bool(quick.get("ok")),
+        "full_replay_ok": bool(full.get("ok")),
+        "negative_detected": negative_detected,
+        "formal_empty_ok": formal_empty,
+        "live_pass": live_pass,
+        "saved_ok": saved_ok,
+    }
+
+
+def write_readme(root: Path, release: dict[str, Any]) -> None:
+    text = f"""# 天气市场前向模拟系统 v5.1.8-RC7
+
+## RC7 目的
+
+RC7 把订单簿到成交的证据链扩展为端到端账本重建：信号登记证据、市场 HTTP 证据、费用、约束、入场状态、lots、分配、结算、事件、策略与总账 PnL。本包只做公开只读模拟与审计，不包含钱包、签名或真实下单。
+
+## 当前发布状态
+
+- release_status: `{release["release_status"]}`
+- formal_start: `{release["formal_start"]}`
+- saved public response replay: `{release["saved_public_response_replay_status"]}`
+- live-readonly selection: `{release["live_readonly_status"]}`{f" ({release['live_readonly_reason']})" if release.get("live_readonly_reason") else ""}
+- selected_market_count: `{release["selected_market_count"]}`
+- selected_token_count: `{release["selected_token_count"]}`
+
+保存响应重放 PASS 不等于当前实时 live-readonly PASS。
+
+## 安装
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+## 核心测试
+
+```bash
+python -m pytest -q tests/test_forward_simulation_v5_1_8.py
+python -m pytest -q
+```
+
+## Quick / Full-replay 审计
+
+```bash
+python -m src.forward_simulation_v5_1_8 --root . --config config/forward_simulation_v5_1_8.yaml audit-integrity --mode demo --level quick
+python -m src.forward_simulation_v5_1_8 --root . --config config/forward_simulation_v5_1_8.yaml audit-integrity --mode demo --level full-replay
+```
+
+## Saved-response replay
+
+离线使用已保存的公开 Gamma/CLOB/订单簿响应：
+
+- 证据：`data/forward_v5_1_8/rc7/real_saved_response_replay.json`
+- 源数据：`data/forward_v5_1_6/live_integration/live_v5_1_6_rc5_final_preferred/`
+
+## Live-readonly 验证
+
+```bash
+python -m src.forward_simulation_v5_1_8 --root . --config config/forward_simulation_v5_1_8.yaml live-integration --iterations 1 --interval-seconds 0
+```
+
+仅公开 GET。不写 formal 账本，不连接钱包，不下单。证据写入：
+
+- `data/forward_v5_1_8/rc7/live_run_manifest.json`
+- `data/forward_v5_1_8/rc7/real_signal_to_fill_validation.json`
+
+## Formal 未启动
+
+本发布不执行 `start-formal --confirm`。`formal_started_at_utc` 必须保持为空，formal 信号/成交/结算计数必须为 0。
+
+## 禁止真实交易
+
+配置中 `trade_enabled`、`account_connection_enabled`、`secret_material_required`、`real_trade_action_enabled` 均为 false。禁止私钥、签名、真实订单。
+
+## 验证 ZIP 与 manifest
+
+```bash
+python - <<'PY'
+import json, zipfile
+from pathlib import Path
+m=json.loads(Path('PACKAGE_MANIFEST_v5_1_8_RC7.json').read_text())
+with zipfile.ZipFile(m['package']) as z:
+    names=set(n for n in z.namelist() if not n.endswith('/'))
+print('manifest', m['file_count'], 'zip', len(names))
+print('only_manifest', sorted(set(m['files'])-names)[:10])
+print('only_zip', sorted(names-set(m['files'])-{{'PACKAGE_MANIFEST_v5_1_8_RC7.json'}})[:10])
+PY
+```
+
+## Clean clone 复跑
+
+```bash
+git clone <repo-url> /tmp/husky_rc7_clean_clone
+cd /tmp/husky_rc7_clean_clone
+git checkout cursor/husky-rc7-release-consistency
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pytest -q tests/test_forward_simulation_v5_1_8.py
+unzip -q huskyvs_forward_simulation_v5_1_8_rc7.zip -d /tmp/husky_rc7_zip
+# 比较源码六件套与 ZIP 内容哈希
+```
+
+## 已知限制
+
+- live-readonly 依赖当前公开可交易天气市场；市场关闭会导致 `not_run`/`no_selected_market`。
+- 保存响应重放使用历史公开快照，不能替代当前实时验证。
+- 公开接口无法恢复未成交挂单、撤单或主观预测。
+- 本包不启动 formal，也不提供真实交易能力。
+"""
+    (root / "README_v5_1_8_RC7.md").write_text(text, encoding="utf-8")
+
+
+def write_reports(root: Path, config_path: Path, validations: dict[str, Any], release: dict[str, Any]) -> None:
     reports = root / "reports"
     reports.mkdir(parents=True, exist_ok=True)
+    status_line = release["release_status"]
     common = f"""# Weather Forward Simulation v5.1.8-RC7
 
 Generated at: {now_utc()}
 
-Status: PASS_FOR_FORMAL_START
+Status: {status_line}
 
 This release extends replay from raw orderbook-to-fill evidence into end-to-end ledger reconstruction: signal evidence, market evidence, fees, constraints, entry state, lots, allocations, settlement, event, strategy, and total ledger PnL. It contains no wallet, signing, or real order functionality.
+
+## Validation separation
+- saved public response replay: {release["saved_public_response_replay_status"]}
+- current live readonly selection: {release["live_readonly_status"]}{f" ({release['live_readonly_reason']})" if release.get("live_readonly_reason") else ""}
+- selected_market_count: {release["selected_market_count"]}
+- selected_token_count: {release["selected_token_count"]}
+- formal start: {release["formal_start"]}
 """
-    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_FIX_REPORT.md").write_text(common + "\n## Fixes\n- Exact HTTP response bytes are stored in `http_evidence.raw_http_bytes`.\n- Signal canonical hashes are rebuilt from registration evidence.\n- Fees are recalculated from Gamma/CLOB evidence, not fill cache fields.\n- Entry state is rebuilt from signal plus entry fills before any extra buy.\n- Strategy lots, exit allocations, settlement allocations, event results, strategy totals, and ledger totals are replayed from fills and settlement evidence.\n", encoding="utf-8")
-    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_AUDIT.md").write_text(common + f"\n## Audit\n- quick audit: {validations['quick_audit']['ok']}\n- full-replay audit: {validations['full_replay']['ok']}\n- negative tests detected: {validations['negative_detected']}/30\n", encoding="utf-8")
-    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_CHECKLIST.md").write_text(common + "\n- [x] Formal ledger empty\n- [x] No wallet/signing/order code\n- [x] ZIP self-contained target prepared\n- [x] 30 direct end-to-end corruptions detected\n- [x] incomplete_take_profit uses latest trigger state\n", encoding="utf-8")
+    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_FIX_REPORT.md").write_text(common + "\n## Fixes\n- Exact HTTP response bytes are stored in `http_evidence.raw_http_bytes`.\n- Signal canonical hashes are rebuilt from registration evidence.\n- Fees are recalculated from Gamma/CLOB evidence, not fill cache fields.\n- Entry state is rebuilt from signal plus entry fills before any extra buy.\n- Strategy lots, exit allocations, settlement allocations, event results, strategy totals, and ledger totals are replayed from fills and settlement evidence.\n- Release status separates saved-response replay from current live-readonly selection.\n", encoding="utf-8")
+    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_AUDIT.md").write_text(common + f"\n## Audit\n- quick audit: {validations['quick_audit']['ok']}\n- full-replay audit: {validations['full_replay']['ok']}\n- negative tests detected: {validations['negative_detected']}/30\n- live-readonly pass gate: {release['live_pass']}\n", encoding="utf-8")
+    checklist_live = "x" if release["live_pass"] else " "
+    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_CHECKLIST.md").write_text(common + f"\n- [x] Formal ledger empty\n- [x] No wallet/signing/order code\n- [x] ZIP self-contained target prepared\n- [x] 30 direct end-to-end corruptions detected\n- [x] incomplete_take_profit uses latest trigger state\n- [x] Saved-response replay reported separately from live-readonly\n- [{checklist_live}] Live-readonly selected markets and signal-to-fill pass\n", encoding="utf-8")
     (reports / "FORWARD_SIMULATION_V5_1_8_END_TO_END_REPLAY_CONTRACT.md").write_text(common + """
 ## Replay Contract
 
@@ -651,31 +824,158 @@ Key error codes include: SIGNAL_*_MISMATCH, MARKET_*_MISMATCH, FILL_FEE_*_MISMAT
     (reports / "FORWARD_SIMULATION_V5_1_8_FEE_CONTRACT.md").write_text(common + "\n## Fee Contract\nOfficial fill fee is recalculated as `shares * fee_rate * price * (1 - price)` when fee evidence is official. Disabled fees remain zero. Unknown, unsupported, or conflicting fees cannot be used for official formal fills.\n", encoding="utf-8")
     (reports / "FORWARD_SIMULATION_V5_1_8_SETTLEMENT_FINALITY_CONTRACT.md").write_text(common + "\n## Settlement Finality Contract\nFinal settlement rows must be supported by resolved final public evidence. Proposed, pending, disputed, or unknown winner states cannot be booked as final payouts.\n", encoding="utf-8")
     (reports / "FORWARD_SIMULATION_V5_1_8_PREREGISTRATION.md").write_text(common + "\nThe four exit rules remain frozen from v5: hold to settlement, 2x sell 50%, 2x sell 75%, and 5x sell 25%. No formal sample has been started in this release task.\n", encoding="utf-8")
-    (reports / "FORWARD_SIMULATION_V5_1_8_OPERATIONS.md").write_text(common + "\n## Commands\n- Register signal: `python3 -m src.forward_simulation_v5_1_8 --root ... --config config/forward_simulation_v5_1_8.yaml register-signal --mode formal --signals-file templates/entry_signal_v5_1_8.csv`\n- Full audit: `python3 -m src.forward_simulation_v5_1_8 --root ... --config config/forward_simulation_v5_1_8.yaml audit-integrity --mode formal --level full-replay`\n", encoding="utf-8")
-    (reports / "FORWARD_SIMULATION_V5_1_8_CURRENT_STATUS.md").write_text(common + f"\n## Formal Status\n```json\n{json.dumps(validations['formal_empty'], ensure_ascii=False, indent=2)}\n```\n", encoding="utf-8")
-    manifest = {"version": VERSION, "generated_at_utc": now_utc(), "validations": validations}
+    (reports / "FORWARD_SIMULATION_V5_1_8_OPERATIONS.md").write_text(common + "\n## Commands\n- Register signal: `python3 -m src.forward_simulation_v5_1_8 --root . --config config/forward_simulation_v5_1_8.yaml register-signal --mode demo --signals-file templates/entry_signal_v5_1_8.csv`\n- Full audit: `python3 -m src.forward_simulation_v5_1_8 --root . --config config/forward_simulation_v5_1_8.yaml audit-integrity --mode demo --level full-replay`\n- Live readonly: `python3 -m src.forward_simulation_v5_1_8 --root . --config config/forward_simulation_v5_1_8.yaml live-integration --iterations 1`\n", encoding="utf-8")
+    (reports / "FORWARD_SIMULATION_V5_1_8_CURRENT_STATUS.md").write_text(common + f"\n## Formal Status\n```json\n{json.dumps(validations['formal_empty'], ensure_ascii=False, indent=2)}\n```\n\n## Release Gate\n```json\n{json.dumps(release, ensure_ascii=False, indent=2)}\n```\n", encoding="utf-8")
+    manifest = {"version": VERSION, "generated_at_utc": now_utc(), "release_status": status_line, "release": release, "validations": validations}
     write_json(reports / "FORWARD_SIMULATION_V5_1_8_MANIFEST.json", manifest)
-    (root / "README_v5_1_8_RC7.md").write_text("# 天气市场前向模拟系统v5.1.8-RC7\n\n本包是订单簿证据链终审修复版。它只包含公开只读模拟与审计功能，不包含钱包、签名或真实下单能力。\n", encoding="utf-8")
+    write_readme(root, release)
 
 
-def generate(root: Path, config_path: Path) -> dict[str, Any]:
-    for rel in ["data/forward_v5_1_8/demo", "data/forward_v5_1_8/formal", "data/forward_v5_1_8/rc7"]:
-        target = root / rel
-        if target.exists():
-            shutil.rmtree(target)
+PACKAGE_INCLUDE_PREFIXES = (
+    "README.md",
+    "README_v5_1_8_RC7.md",
+    "requirements.txt",
+    "config/forward_simulation_v5_1_8.yaml",
+    "schemas/forward_simulation_v5_1_8.sql",
+    "src/__init__.py",
+    "src/forward_simulation_v5_1_8.py",
+    "src/forward_reporting_v5_1_8.py",
+    "src/polymarket_public_adapter_v5_1_8.py",
+    "templates/entry_signal_v5_1_8.csv",
+    "tests/test_forward_simulation_v5_1_8.py",
+)
+
+
+def package_file_list(root: Path) -> list[str]:
+    files: list[str] = []
+    for rel in PACKAGE_INCLUDE_PREFIXES:
+        path = root / rel
+        if path.exists():
+            files.append(rel)
+    report_names = [
+        "FORWARD_SIMULATION_V5_1_8_API_CONTRACT.md",
+        "FORWARD_SIMULATION_V5_1_8_CURRENT_STATUS.md",
+        "FORWARD_SIMULATION_V5_1_8_END_TO_END_REPLAY_CONTRACT.md",
+        "FORWARD_SIMULATION_V5_1_8_FEE_CONTRACT.md",
+        "FORWARD_SIMULATION_V5_1_8_MANIFEST.json",
+        "FORWARD_SIMULATION_V5_1_8_OPERATIONS.md",
+        "FORWARD_SIMULATION_V5_1_8_PREREGISTRATION.md",
+        "FORWARD_SIMULATION_V5_1_8_RC7_FIX_REPORT.md",
+        "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_AUDIT.md",
+        "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_CHECKLIST.md",
+        "FORWARD_SIMULATION_V5_1_8_SETTLEMENT_FINALITY_CONTRACT.md",
+    ]
+    for name in report_names:
+        rel = f"reports/{name}"
+        if (root / rel).exists():
+            files.append(rel)
+    # Keep selected frozen live-integration preferred fixtures used by saved replay.
+    preferred = root / "data/forward_v5_1_6/live_integration/live_v5_1_6_rc5_final_preferred"
+    if preferred.exists():
+        for path in sorted(preferred.rglob("*")):
+            if path.is_file():
+                files.append(path.relative_to(root).as_posix())
+    # RC7 evidence and demo/negative work needed for package self-containment.
+    for base in [
+        root / "data/forward_v5_1_8/demo",
+        root / "data/forward_v5_1_8/rc7",
+        root / "data/forward_v5_1_8/formal_empty_proof.json",
+        root / "data/forward_v5_1_8/live_integration/real_saved_response_replay_work",
+        root / "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_readonly_final",
+    ]:
+        if base.is_file():
+            files.append(base.relative_to(root).as_posix())
+        elif base.exists():
+            for path in sorted(base.rglob("*")):
+                if path.is_file():
+                    # Skip nested temp/pyc
+                    if "__pycache__" in path.parts or path.suffix == ".pyc":
+                        continue
+                    files.append(path.relative_to(root).as_posix())
+    # stable unique sorted
+    return sorted(set(files))
+
+
+def build_package(root: Path, release: dict[str, Any]) -> dict[str, Any]:
+    import zipfile
+
+    files = package_file_list(root)
+    package_name = "huskyvs_forward_simulation_v5_1_8_rc7.zip"
+    zip_path = root / package_name
+    # Rebuild ZIP in place after collecting file list.
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for rel in files:
+            zf.write(root / rel, rel)
+        # Manifest is written next; include placeholder then rewrite after.
+    manifest = {
+        "version": VERSION,
+        "package": package_name,
+        "release_status": release["release_status"],
+        "generated_at_utc": now_utc(),
+        "file_count": len(files) + 1,
+        "files": sorted(files + ["PACKAGE_MANIFEST_v5_1_8_RC7.json"]),
+        "formal_ledger_files_included": [],
+        "extra_zip_files_reason": {
+            "PACKAGE_MANIFEST_v5_1_8_RC7.json": "manifest is embedded in the zip for self-contained verification"
+        },
+        "release": release,
+        "file_sha256": {rel: hashlib.sha256((root / rel).read_bytes()).hexdigest() for rel in files},
+    }
+    write_json(root / "PACKAGE_MANIFEST_v5_1_8_RC7.json", manifest)
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for rel in manifest["files"]:
+            zf.write(root / rel, rel)
+    manifest["package_sha256"] = hashlib.sha256(zip_path.read_bytes()).hexdigest()
+    write_json(root / "PACKAGE_MANIFEST_v5_1_8_RC7.json", manifest)
+    # rewrite zip once more so embedded manifest includes package_sha256 of previous? 
+    # Avoid circular hash: package_sha256 is of zip that includes manifest without package_sha256.
+    # Keep package_sha256 only in worktree manifest, not require zip byte identity of that field.
+    return manifest
+
+
+def load_json_if_exists(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def finalize_release(root: Path, config_path: Path, preserve_live_evidence: bool = True) -> dict[str, Any]:
+    """Regenerate demo/audit/report/package while preserving live-readonly evidence when present."""
+    live_signal_path = rc7_dir(root) / "real_signal_to_fill_validation.json"
+    live_manifest_path = rc7_dir(root) / "live_run_manifest.json"
+    resolved_path = rc7_dir(root) / "resolved_market_validation.json"
+    preserved_live_signal = load_json_if_exists(live_signal_path) if preserve_live_evidence else None
+    preserved_live_manifest = load_json_if_exists(live_manifest_path) if preserve_live_evidence else None
+    preserved_resolved = load_json_if_exists(resolved_path) if preserve_live_evidence else None
+
+    # Do not wipe rc7/live evidence directories; only ensure demo subtree can be rebuilt by helpers.
     rc7_dir(root)
     write_signal_template(root)
-    real = write_real_signal_to_fill_validation(root, config_path)
+    demo_saved = write_real_signal_to_fill_validation(root, config_path)
     demo_e2e = write_demo_end_to_end_validation(root, config_path)
     quick = audit_integrity(root, DEMO, config_path, "quick")
     full = audit_integrity(root, DEMO, config_path, "full-replay")
     write_json(rc7_dir(root) / "full_replay_validation.json", full)
     negative = write_negative_tests_csv(root, config_path)
-    rc7_validations = write_rc7_validation_files(root, full, negative, real)
+    rc7_validations = write_rc7_validation_files(root, full, negative, demo_saved)
     neg_temp = write_negative_temperature_validation(root)
     completed = write_completed_polling_validation(root, config_path)
     illegal_bucket = write_illegal_bucket_validation(root, config_path)
     formal = formal_empty_proof(root, config_path)
+
+    # Restore live evidence over any accidental overwrite.
+    if preserved_live_signal is not None:
+        write_json(live_signal_path, preserved_live_signal)
+    if preserved_live_manifest is not None:
+        write_json(live_manifest_path, preserved_live_manifest)
+    if preserved_resolved is not None:
+        write_json(resolved_path, preserved_resolved)
+
+    live_signal = load_json_if_exists(live_signal_path) or {"status": "not_run", "reason": "missing_live_evidence", "validation_source": "live_readonly_public_api"}
+    live_manifest = load_json_if_exists(live_manifest_path) or {}
+    saved_replay = load_json_if_exists(rc7_dir(root) / "real_saved_response_replay.json") or {}
+
+    release = compute_release_status(live_manifest, live_signal, saved_replay, quick, full, formal, sum(row["detected"] == "true" for row in negative))
     validations = {
         "quick_audit": quick,
         "full_replay": full,
@@ -683,26 +983,55 @@ def generate(root: Path, config_path: Path) -> dict[str, Any]:
         "negative_temperature": neg_temp,
         "completed_signal_polling": completed,
         "illegal_bucket_registration": illegal_bucket,
-        "real_signal_to_fill": real,
+        "demo_and_saved_signal_pipeline": demo_saved,
         "demo_end_to_end": demo_e2e,
+        "saved_public_response_replay": {"status": saved_replay.get("status"), "source": saved_replay.get("source"), "audit_ok": saved_replay.get("audit_ok")},
+        "live_readonly": live_signal,
+        "live_run_manifest_summary": {
+            "selected_market_count": live_manifest.get("selected_market_count"),
+            "selected_token_count": live_manifest.get("selected_token_count"),
+            "snapshot_count": live_manifest.get("snapshot_count"),
+            "run_id": live_manifest.get("run_id"),
+        },
         "formal_empty": formal,
         "rc7_validations": rc7_validations,
+        "release": release,
     }
-    write_reports(root, config_path, validations)
+    write_reports(root, config_path, validations, release)
     hashes = write_hash_match(root, config_path)
     validations["hash_match"] = hashes
+    package = build_package(root, release)
+    validations["package"] = {"package": package["package"], "file_count": package["file_count"], "release_status": package["release_status"]}
     return validations
+
+
+def generate(root: Path, config_path: Path) -> dict[str, Any]:
+    # Legacy full regenerate. Prefer finalize_release for consistency repairs.
+    for rel in ["data/forward_v5_1_8/demo", "data/forward_v5_1_8/rc7"]:
+        target = root / rel
+        if target.exists():
+            shutil.rmtree(target)
+    formal_dir = root / "data/forward_v5_1_8/formal"
+    if formal_dir.exists():
+        # Never recreate formal here; only refuse to delete if somehow present with data.
+        raise RuntimeError("refusing generate() while formal directory exists; use finalize_release")
+    return finalize_release(root, config_path, preserve_live_evidence=False)
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=str(PROJECT_ROOT))
     parser.add_argument("--config", default=str(CONFIG))
+    parser.add_argument("--finalize", action="store_true", help="preserve live evidence and rebuild reports/package")
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     config = Path(args.config)
     config_path = config if config.is_absolute() else (root / config)
-    print(json.dumps(generate(root, config_path), ensure_ascii=False, indent=2, sort_keys=True))
+    if args.finalize:
+        result = finalize_release(root, config_path, preserve_live_evidence=True)
+    else:
+        result = generate(root, config_path)
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

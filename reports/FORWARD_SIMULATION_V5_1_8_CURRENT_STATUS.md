@@ -1,15 +1,22 @@
 # Weather Forward Simulation v5.1.8-RC7
 
-Generated at: 2026-07-23T05:38:54.309034+00:00
+Generated at: 2026-07-24T03:19:58.906076+00:00
 
 Status: PASS_FOR_FORMAL_START
 
 This release extends replay from raw orderbook-to-fill evidence into end-to-end ledger reconstruction: signal evidence, market evidence, fees, constraints, entry state, lots, allocations, settlement, event, strategy, and total ledger PnL. It contains no wallet, signing, or real order functionality.
 
+## Validation separation
+- saved public response replay: pass
+- current live readonly selection: pass
+- selected_market_count: 3
+- selected_token_count: 3
+- formal start: ALLOWED_BUT_NOT_STARTED
+
 ## Formal Status
 ```json
 {
-  "generated_at_utc": "2026-07-23T05:38:54.308857+00:00",
+  "generated_at_utc": "2026-07-24T03:19:58.905558+00:00",
   "formal_started_at_utc": null,
   "signals": 0,
   "snapshots": 0,
@@ -18,5 +25,25 @@ This release extends replay from raw orderbook-to-fill evidence into end-to-end 
   "settlements": 0,
   "event_results": 0,
   "ok": true
+}
+```
+
+## Release Gate
+```json
+{
+  "release_status": "PASS_FOR_FORMAL_START",
+  "formal_start": "ALLOWED_BUT_NOT_STARTED",
+  "live_readonly_status": "pass",
+  "live_readonly_reason": null,
+  "saved_public_response_replay_status": "pass",
+  "selected_market_count": 3,
+  "selected_token_count": 3,
+  "snapshot_count": 3,
+  "quick_audit_ok": true,
+  "full_replay_ok": true,
+  "negative_detected": 30,
+  "formal_empty_ok": true,
+  "live_pass": true,
+  "saved_ok": true
 }
 ```

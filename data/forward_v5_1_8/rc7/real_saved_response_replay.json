@@ -6,14 +6,14 @@
   ],
   "build_hash": {
     "adapter_code_sha256": "28072d207cfb0e68427c2505e306ab38439c8dc2317fbb7f144c140b32e3acfa",
-    "api_contract_sha256": "4408d35474136cc9b6571416ae40087313137350d0ee83575931d1144f155907",
-    "config_sha256": "f7775bebdce3fa57f52cae912d1166243351f626a8cea655fde20e84842c93f6",
-    "core_code_sha256": "9407ee87504b4116711d9159839247db98535c87667a056b10fe2c6c7979d75e",
-    "fee_contract_sha256": "b9a2675c74f622ba6b04fa1350acf05bbfec2164422eb757b8dc120dfaf111af",
-    "preregistration_sha256": "378285d54a2b3b7c27d9e3dcf1e09d03b2964fa11bcc9f4c3d4617dae68ee888",
-    "reporting_code_sha256": "c042ddc3f8e883f50abd64b962a9b63ad2d149041de70417e7ee0596fe3f6bfa",
+    "api_contract_sha256": "634eeb6847a8751fe700ee2ca91864aa2dbc3e67f520bf9885728d5f33a33e0d",
+    "config_sha256": "e972ba8b831ec42d576980dc5b6c42f6e54e51338c6bf40722b71c1aa2266895",
+    "core_code_sha256": "baea656671113c1857d9f6da65cb6a7d473a2ce57d411f02e17c0fd9bf1233c1",
+    "fee_contract_sha256": "bac54877917451956dcdabbd9ef4d64bd0a0481491489446c5de52cd25956925",
+    "preregistration_sha256": "9605fa8034e5dd40dc1c87eb1077e0279c646b139360ce8dd44223b514cf7d63",
+    "reporting_code_sha256": "0031a570e22b1e9938c43c367bbc126684e4203a69b97c597bd7d1addbe3509b",
     "schema_sha256": "cb65f81da51e4d7e685e4b41338a19ddb7bd54cd829a871a85e0b8128dbe19dc",
-    "settlement_finality_contract_sha256": "448aaf9111f2bc03530f03f9e2c31f46eec80bc758651473e7a81bc8fa57635f"
+    "settlement_finality_contract_sha256": "1718d3fa4e0a3ce84809dbf597cb6b601e84dfbe2c0e2455ab93399b97a02004"
   },
   "build_hash_recorded_after_release_reports": true,
   "entry_fills": 3,
@@ -241,7 +241,7 @@
       "run_id": "real_saved_response_replay_round_3"
     }
   ],
-  "replay_root": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/live_integration/real_saved_response_replay_work",
+  "replay_root": "data/forward_v5_1_8/live_integration/real_saved_response_replay_work",
   "signal_count": 3,
   "simulated_duration_seconds": 120,
   "snapshots": 9,

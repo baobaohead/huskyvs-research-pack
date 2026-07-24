@@ -276,6 +276,50 @@ def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def repository_relative_path(root: Path, path: Path | str) -> str:
+    candidate = Path(path)
+    root_res = Path(root).resolve()
+    if not candidate.is_absolute():
+        return candidate.as_posix()
+    try:
+        return candidate.resolve().relative_to(root_res).as_posix()
+    except Exception:
+        return str(path)
+
+
+def portable_path_fields(root: Path, path: Path | str) -> dict[str, Any]:
+    candidate = Path(path)
+    root_res = Path(root).resolve()
+    if not candidate.is_absolute():
+        return {
+            "repository_relative_path": candidate.as_posix(),
+            "historical_local_path_nonportable": False,
+        }
+    try:
+        rel = candidate.resolve().relative_to(root_res).as_posix()
+        return {
+            "repository_relative_path": rel,
+            "historical_local_path_nonportable": False,
+        }
+    except Exception:
+        return {
+            "repository_relative_path": None,
+            "historical_local_path": str(path),
+            "historical_local_path_nonportable": True,
+        }
+
+
+def sanitize_status_for_release(root: Path, st: dict[str, Any]) -> dict[str, Any]:
+    out = dict(st)
+    for key in ("config_path", "ledger_path"):
+        if key in out and out[key]:
+            fields = portable_path_fields(root, out[key])
+            if fields.get("repository_relative_path"):
+                out[key] = fields["repository_relative_path"]
+            out[f"{key}_meta"] = fields
+    return out
+
+
 def data_dir(root: Path, mode: str, config: dict[str, Any]) -> Path:
     if mode == LIVE:
         return root / str(config["paths"].get("live_integration_dir", "data/forward_v5_1_8/live_integration"))
@@ -539,10 +583,12 @@ def frozen_file_records(root: Path, config_path: Path) -> dict[str, dict[str, An
     }
     records: dict[str, dict[str, Any]] = {}
     for key, path in paths.items():
+        portable = portable_path_fields(root, path)
+        rel = portable.get("repository_relative_path") or str(path)
         if not path.exists():
-            records[key] = {"path": str(path), "sha256": None, "size": None, "missing": True}
+            records[key] = {"path": rel, "sha256": None, "size": None, "missing": True, **portable}
         else:
-            records[key] = {"path": str(path), "sha256": sha256_bytes(path), "size": path.stat().st_size, "missing": False}
+            records[key] = {"path": rel, "sha256": sha256_bytes(path), "size": path.stat().st_size, "missing": False, **portable}
     return records
 
 
@@ -2846,45 +2892,51 @@ def status(root: Path, mode: str, config_path: Path) -> dict[str, Any]:
     lock_info = read_json_if_exists(lock_path(root, mode, config))
     heartbeat_info = read_json_if_exists(heartbeat_path(root, mode, config))
     if mode == FORMAL and not db.exists():
-        return {
-            "version": VERSION,
-            "mode": mode,
-            "config_path": str(config_path),
-            "ledger_path": str(db),
-            "formal_started_at_utc": None,
-            "signals": 0,
-            "snapshots": 0,
-            "entry_fills": 0,
-            "exit_fills": 0,
-            "settlements": 0,
-            "event_results": 0,
-            "runs": 0,
-            "lock_held": bool(lock_info),
-            "lock_info": lock_info,
-            "heartbeat": heartbeat_info,
-        }
+        return sanitize_status_for_release(
+            root,
+            {
+                "version": VERSION,
+                "mode": mode,
+                "config_path": str(config_path),
+                "ledger_path": str(db),
+                "formal_started_at_utc": None,
+                "signals": 0,
+                "snapshots": 0,
+                "entry_fills": 0,
+                "exit_fills": 0,
+                "settlements": 0,
+                "event_results": 0,
+                "runs": 0,
+                "lock_held": bool(lock_info),
+                "lock_info": lock_info,
+                "heartbeat": heartbeat_info,
+            },
+        )
     db = init_ledger(root, mode, config_path)
     conn = connect(db)
     try:
-        return {
-            "version": VERSION,
-            "mode": mode,
-            "config_path": str(config_path),
-            "ledger_path": str(db),
-            "formal_started_at_utc": get_state(conn, "formal_started_at_utc", None),
-            "signals": conn.execute("SELECT COUNT(*) c FROM signals WHERE mode=?", (mode,)).fetchone()["c"],
-            "snapshots": conn.execute("SELECT COUNT(*) c FROM orderbook_snapshots WHERE mode=?", (mode,)).fetchone()["c"],
-            "entry_fills": conn.execute("SELECT COUNT(*) c FROM entry_fills WHERE mode=?", (mode,)).fetchone()["c"],
-            "exit_fills": conn.execute("SELECT COUNT(*) c FROM exit_fills WHERE mode=?", (mode,)).fetchone()["c"],
-            "settlements": conn.execute("SELECT COUNT(*) c FROM settlements WHERE mode=?", (mode,)).fetchone()["c"],
-            "event_results": conn.execute("SELECT COUNT(*) c FROM event_results WHERE mode=?", (mode,)).fetchone()["c"],
-            "runs": conn.execute("SELECT COUNT(*) c FROM runs WHERE mode=?", (mode,)).fetchone()["c"],
-            "paused": get_state(conn, "paused", "false"),
-            "stopped": get_state(conn, "stopped", "false"),
-            "lock_held": bool(lock_info),
-            "lock_info": lock_info,
-            "heartbeat": heartbeat_info,
-        }
+        return sanitize_status_for_release(
+            root,
+            {
+                "version": VERSION,
+                "mode": mode,
+                "config_path": str(config_path),
+                "ledger_path": str(db),
+                "formal_started_at_utc": get_state(conn, "formal_started_at_utc", None),
+                "signals": conn.execute("SELECT COUNT(*) c FROM signals WHERE mode=?", (mode,)).fetchone()["c"],
+                "snapshots": conn.execute("SELECT COUNT(*) c FROM orderbook_snapshots WHERE mode=?", (mode,)).fetchone()["c"],
+                "entry_fills": conn.execute("SELECT COUNT(*) c FROM entry_fills WHERE mode=?", (mode,)).fetchone()["c"],
+                "exit_fills": conn.execute("SELECT COUNT(*) c FROM exit_fills WHERE mode=?", (mode,)).fetchone()["c"],
+                "settlements": conn.execute("SELECT COUNT(*) c FROM settlements WHERE mode=?", (mode,)).fetchone()["c"],
+                "event_results": conn.execute("SELECT COUNT(*) c FROM event_results WHERE mode=?", (mode,)).fetchone()["c"],
+                "runs": conn.execute("SELECT COUNT(*) c FROM runs WHERE mode=?", (mode,)).fetchone()["c"],
+                "paused": get_state(conn, "paused", "false"),
+                "stopped": get_state(conn, "stopped", "false"),
+                "lock_held": bool(lock_info),
+                "lock_info": lock_info,
+                "heartbeat": heartbeat_info,
+            },
+        )
     finally:
         conn.close()
 
@@ -3473,6 +3525,7 @@ def live_integration(root: Path, config_path: Path, iterations: int, interval_se
                 buy = consume_buy_depth(normalized, Decimal("10"), normalized["best_ask"] if normalized["best_ask"] is not None else Decimal("1"))
                 signal_to_fill = {
                     "status": "pass" if validation["mapping_valid"] and buy["filled_shares"] > ZERO else "blocked",
+                    "validation_source": "live_readonly_public_api",
                     "market_slug": first["market_slug"],
                     "event_key": first["semantic"]["event_key"],
                     "canonical_label": first["semantic"]["canonical_label"],
@@ -3485,10 +3538,15 @@ def live_integration(root: Path, config_path: Path, iterations: int, interval_se
                     "uses_wallet_or_real_order": False,
                 }
             except Exception as exc:
-                signal_to_fill = {"status": "error", "error": str(exc), "uses_formal_ledger": False, "uses_wallet_or_real_order": False}
+                signal_to_fill = {"status": "error", "validation_source": "live_readonly_public_api", "error": str(exc), "uses_formal_ledger": False, "uses_wallet_or_real_order": False}
+    elif selected and not snapshots:
+        signal_to_fill = {"status": "not_run", "reason": "no_orderbook_snapshots", "validation_source": "live_readonly_public_api"}
+    else:
+        signal_to_fill = {"status": "not_run", "reason": "no_selected_market", "validation_source": "live_readonly_public_api"}
     ended = utcnow()
     event_keys = sorted({str(s.get("event_key", "")) for s in snapshots if s.get("event_key")})
     city_date_keys = sorted({"|".join([str(s.get("city", "")).lower(), str(s.get("weather_date_local", ""))]) for s in snapshots if s.get("city") and s.get("weather_date_local")})
+    formal_counts = status(root, FORMAL, config_path)
     manifest = {
         "run_id": rid,
         "started_at_utc": started.isoformat(),
@@ -3508,9 +3566,10 @@ def live_integration(root: Path, config_path: Path, iterations: int, interval_se
         "adapter_version": ADAPTER_VERSION,
         "actual_endpoints": adapter.visited_endpoints,
         "resolved_evidence_status": evidence.get("evidence", {}).get("settlement_status", evidence.get("error", "")),
-        "formal_signal_fill_position_counts": status(root, FORMAL, config_path),
+        "formal_signal_fill_position_counts": formal_counts,
         "code_hash": current_hashes(root, config_path),
         "real_signal_to_fill_validation": signal_to_fill,
+        "validation_source": "live_readonly_public_api",
     }
     write_json(out_dir / "run_manifest.json", manifest)
     write_json(rc7_dir(root) / "live_run_manifest.json", manifest)

@@ -1,9 +1,9 @@
 {
-  "heartbeat_at_utc": "2026-07-23T05:38:54.294673+00:00",
+  "heartbeat_at_utc": "2026-07-24T03:19:58.891533+00:00",
   "hostname": "baobaotoudeMac-mini.local",
   "mode": "demo",
-  "pid": 62890,
-  "process_start_time": "2026-07-23T05:38:52+00:00",
+  "pid": 19167,
+  "process_start_time": "2026-07-24T03:19:57+00:00",
   "run_id": "completed_signal_no_poll",
   "status": "running",
   "version": "forward_simulation_v5.1.8-rc7"

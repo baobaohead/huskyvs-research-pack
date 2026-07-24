@@ -77,16 +77,18 @@ live_integration:
   max_iterations: 30
   default_interval_seconds: 0
   preferred_weather_slugs:
-    - highest-temperature-in-tokyo-on-july-22-2026-29corbelow
-    - highest-temperature-in-beijing-on-july-22-2026-25corbelow
-    - highest-temperature-in-tokyo-on-july-22-2026-30c
+    - highest-temperature-in-tokyo-on-july-24-2026-27corbelow
+    - highest-temperature-in-beijing-on-july-24-2026-24corbelow
+    - highest-temperature-in-tokyo-on-july-24-2026-30c
   search_terms:
-    - Tokyo temperature July 22
-    - Beijing temperature July 22
-    - Paris temperature July 22
-    - July 22 temperature
-    - highest temperature July 22
-    - weather July 22
+    - Tokyo temperature July 24
+    - Beijing temperature July 24
+    - Paris temperature July 24
+    - July 24 temperature
+    - highest temperature July 24
+    - weather July 24
+    - Tokyo temperature July 25
+    - Beijing temperature July 25
   resolved_weather_slugs:
     - highest-temperature-in-hong-kong-on-july-20-2026-31c
     - highest-temperature-in-hong-kong-on-july-20-2026-29c

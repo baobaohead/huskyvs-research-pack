@@ -1,0 +1,26 @@
+{
+  "audit_ok": true,
+  "demo_result": {
+    "results": [],
+    "run_id": "demo_run_fixture"
+  },
+  "entry_fills": 1,
+  "exact_and_boundary_bucket_examples": {
+    "exact_demo": "exact:30C",
+    "or_below_demo": "or_below:25C"
+  },
+  "exit_fills": 2,
+  "note": "This file is demo/saved-response evidence only. Live-readonly status is recorded by live_integration into real_signal_to_fill_validation.json.",
+  "saved_public_response_replay": {
+    "audit_ok": true,
+    "entry_fills": 3,
+    "snapshots": 9,
+    "source": "saved_public_gamma_clob_orderbook_responses_from_v5_1_6_rc5",
+    "status": "pass",
+    "token_count": 3
+  },
+  "snapshots": 2,
+  "status": "pass",
+  "uses_formal_ledger": false,
+  "validation_source": "demo_and_saved_public_response_replay"
+}
