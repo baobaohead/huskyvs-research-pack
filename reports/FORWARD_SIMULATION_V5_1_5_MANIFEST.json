@@ -1,0 +1,288 @@
+{
+  "adapter_source_validation": {
+    "audit_integrity_formal_source_checks": [
+      "formal_missing_source_fields",
+      "formal_non_official_adapter_rows",
+      "formal_adapter_hash_mismatch"
+    ],
+    "cli_fixture_argument_exposed": false,
+    "fixture_result": {
+      "fatal_error": true,
+      "run_id": "formal_fixture_rejected",
+      "status": "formal_adapter_injection_rejected"
+    },
+    "formal_adapter_class": "PolymarketPublicAdapterV5_1_5",
+    "formal_data_source": "polymarket_public_api",
+    "formal_fixture_adapter_rejected_before_public_calls": true,
+    "formal_run_environment": "formal",
+    "generated_at_utc": "2026-07-22T05:24:55.292246+00:00",
+    "wallet_or_order_methods_exposed": false
+  },
+  "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_5.yaml",
+  "demo_audit": {
+    "checks": {
+      "audit_violation_events": 0,
+      "below_min_order_fill": 0,
+      "constraint_conflict_entered": 0,
+      "duplicate_signal_id": 0,
+      "duplicate_snapshot_in_run": 0,
+      "entry_after_settlement": 0,
+      "entry_shared_depth_overfill": 0,
+      "exit_shared_depth_overfill": 0,
+      "fee_conflicts_entered": 0,
+      "formal_adapter_hash_mismatch": 0,
+      "formal_missing_source_fields": 0,
+      "formal_non_official_adapter_rows": 0,
+      "future_signal_too_far": 0,
+      "gross_minus_fees_net_mismatch": 0,
+      "hash_freeze_drift": 0,
+      "illegal_tick_price_entered": 0,
+      "inventory_oversold": 0,
+      "mapping_invalid_entered": 0,
+      "missing_constraints_for_fill": 0,
+      "missing_settlement_raw_response": 0,
+      "non_final_settlement": 0,
+      "proposed_final_settlement": 0,
+      "run_manifest_hash_mismatch": 0,
+      "settled_after_exit": 0,
+      "settlement_raw_hash_mismatch": 0,
+      "signal_before_formal_start": 0,
+      "signal_registration_delay_exceeded": 0,
+      "unsupported_fee_exponent_entered": 0
+    },
+    "ok": true
+  },
+  "demo_runs": [
+    {
+      "command": "monitor_once",
+      "ended_at_utc": "2099-01-01T00:00:02+00:00",
+      "error_count": 0,
+      "mode": "demo",
+      "run_id": "demo_run_fixture",
+      "selected_tokens_json": "[\"yes-token\"]",
+      "snapshot_count": 1,
+      "started_at_utc": "2099-01-01T00:00:02+00:00"
+    },
+    {
+      "command": "monitor_once",
+      "ended_at_utc": "2099-01-03T00:00:00+00:00",
+      "error_count": 0,
+      "mode": "demo",
+      "run_id": "demo_run_settlement",
+      "selected_tokens_json": "[\"yes-token\"]",
+      "snapshot_count": 0,
+      "started_at_utc": "2099-01-03T00:00:00+00:00"
+    }
+  ],
+  "final_hash_match_proof": {
+    "current_hashes": {
+      "adapter_code_sha256": "dc879f3e27106b13fc9b58a5ccb8e31bcdcee529f4722b8dd032a68fee48a035",
+      "api_contract_sha256": "e0851ce6a22f3789adafda970a896e639a6648cc8e3d91995862722eafd8dd14",
+      "config_sha256": "b99790d2485a6d802244a360386af960a288407d56c6c7a620c5b4e92915c06c",
+      "core_code_sha256": "ab48b5ae2978dfae76502981f3128ea1331e2a307ba96b032d68de19699062dd",
+      "fee_contract_sha256": "34d89355f7f472f52e7accaf8219e4531506d8a7afe4d60a872442b6d71fb0b6",
+      "preregistration_sha256": "d2c8a49e3ad6829fbafe8f421ab578ed75629e0868e3039fda4b4bce18977c61",
+      "reporting_code_sha256": "51a4a03c6b7c76998927b6141e40dc95922b71d7a57c4a926e63462c162ed1fe",
+      "schema_sha256": "400ecc8684e8cb491fd52ba2d2d8cb90f9c1dc46baa89502fa37d83911b0327c",
+      "settlement_finality_contract_sha256": "5e47cf5376a36d40b6a71ebf7013c5e9676dcded3582091aa56a0cef04950838"
+    },
+    "current_matches_live_manifest": true,
+    "frozen_hash_keys": [
+      "adapter_code_sha256",
+      "api_contract_sha256",
+      "config_sha256",
+      "core_code_sha256",
+      "fee_contract_sha256",
+      "preregistration_sha256",
+      "reporting_code_sha256",
+      "schema_sha256",
+      "settlement_finality_contract_sha256"
+    ],
+    "generated_at_utc": "2026-07-22T05:38:02.342760+00:00",
+    "live_hashes": {
+      "adapter_code_sha256": "dc879f3e27106b13fc9b58a5ccb8e31bcdcee529f4722b8dd032a68fee48a035",
+      "api_contract_sha256": "e0851ce6a22f3789adafda970a896e639a6648cc8e3d91995862722eafd8dd14",
+      "config_sha256": "b99790d2485a6d802244a360386af960a288407d56c6c7a620c5b4e92915c06c",
+      "core_code_sha256": "ab48b5ae2978dfae76502981f3128ea1331e2a307ba96b032d68de19699062dd",
+      "fee_contract_sha256": "34d89355f7f472f52e7accaf8219e4531506d8a7afe4d60a872442b6d71fb0b6",
+      "preregistration_sha256": "d2c8a49e3ad6829fbafe8f421ab578ed75629e0868e3039fda4b4bce18977c61",
+      "reporting_code_sha256": "51a4a03c6b7c76998927b6141e40dc95922b71d7a57c4a926e63462c162ed1fe",
+      "schema_sha256": "400ecc8684e8cb491fd52ba2d2d8cb90f9c1dc46baa89502fa37d83911b0327c",
+      "settlement_finality_contract_sha256": "5e47cf5376a36d40b6a71ebf7013c5e9676dcded3582091aa56a0cef04950838"
+    },
+    "live_manifest_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_5/rc4/live_run_manifest.json",
+    "notes": "Frozen file hashes were recomputed from the ZIP entries and compared with data/forward_v5_1_5/rc4/live_run_manifest.json.",
+    "package_file_count": 186,
+    "run_id": "rc4_live_readonly_final",
+    "zip_entries_match_live_manifest": true,
+    "zip_entry_hashes": {
+      "adapter_code_sha256": "dc879f3e27106b13fc9b58a5ccb8e31bcdcee529f4722b8dd032a68fee48a035",
+      "api_contract_sha256": "e0851ce6a22f3789adafda970a896e639a6648cc8e3d91995862722eafd8dd14",
+      "config_sha256": "b99790d2485a6d802244a360386af960a288407d56c6c7a620c5b4e92915c06c",
+      "core_code_sha256": "ab48b5ae2978dfae76502981f3128ea1331e2a307ba96b032d68de19699062dd",
+      "fee_contract_sha256": "34d89355f7f472f52e7accaf8219e4531506d8a7afe4d60a872442b6d71fb0b6",
+      "preregistration_sha256": "d2c8a49e3ad6829fbafe8f421ab578ed75629e0868e3039fda4b4bce18977c61",
+      "reporting_code_sha256": "51a4a03c6b7c76998927b6141e40dc95922b71d7a57c4a926e63462c162ed1fe",
+      "schema_sha256": "400ecc8684e8cb491fd52ba2d2d8cb90f9c1dc46baa89502fa37d83911b0327c",
+      "settlement_finality_contract_sha256": "5e47cf5376a36d40b6a71ebf7013c5e9676dcded3582091aa56a0cef04950838"
+    },
+    "zip_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/huskyvs_forward_simulation_v5_1_5_rc4.zip"
+  },
+  "formal_audit": {
+    "checks": {
+      "formal_ledger_absent": 0
+    },
+    "ok": true
+  },
+  "formal_empty_proof": {
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "generated_at_utc": "2026-07-22T05:24:54.822501+00:00",
+    "ok": true,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0
+  },
+  "formal_runs": [],
+  "generated_at_utc": "2026-07-22T05:24:55.292916+00:00",
+  "hashes": {
+    "adapter_code_sha256": "dc879f3e27106b13fc9b58a5ccb8e31bcdcee529f4722b8dd032a68fee48a035",
+    "api_contract_sha256": "e0851ce6a22f3789adafda970a896e639a6648cc8e3d91995862722eafd8dd14",
+    "config_sha256": "b99790d2485a6d802244a360386af960a288407d56c6c7a620c5b4e92915c06c",
+    "core_code_sha256": "ab48b5ae2978dfae76502981f3128ea1331e2a307ba96b032d68de19699062dd",
+    "fee_contract_sha256": "34d89355f7f472f52e7accaf8219e4531506d8a7afe4d60a872442b6d71fb0b6",
+    "preregistration_sha256": "d2c8a49e3ad6829fbafe8f421ab578ed75629e0868e3039fda4b4bce18977c61",
+    "reporting_code_sha256": "51a4a03c6b7c76998927b6141e40dc95922b71d7a57c4a926e63462c162ed1fe",
+    "schema_sha256": "400ecc8684e8cb491fd52ba2d2d8cb90f9c1dc46baa89502fa37d83911b0327c",
+    "settlement_finality_contract_sha256": "5e47cf5376a36d40b6a71ebf7013c5e9676dcded3582091aa56a0cef04950838"
+  },
+  "live_readonly_validation": {
+    "duration_seconds": "637.416016",
+    "error_count": 0,
+    "formal_counts_after_live": {
+      "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_5.yaml",
+      "entry_fills": 0,
+      "event_results": 0,
+      "exit_fills": 0,
+      "formal_started_at_utc": null,
+      "heartbeat": {},
+      "ledger_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_5/formal/ledger.sqlite3",
+      "lock_held": false,
+      "lock_info": {},
+      "mode": "formal",
+      "runs": 0,
+      "settlements": 0,
+      "signals": 0,
+      "snapshots": 0,
+      "version": "forward_simulation_v5.1.5-rc4"
+    },
+    "resolved_evidence_status": "final",
+    "run_id": "rc4_live_readonly_final",
+    "selected_market_count": 3,
+    "selected_token_count": 3,
+    "snapshot_count": 9,
+    "snapshots_per_token": {
+      "78608696928144203899113103572524300755214133117458098664721206160902611348763": 3,
+      "84604599121176894060011859823018624631807623987870880013304120047133627617638": 3,
+      "94748732915349195546448713444722756080968626922653917934033369521339618987721": 3
+    }
+  },
+  "market_constraints_validation": {
+    "blocked_cases": 6,
+    "count": 8
+  },
+  "negative_audit_tests": {
+    "count": 30,
+    "passed": 30
+  },
+  "official_docs": {
+    "fees": "https://docs.polymarket.com/trading/fees",
+    "market_by_slug": "https://docs.polymarket.com/api-reference/markets/get-market-by-slug",
+    "orderbook": "https://docs.polymarket.com/api-reference/market-data/get-order-book",
+    "public_methods": "https://docs.polymarket.com/trading/clients/public"
+  },
+  "pending_market_validation": {
+    "all_non_final": true,
+    "generated_at_utc": "2026-07-22T05:24:55.292533+00:00",
+    "source_type": "fixture_pending_or_proposed_market",
+    "validations": [
+      {
+        "case": "proposed_outcome_prices_not_final",
+        "evidence": {
+          "active": false,
+          "closed": true,
+          "conflict_details": "",
+          "error": "resolution_proposed_not_final",
+          "evidence_tier": "",
+          "evidence_valid": false,
+          "finality_status": "proposed",
+          "market_status": "resolved",
+          "raw_response_hash": "f573e44f9f65694d9346849eba02d98a4b35844aa70ec8fbc2f6a652726adac6",
+          "resolution_status": "proposed",
+          "resolved": true,
+          "settlement_status": "proposed",
+          "token_settlement_values": {
+            "no-token": null,
+            "yes-token": null
+          },
+          "uma_status": "proposed",
+          "winning_asset_id": "",
+          "winning_outcome": ""
+        },
+        "raw_fixture": {
+          "active": false,
+          "automaticallyResolved": false,
+          "clobTokenIds": "[\"yes-token\",\"no-token\"]",
+          "closed": true,
+          "conditionId": "0xpending",
+          "outcomePrices": "[\"1\",\"0\"]",
+          "outcomes": "[\"Yes\",\"No\"]",
+          "resolved": true,
+          "slug": "rc4-proposed-weather-fixture",
+          "umaResolutionStatus": "proposed",
+          "winningOutcome": "Yes"
+        }
+      },
+      {
+        "case": "automatically_resolved_plus_proposed_conflict",
+        "evidence": {
+          "active": false,
+          "closed": true,
+          "conflict_details": "automaticallyResolved_with_proposed",
+          "error": "automatically_resolved_proposed_conflict",
+          "evidence_tier": "",
+          "evidence_valid": false,
+          "finality_status": "status_conflict",
+          "market_status": "resolved",
+          "raw_response_hash": "f9e6fce321a326c4b282098c830587bfd3591fa449efd0ec2a8703e0bdc11330",
+          "resolution_status": "proposed",
+          "resolved": true,
+          "settlement_status": "conflict",
+          "token_settlement_values": {
+            "no-token": null,
+            "yes-token": null
+          },
+          "uma_status": "proposed",
+          "winning_asset_id": "",
+          "winning_outcome": ""
+        },
+        "raw_fixture": {
+          "active": false,
+          "automaticallyResolved": true,
+          "clobTokenIds": "[\"yes-token\",\"no-token\"]",
+          "closed": true,
+          "conditionId": "0xpending",
+          "outcomePrices": "[\"1\",\"0\"]",
+          "outcomes": "[\"Yes\",\"No\"]",
+          "resolved": true,
+          "slug": "rc4-auto-resolved-proposed-conflict-fixture",
+          "umaResolutionStatus": "proposed",
+          "winningOutcome": "Yes"
+        }
+      }
+    ]
+  },
+  "version": "forward_simulation_v5.1.5-rc4"
+}

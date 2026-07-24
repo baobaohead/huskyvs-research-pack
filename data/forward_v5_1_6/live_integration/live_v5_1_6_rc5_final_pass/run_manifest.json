@@ -1,0 +1,955 @@
+{
+  "actual_endpoints": [
+    {
+      "latency_ms": "3062.5093749258667",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/public-search?q=Tokyo+temperature+July+22&events_status=active&limit_per_type=10&page=1&keep_closed_markets=0"
+    },
+    {
+      "latency_ms": "2372.82008305192",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/public-search?q=Beijing+temperature+July+22&events_status=active&limit_per_type=10&page=1&keep_closed_markets=0"
+    },
+    {
+      "latency_ms": "2065.5315001495183",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/public-search?q=Paris+temperature+July+22&events_status=active&limit_per_type=10&page=1&keep_closed_markets=0"
+    },
+    {
+      "latency_ms": "873.3083340339363",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "1154.5364579651505",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "1279.16070795618",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "1040.0368750561029",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+    },
+    {
+      "latency_ms": "724.5343748945743",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-31c"
+    },
+    {
+      "latency_ms": "1158.1598750781268",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x687b20b83ebf43f8f3127731229adc559e6b8fbdc81011876551276857539d9c"
+    },
+    {
+      "latency_ms": "962.8070418257266",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-32c"
+    },
+    {
+      "latency_ms": "1130.6892498396337",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x1a0ee3b59d9cea5e0bbc46f7f3545cf4e6bac3bb2175347df1c5228aa6426c9b"
+    },
+    {
+      "latency_ms": "2257.537042023614",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-33c"
+    },
+    {
+      "latency_ms": "922.0253750681877",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x341e224961531d3b94b9fb196c3f011f4b0b5c969fe084fec1097168caec5ded"
+    },
+    {
+      "latency_ms": "1354.47037499398",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-34c"
+    },
+    {
+      "latency_ms": "854.2354160454124",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x98b18c10e9329b12a54a72fceb87c67bebf5f19e439fb60f36ee1931f75fcb40"
+    },
+    {
+      "latency_ms": "948.1623340398073",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-35c"
+    },
+    {
+      "latency_ms": "889.1072918195277",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x7514e9d84cecac8de365ef903a51318e0a7355ba43145da4cf999f704a9d3c5d"
+    },
+    {
+      "latency_ms": "897.9808338917792",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-36c"
+    },
+    {
+      "latency_ms": "892.3875419422984",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x51d7f5b7d0b73120d94e2ccef1f40894f062882747f7970ff2baa35364c415b3"
+    },
+    {
+      "latency_ms": "1196.9785830006003",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-37c"
+    },
+    {
+      "latency_ms": "665.8999170176685",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc132c3bb3c6a3268cdec609ca5d0d9447730e2d523d9aeed73ab864d0992dd43"
+    },
+    {
+      "latency_ms": "1983.8309579063207",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-38c"
+    },
+    {
+      "latency_ms": "1233.0285410862416",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x6178102564885b111e654947e089dfe2fbbd8c92b69b272f35d3a1c65b8dfcd1"
+    },
+    {
+      "latency_ms": "1153.2415410038084",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-39corhigher"
+    },
+    {
+      "latency_ms": "881.6026251297444",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x9edc866424d1e50621c39d30e9017a22c3fc183dd542bc35eeabe9e9dc28e346"
+    },
+    {
+      "latency_ms": "1069.8541670572013",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-22corbelow"
+    },
+    {
+      "latency_ms": "819.3330001085997",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x53aa032f60a5896428253ceb181a38755287755f5cfd1f70b34455ac18d30a58"
+    },
+    {
+      "latency_ms": "1369.682707823813",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-23c"
+    },
+    {
+      "latency_ms": "858.4922088775784",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x776e8ee0d410f2f4380d286730f86820111df5c4a5b989d21474e27e833f249b"
+    },
+    {
+      "latency_ms": "1083.7125421967357",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-24c"
+    },
+    {
+      "latency_ms": "961.4297919906676",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa62ecd335ead4e7245ab8a1c23b82f7bc383e1b23041e51bc8b3dfb98b537395"
+    },
+    {
+      "latency_ms": "1372.8781251702458",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-25c"
+    },
+    {
+      "latency_ms": "902.1500002127141",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x12dfb424c6121a10aba23c4a98527edf03075ea58e7ec8f488336de46b4547fb"
+    },
+    {
+      "latency_ms": "1370.5932081211358",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-26c"
+    },
+    {
+      "latency_ms": "1061.5303330123425",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x2535b375313afd0600b3f551e2e34de0a45af408564b1c5cd4d6511f9fd52c5c"
+    },
+    {
+      "latency_ms": "758.2638331223279",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-27c"
+    },
+    {
+      "latency_ms": "1103.1360409688205",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x0e9f6f7291bb4eaa346213b6863aa9fbc389ffd07da07f3073f60da101b59ac2"
+    },
+    {
+      "latency_ms": "1319.342999951914",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-28c"
+    },
+    {
+      "latency_ms": "1394.8453329503536",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x4ff88151aadf92386d07374156a2af3762d13b1df16a3231835b8fc92cf8888b"
+    },
+    {
+      "latency_ms": "1477.16408316046",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-29c"
+    },
+    {
+      "latency_ms": "967.9795000702143",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x1e6f32de1bb782e78f2ca4746860a6fe3824f959d41b4686b6ef9f6c7f647556"
+    },
+    {
+      "latency_ms": "1034.01791700162",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "702.9303340241313",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xe9d9c07931dd7f0cf11936c8f3139ac12282b21b914dd9e3f2a7a026fd1416fe"
+    },
+    {
+      "latency_ms": "1425.8328329306096",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-31c"
+    },
+    {
+      "latency_ms": "1274.633791996166",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xe0d255d93e43afa4bf3e68c33e2ba70360d9a7ad4df13a47490fece4cbf76703"
+    },
+    {
+      "latency_ms": "940.3902920894325",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-tokyo-on-july-22-2026-32corhigher"
+    },
+    {
+      "latency_ms": "2292.2795000486076",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x1c92d384fee32a9e5d880e3c15073fd16e6679af3050d9d7806e160c7c0b7e25"
+    },
+    {
+      "latency_ms": "1687.9860830958933",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+    },
+    {
+      "latency_ms": "1467.3450000118464",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+    },
+    {
+      "latency_ms": "1811.5575830452144",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-26c"
+    },
+    {
+      "latency_ms": "1099.5834169443697",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x1c1220cf78e724cef18de6080234a375e5a33fa5ecb6c4a5f2052b59a213657b"
+    },
+    {
+      "latency_ms": "1122.7325000800192",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-27c"
+    },
+    {
+      "latency_ms": "1157.0010411087424",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x8a7f9391487833c51598d6c245adcde81ad2941e590c3aa125f1899c4fc082bc"
+    },
+    {
+      "latency_ms": "1367.1095410827547",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-28c"
+    },
+    {
+      "latency_ms": "1304.298958973959",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x4f3630870488d366fc54f1a200a345253e093f988d87d5dde225ef536c095f36"
+    },
+    {
+      "latency_ms": "1498.5904169734567",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-29c"
+    },
+    {
+      "latency_ms": "2004.3364590965211",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x6e7a43bb12af33591d0a10e91d2bd811b28244d76825ea3159cc2e3eca17bba2"
+    },
+    {
+      "latency_ms": "1479.5026669744402",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "657.3059998918325",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xf16322b84432187cfdc109a659876f4dc5bd7181c10bdc4fd822b3661f8a6a1e"
+    },
+    {
+      "latency_ms": "1625.96149998717",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-31c"
+    },
+    {
+      "latency_ms": "1408.1334581132978",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x1eb155ca1b535956e5ac316162e5a913d1b4307a72b24d2cb1469dd2ce84e50f"
+    },
+    {
+      "latency_ms": "1791.3673329167068",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-32c"
+    },
+    {
+      "latency_ms": "1643.5202918946743",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xe624db116454a4d17552d9d53b915a621c69c39f4c3b68d44e64cd15d7b41280"
+    },
+    {
+      "latency_ms": "1395.8599590696394",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-33c"
+    },
+    {
+      "latency_ms": "1143.6600419692695",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x8735c898c426b25a05608542e4b88f38e05033f36eb578d48636e347d73b0f80"
+    },
+    {
+      "latency_ms": "1455.1542501430959",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-34c"
+    },
+    {
+      "latency_ms": "856.4288329798728",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x420fe34c7ff2c7da6178a14bcf0f9d8cf7df133274a5bc4a5c498eb59f500a17"
+    },
+    {
+      "latency_ms": "1003.612665925175",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-35corhigher"
+    },
+    {
+      "latency_ms": "1010.2204999420792",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x7e7bc1d7a97fed3a3f10644a9f1d69cc95af6e577139c545501e286f8eeb8ef3"
+    },
+    {
+      "latency_ms": "1278.7341251969337",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-20corbelow"
+    },
+    {
+      "latency_ms": "987.0192080270499",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x3dbf9248fc528944b0aa74567252db0f70974cbab542db0d452a2d6d6155ea67"
+    },
+    {
+      "latency_ms": "1345.4637920949608",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-21c"
+    },
+    {
+      "latency_ms": "844.5171669591218",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x61241717f8e45e99d5d9f0947656611f033078785523aab3422bd6457d724120"
+    },
+    {
+      "latency_ms": "1363.5907089337707",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-22c"
+    },
+    {
+      "latency_ms": "1331.7315420135856",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x1d61d797252c9193ef652b300bac97dec2cefcbc5118af2cb24e1b1421832cfc"
+    },
+    {
+      "latency_ms": "1522.9849168099463",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-23c"
+    },
+    {
+      "latency_ms": "935.4799590073526",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x8af78d5e1b209a0f52aac147c6ed2757913a18e9c558e181b35b567aeb744123"
+    },
+    {
+      "latency_ms": "1244.678000221029",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-24c"
+    },
+    {
+      "latency_ms": "907.911374932155",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x46c9f8519f291a31872a748d7e4e30d33bcb8601a6dcc9c3f09e51cf6138c583"
+    },
+    {
+      "latency_ms": "4023.492290871218",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-25c"
+    },
+    {
+      "latency_ms": "2263.875500066206",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xf3797bd4c0fcffa75465081df2ff1b5a298150fa167dd929f7b5f19602f8cf83"
+    },
+    {
+      "latency_ms": "1722.3826250992715",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-26c"
+    },
+    {
+      "latency_ms": "1059.7205830272287",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x290aa4b0f8a0d350eca48f5b97c79509f368122c37f531e8397d0cbd6e116feb"
+    },
+    {
+      "latency_ms": "1457.6213750988245",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-27c"
+    },
+    {
+      "latency_ms": "1268.782458966598",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x95ba4a69ad98c0a2f2cb767e21096683e86fed2288e8b6fb3dc331e5e0ebcd06"
+    },
+    {
+      "latency_ms": "1285.9394170809537",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-28c"
+    },
+    {
+      "latency_ms": "693.8895410858095",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x22d6d7407eb5ef7da01613707a225fe2baff135bf51448a4f0bcb30465fc6119"
+    },
+    {
+      "latency_ms": "1201.3934589922428",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-29c"
+    },
+    {
+      "latency_ms": "1078.899250132963",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xf26350bbf49ca7b3ee403713e69ad8c0fbafacb93a383317285c3e5f83de608d"
+    },
+    {
+      "latency_ms": "1508.5205000359565",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-paris-on-july-22-2026-30corhigher"
+    },
+    {
+      "latency_ms": "2069.1937911324203",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x54274bd8d3036fdc7f61e4c7fa4f3d82b447245fdda4b057c3b881ac23b972d8"
+    },
+    {
+      "latency_ms": "2596.885833889246",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-10corbelow"
+    },
+    {
+      "latency_ms": "853.165959008038",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x9f9f81b0e35a5b817d9c66e42ce789258f3934184b8343c072760c14397388d7"
+    },
+    {
+      "latency_ms": "1096.2548749521375",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-11c"
+    },
+    {
+      "latency_ms": "849.6484169736505",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x566970e2cebf1c99d673dafd30f84ea4445fe26d1fc5a47863134f314a49a21f"
+    },
+    {
+      "latency_ms": "1096.5415830723941",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-12c"
+    },
+    {
+      "latency_ms": "847.424624953419",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x1cb162dd8ce1d42a8bfe7ff4286359ab6092db44cf339d1001e6525c24265490"
+    },
+    {
+      "latency_ms": "2119.647624902427",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-13c"
+    },
+    {
+      "latency_ms": "1145.649041980505",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x5410cf2e1d7f04092d9c2a6d39adc70b825b692f94f50b7da0e71f1b9903c2e2"
+    },
+    {
+      "latency_ms": "1083.5428747814149",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-14c"
+    },
+    {
+      "latency_ms": "995.7087920047343",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x02f63330fab3d1073f86debc0787affe9dbf8fdbbbb259546e511fb785dc11e9"
+    },
+    {
+      "latency_ms": "1227.8109169565141",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-15c"
+    },
+    {
+      "latency_ms": "769.3379581905901",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xdf14699b16769245a1a16680ac8c5cc13f206d4591911f4ac926a2539725ff5d"
+    },
+    {
+      "latency_ms": "887.0501250494272",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-16c"
+    },
+    {
+      "latency_ms": "737.4409171752632",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xf62f156e71f0ae979dbe63c6eab053644054e9508cda314f2e6a7f4e85550178"
+    },
+    {
+      "latency_ms": "1227.59212506935",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-17c"
+    },
+    {
+      "latency_ms": "1063.5476249735802",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xefe3a9f15c64b8c8ebeead14c0b5c867442851b1b8b83aa70f07b1cb49f74c61"
+    },
+    {
+      "latency_ms": "1302.1390829235315",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-18c"
+    },
+    {
+      "latency_ms": "873.8613328896463",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x07a2263b56d965473eb56d6748bd25488b9cb86470e8d200268533f05dd4e932"
+    },
+    {
+      "latency_ms": "1215.2414158917964",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-19c"
+    },
+    {
+      "latency_ms": "918.7228751834482",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x7e047c257ad871ba537cbcec959486fc400afdb834bc7bab4a424c3422ada4b5"
+    },
+    {
+      "latency_ms": "1344.598709139973",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/lowest-temperature-in-paris-on-july-22-2026-20corhigher"
+    },
+    {
+      "latency_ms": "1951.9279168453068",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x2c4327e1ec21d73638f253ab69e65e8c35a8dee03def2ba6b95b87b08d1fc13b"
+    },
+    {
+      "latency_ms": "1122.7585000451654",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "1072.193665895611",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "1557.8570421785116",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=109644598776046108708215544048760195529874448367370183373343350346816220605264"
+    },
+    {
+      "latency_ms": "1906.0117499902844",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+    },
+    {
+      "latency_ms": "1966.7597499210387",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+    },
+    {
+      "latency_ms": "1051.0719169396907",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=94748732915349195546448713444722756080968626922653917934033369521339618987721"
+    },
+    {
+      "latency_ms": "962.8130421042442",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "864.2705001402646",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+    },
+    {
+      "latency_ms": "1127.883959095925",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=57405213645557461549191886203867858953892828891706620093356332496034092608597"
+    },
+    {
+      "latency_ms": "1581.7945830058306",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "1131.0236249119043",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "960.7330420985818",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=109644598776046108708215544048760195529874448367370183373343350346816220605264"
+    },
+    {
+      "latency_ms": "910.4619999416173",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+    },
+    {
+      "latency_ms": "987.0182911399752",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+    },
+    {
+      "latency_ms": "909.4496250618249",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=94748732915349195546448713444722756080968626922653917934033369521339618987721"
+    },
+    {
+      "latency_ms": "1011.1660419497639",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "952.6983329560608",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+    },
+    {
+      "latency_ms": "865.4790830332786",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=57405213645557461549191886203867858953892828891706620093356332496034092608597"
+    },
+    {
+      "latency_ms": "3258.7040420621634",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "2768.566458951682",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "1115.322917001322",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=109644598776046108708215544048760195529874448367370183373343350346816220605264"
+    },
+    {
+      "latency_ms": "1074.7775421477854",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+    },
+    {
+      "latency_ms": "1685.9454580117017",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+    },
+    {
+      "latency_ms": "1371.2050418835133",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=94748732915349195546448713444722756080968626922653917934033369521339618987721"
+    },
+    {
+      "latency_ms": "1566.08762498945",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "2356.354583054781",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+    },
+    {
+      "latency_ms": "1503.8415831513703",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=57405213645557461549191886203867858953892828891706620093356332496034092608597"
+    },
+    {
+      "latency_ms": "5955.383665859699",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-hong-kong-on-july-20-2026-31c"
+    },
+    {
+      "latency_ms": "2979.9729590304196",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xffefd886a73174e57a57b5683ffa5897555e0ed1d718198ef1bb7c1a7414d501"
+    },
+    {
+      "latency_ms": "3884.002499980852",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/markets/0xffefd886a73174e57a57b5683ffa5897555e0ed1d718198ef1bb7c1a7414d501"
+    },
+    {
+      "latency_ms": "2078.2925421372056",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "2160.2587499655783",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "2558.558083837852",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=109644598776046108708215544048760195529874448367370183373343350346816220605264"
+    }
+  ],
+  "adapter_version": "polymarket_public_adapter_v5.1.6-rc5",
+  "bucket_types": [
+    "exact",
+    "or_below"
+  ],
+  "code_hash": {
+    "adapter_code_sha256": "3938efe08efef5aa0d86b5a3306898a44c0a7ad1f0ab6890a8734bb017354ba6",
+    "api_contract_sha256": "fbbf2cd5d99749448b1cd778cddd154e796f004dd4e526740561ff654bc721fd",
+    "config_sha256": "0a114fe84aeabaf1974719765bce2d0091b23a230599efbf6fd6cfe5cedd7b22",
+    "core_code_sha256": "bd23b448872e972b1618a85c33e2b6bd1546974bf050cffa660dfc1e1a324d17",
+    "fee_contract_sha256": "21dc714105da05d2a666c0057a0f9a620c241c44306cf86e31748f4afb6ba450",
+    "preregistration_sha256": "e41591f4eebb8388269fb316a949413ddc2952a5fd79944c2a8b3b2e8c367856",
+    "reporting_code_sha256": "24365b250b6a7bbc950a60aba8e2fd36a01f14d5bf1b221fda480cca49c1a79e",
+    "schema_sha256": "5027b778d753ace8c0b88eda893206104714ae1cbf57bb0dfc288cb08ca498ba",
+    "settlement_finality_contract_sha256": "43e2b178b32328f6ab6345a09acea51e2b16d0e383b83be25a4d241bd7b44f5a"
+  },
+  "duration_seconds": "1684.303802",
+  "ended_at_utc": "2026-07-22T07:47:54.510657+00:00",
+  "error_count": 0,
+  "formal_signal_fill_position_counts": {
+    "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_6.yaml",
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "heartbeat": {},
+    "ledger_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_6/formal/ledger.sqlite3",
+    "lock_held": false,
+    "lock_info": {},
+    "mode": "formal",
+    "runs": 0,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0,
+    "version": "forward_simulation_v5.1.6-rc5"
+  },
+  "real_signal_to_fill_validation": {
+    "canonical_label": "or_below:29C",
+    "entry_vwap": "0.001",
+    "event_key": "tokyo|2026-07-22|high",
+    "filled_shares": "10000",
+    "filled_usd": "10",
+    "mapping_errors": [],
+    "mapping_valid": true,
+    "market_slug": "highest-temperature-in-tokyo-on-july-22-2026-29corbelow",
+    "status": "pass",
+    "uses_formal_ledger": false,
+    "uses_wallet_or_real_order": false
+  },
+  "resolved_evidence_status": "final",
+  "run_id": "live_v5_1_6_rc5_final_pass",
+  "selected_city_date_count": 2,
+  "selected_city_date_keys": [
+    "beijing|2026-07-22",
+    "tokyo|2026-07-22"
+  ],
+  "selected_event_count": 2,
+  "selected_event_keys": [
+    "beijing|2026-07-22|high",
+    "tokyo|2026-07-22|high"
+  ],
+  "selected_market_count": 3,
+  "selected_token_count": 3,
+  "selected_tokens": [
+    "109644598776046108708215544048760195529874448367370183373343350346816220605264",
+    "57405213645557461549191886203867858953892828891706620093356332496034092608597",
+    "94748732915349195546448713444722756080968626922653917934033369521339618987721"
+  ],
+  "snapshot_count": 9,
+  "snapshots_per_token": {
+    "109644598776046108708215544048760195529874448367370183373343350346816220605264": 3,
+    "57405213645557461549191886203867858953892828891706620093356332496034092608597": 3,
+    "94748732915349195546448713444722756080968626922653917934033369521339618987721": 3
+  },
+  "started_at_utc": "2026-07-22T07:19:50.206855+00:00"
+}

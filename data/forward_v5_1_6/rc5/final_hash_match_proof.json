@@ -1,0 +1,28 @@
+{
+  "all_hashes_match": true,
+  "current_code_hash": {
+    "adapter_code_sha256": "3938efe08efef5aa0d86b5a3306898a44c0a7ad1f0ab6890a8734bb017354ba6",
+    "api_contract_sha256": "fbbf2cd5d99749448b1cd778cddd154e796f004dd4e526740561ff654bc721fd",
+    "config_sha256": "85528bc1dd65b6ba1857f6c4c5fbb6568059b63b0954d62f2a0a82f0e4d99be8",
+    "core_code_sha256": "cad3ceeefe472bea45f51139061d0a998dda93e4bcad479f37c48f9f4d2a7eb0",
+    "fee_contract_sha256": "21dc714105da05d2a666c0057a0f9a620c241c44306cf86e31748f4afb6ba450",
+    "preregistration_sha256": "e41591f4eebb8388269fb316a949413ddc2952a5fd79944c2a8b3b2e8c367856",
+    "reporting_code_sha256": "24365b250b6a7bbc950a60aba8e2fd36a01f14d5bf1b221fda480cca49c1a79e",
+    "schema_sha256": "5027b778d753ace8c0b88eda893206104714ae1cbf57bb0dfc288cb08ca498ba",
+    "settlement_finality_contract_sha256": "43e2b178b32328f6ab6345a09acea51e2b16d0e383b83be25a4d241bd7b44f5a"
+  },
+  "generated_at_utc": "2026-07-22T08:05:32.588055+00:00",
+  "live_code_hash": {
+    "adapter_code_sha256": "3938efe08efef5aa0d86b5a3306898a44c0a7ad1f0ab6890a8734bb017354ba6",
+    "api_contract_sha256": "fbbf2cd5d99749448b1cd778cddd154e796f004dd4e526740561ff654bc721fd",
+    "config_sha256": "85528bc1dd65b6ba1857f6c4c5fbb6568059b63b0954d62f2a0a82f0e4d99be8",
+    "core_code_sha256": "cad3ceeefe472bea45f51139061d0a998dda93e4bcad479f37c48f9f4d2a7eb0",
+    "fee_contract_sha256": "21dc714105da05d2a666c0057a0f9a620c241c44306cf86e31748f4afb6ba450",
+    "preregistration_sha256": "e41591f4eebb8388269fb316a949413ddc2952a5fd79944c2a8b3b2e8c367856",
+    "reporting_code_sha256": "24365b250b6a7bbc950a60aba8e2fd36a01f14d5bf1b221fda480cca49c1a79e",
+    "schema_sha256": "5027b778d753ace8c0b88eda893206104714ae1cbf57bb0dfc288cb08ca498ba",
+    "settlement_finality_contract_sha256": "43e2b178b32328f6ab6345a09acea51e2b16d0e383b83be25a4d241bd7b44f5a"
+  },
+  "live_run_id": "live_v5_1_6_rc5_final_preferred",
+  "mismatches": {}
+}

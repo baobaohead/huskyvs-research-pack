@@ -1,0 +1,18 @@
+validation_case,input,city,weather_date_local,weather_metric,bucket_type,threshold_value,unit,canonical_label,parsing_status,mapping_valid,errors
+temperature_bucket,30C,,,,exact,30,C,exact:30C,ok,,
+temperature_bucket,20C,,,,exact,20,C,exact:20C,ok,,
+temperature_bucket,10C,,,,exact,10,C,exact:10C,ok,,
+temperature_bucket,100F,,,,exact,100,F,exact:100F,ok,,
+temperature_bucket,0C,,,,exact,0,C,exact:0C,ok,,
+temperature_bucket,-10C,,,,exact,-10,C,exact:-10C,ok,,
+temperature_bucket,30.0C,,,,exact,30.0,C,exact:30C,ok,,
+temperature_bucket,30.50C,,,,exact,30.50,C,exact:30.5C,ok,,
+temperature_bucket,25C or below,,,,or_below,25,C,or_below:25C,ok,,
+temperature_bucket,25C or lower,,,,or_below,25,C,or_below:25C,ok,,
+temperature_bucket,35C or higher,,,,or_higher,35,C,or_higher:35C,ok,,
+temperature_bucket,35C or above,,,,or_higher,35,C,or_higher:35C,ok,,
+beijing_exact_26,Will the highest temperature in Beijing be 26°C on July 22?,Beijing,2026-07-22,high,exact,26,C,exact:26C,ok,true,
+beijing_exact_as_or_below_rejected,Will the highest temperature in Beijing be 26°C on July 22?,Beijing,2026-07-22,high,exact,26,C,exact:26C,ok,false,BUCKET_TYPE_MISMATCH
+beijing_or_below_25,Will the highest temperature in Beijing be 25°C or below on July 22?,Beijing,2026-07-22,high,or_below,25,C,or_below:25C,ok,true,
+beijing_or_below_as_exact_rejected,Will the highest temperature in Beijing be 25°C or below on July 22?,Beijing,2026-07-22,high,or_below,25,C,or_below:25C,ok,false,BUCKET_TYPE_MISMATCH
+second_city_exact,Will the highest temperature in New York City be 80°F on July 23?,New York City,2026-07-23,high,exact,80,F,exact:80F,ok,true,

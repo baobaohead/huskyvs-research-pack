@@ -1,0 +1,148 @@
+{
+  "audit_ok": true,
+  "demo_result": {
+    "results": [
+      {
+        "filled_shares": "200",
+        "signal_id": "demo-signal-1",
+        "snapshot_id": "ob_d6011dbb2b406b661d559847",
+        "status": "filled"
+      },
+      {
+        "signal_id": "demo-signal-1",
+        "status": "not_triggered",
+        "strategy_id": "tp_2x_sell_50pct",
+        "threshold": "0.209",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-signal-1",
+        "status": "not_triggered",
+        "strategy_id": "tp_2x_sell_75pct",
+        "threshold": "0.209",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-signal-1",
+        "status": "not_triggered",
+        "strategy_id": "tp_5x_sell_25pct",
+        "threshold": "0.5225",
+        "vwap": "0.09"
+      }
+    ],
+    "run_id": "demo_run_fixture"
+  },
+  "entry_fills": 1,
+  "exact_and_boundary_bucket_examples": {
+    "exact_demo": "exact:30C",
+    "or_below_demo": "or_below:25C"
+  },
+  "exit_fills": 2,
+  "saved_public_response_replay": {
+    "audit_ok": true,
+    "bucket_types": [
+      "exact",
+      "or_below"
+    ],
+    "entry_fills": 3,
+    "monitor": {
+      "results": [
+        {
+          "filled_shares": "10000",
+          "signal_id": "real-saved-1",
+          "snapshot_id": "ob_6514a95b6cb2cd59a3c7c281",
+          "status": "filled"
+        },
+        {
+          "signal_id": "real-saved-1",
+          "status": "not_triggered",
+          "strategy_id": "tp_2x_sell_50pct",
+          "threshold": "0.0020999",
+          "vwap": null
+        },
+        {
+          "signal_id": "real-saved-1",
+          "status": "not_triggered",
+          "strategy_id": "tp_2x_sell_75pct",
+          "threshold": "0.0020999",
+          "vwap": null
+        },
+        {
+          "signal_id": "real-saved-1",
+          "status": "not_triggered",
+          "strategy_id": "tp_5x_sell_25pct",
+          "threshold": "0.00524975",
+          "vwap": null
+        },
+        {
+          "filled_shares": "10000",
+          "signal_id": "real-saved-2",
+          "snapshot_id": "ob_cf14441ef9af1d9d74dcd147",
+          "status": "filled"
+        },
+        {
+          "signal_id": "real-saved-2",
+          "status": "not_triggered",
+          "strategy_id": "tp_2x_sell_50pct",
+          "threshold": "0.0020999",
+          "vwap": null
+        },
+        {
+          "signal_id": "real-saved-2",
+          "status": "not_triggered",
+          "strategy_id": "tp_2x_sell_75pct",
+          "threshold": "0.0020999",
+          "vwap": null
+        },
+        {
+          "signal_id": "real-saved-2",
+          "status": "not_triggered",
+          "strategy_id": "tp_5x_sell_25pct",
+          "threshold": "0.00524975",
+          "vwap": null
+        },
+        {
+          "filled_shares": "10000",
+          "signal_id": "real-saved-3",
+          "snapshot_id": "ob_312b1260e1634b00c052388f",
+          "status": "filled"
+        },
+        {
+          "signal_id": "real-saved-3",
+          "status": "not_triggered",
+          "strategy_id": "tp_2x_sell_50pct",
+          "threshold": "0.0020999",
+          "vwap": null
+        },
+        {
+          "signal_id": "real-saved-3",
+          "status": "not_triggered",
+          "strategy_id": "tp_2x_sell_75pct",
+          "threshold": "0.0020999",
+          "vwap": null
+        },
+        {
+          "signal_id": "real-saved-3",
+          "status": "not_triggered",
+          "strategy_id": "tp_5x_sell_25pct",
+          "threshold": "0.00524975",
+          "vwap": null
+        }
+      ],
+      "run_id": "real_saved_response_replay"
+    },
+    "replay_root": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_7/rc6/real_signal_to_fill_work",
+    "signal_count": 3,
+    "snapshots": 3,
+    "source": "saved_public_gamma_clob_orderbook_responses_from_v5_1_6_rc5",
+    "status": "pass",
+    "token_count": 3,
+    "weather_events": [
+      "beijing|2026-07-22|high",
+      "tokyo|2026-07-22|high"
+    ]
+  },
+  "snapshots": 2,
+  "status": "pass",
+  "uses_formal_ledger": false
+}

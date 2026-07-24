@@ -1,0 +1,9 @@
+lot_id,strategy_id,signal_id,event_key,token_id,entry_fill_id,created_at_utc,entry_shares,gross_entry_cost,entry_fee,mode
+lot_e4822039eb1883590f93758d,hold_to_settlement,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,entry_a999e8bba2bd6e983867813d,2026-07-21T06:43:22.358149+00:00,100.0,10.0,0.01,demo
+lot_a9cd81316f0c50fcdb7cb82d,tp_2x_sell_50pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,entry_a999e8bba2bd6e983867813d,2026-07-21T06:43:22.358149+00:00,100.0,10.0,0.01,demo
+lot_2757634629041c51cbec2650,tp_2x_sell_75pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,entry_a999e8bba2bd6e983867813d,2026-07-21T06:43:22.358149+00:00,100.0,10.0,0.01,demo
+lot_dfb8dbd5d3e7b236aa26d0d1,tp_5x_sell_25pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,entry_a999e8bba2bd6e983867813d,2026-07-21T06:43:22.358149+00:00,100.0,10.0,0.01,demo
+lot_7b2e07006080e6d030bbb680,hold_to_settlement,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,entry_22b0fac1d7579b3065d52468,2026-07-21T06:43:23.358149+00:00,900.0,90.0,0.09,demo
+lot_b1cf5c1c15405e9e85ae33ff,tp_2x_sell_50pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,entry_22b0fac1d7579b3065d52468,2026-07-21T06:43:23.358149+00:00,900.0,90.0,0.09,demo
+lot_675cead2b4f47764af0a408a,tp_2x_sell_75pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,entry_22b0fac1d7579b3065d52468,2026-07-21T06:43:23.358149+00:00,900.0,90.0,0.09,demo
+lot_7f1432ae41cd2308e34e1163,tp_5x_sell_25pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,entry_22b0fac1d7579b3065d52468,2026-07-21T06:43:23.358149+00:00,900.0,90.0,0.09,demo

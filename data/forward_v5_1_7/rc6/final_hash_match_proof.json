@@ -1,0 +1,18 @@
+{
+  "adapter": "PolymarketPublicAdapterV5_1_7",
+  "all_hashes_match": true,
+  "build_hash": {
+    "adapter_code_sha256": "c37c4a7050c6e8772c4288793109711b0c657e641de2e05f04eb85b934bf8918",
+    "api_contract_sha256": "467d4b3c02fe3fcb5c350d66855f682b579bc2769dd40f66e5b6b869a77f2904",
+    "config_sha256": "ce992f5163be513ed909e1ede8e7e3c13bf277670cb14743acdff352c9c38911",
+    "core_code_sha256": "2547492b2f3af4b93dec3cf5cba273d4cc8240bba3a1734f65767e467670a176",
+    "fee_contract_sha256": "edb80a4809fe1272509e7aa19cb017ef68190a2e0e827d4cb28a1e4ac290029b",
+    "preregistration_sha256": "cd84508ca41ed24c54ca56f17f63bd2c2290338fa5c784e41f54c488931a634c",
+    "reporting_code_sha256": "7929366c311cc0b538a04cacff9a586f1f44af1e0a5a7782a6111badb2f927f6",
+    "schema_sha256": "38e9ab63913ebb7f6d6e52c0099e6826208cd259efed7a51e6ec415d3c2d0887",
+    "settlement_finality_contract_sha256": "cde069c04f9bf84cde3b46b8cd8a217ec53268f5e65b05cab264f00f31e24f4d"
+  },
+  "fill_algorithm_version": "depth_replay_v5_1_7_rc6",
+  "generated_at_utc": "2026-07-23T03:30:19.120826+00:00",
+  "normalization_algorithm_version": "orderbook_normalize_v5_1_7_rc6"
+}

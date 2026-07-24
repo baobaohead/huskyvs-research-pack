@@ -1,0 +1,56 @@
+version: forward_simulation_v5.1.0
+schema_version: forward_v5_1_schema_001
+status: not_formally_started
+
+paths:
+  formal_data_dir: data/forward_v5_1/formal
+  demo_data_dir: data/forward_v5_1/demo
+
+api:
+  clob_base_url: https://clob.polymarket.com
+  orderbook_path: /book
+  orderbook_docs_url: https://docs.polymarket.com/api-reference/market-data/get-order-book
+
+execution:
+  trade_enabled: false
+  wallet_connection_enabled: false
+  private_key_required: false
+  order_submission_enabled: false
+  long_running_monitor_requires_confirmation: true
+  run_loop_foreground_only: true
+
+entry:
+  entry_valid_minutes: 10
+
+sample_rules:
+  reject_signals_before_formal_start: true
+  max_signal_registration_delay_seconds: 300
+  allowed_future_skew_seconds: 30
+  first_review_settled_traded_events: 50
+  second_review_settled_traded_events: 100
+  demo_data_excluded_from_formal_stats: true
+
+accounting:
+  lot_method: signal_independent_fifo_lots
+  event_key: normalized_city + weather_date_local + weather_metric
+  celsius_fahrenheit_display_unit_not_event_key: true
+  trigger_stage_once_only: true
+
+fees:
+  entry_fee_bps: 10
+  exit_fee_bps: 10
+  settlement_fee_bps: 0
+  conservative_fee_note: Single-side 10bps on traded notional for entries and exits. Settlement fee defaults to zero because it is not confirmed.
+  fee_basis: gross_notional
+  rounding: round_to_8_decimal_places
+
+polling:
+  default_interval_seconds: 60
+  retry_backoff_seconds: 2
+  max_network_retries_per_market: 2
+
+strategies:
+  hold_to_settlement: completely hold until settlement
+  tp_2x_sell_50pct: one trigger stage; sell 50 percent of current signal-level inventory once when executable bid-depth VWAP is at least 2x rolling average cost
+  tp_2x_sell_75pct: one trigger stage; sell 75 percent of current signal-level inventory once when executable bid-depth VWAP is at least 2x rolling average cost
+  tp_5x_sell_25pct: one trigger stage; sell 25 percent of current signal-level inventory once when executable bid-depth VWAP is at least 5x rolling average cost

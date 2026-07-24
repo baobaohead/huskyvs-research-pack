@@ -1,0 +1,2 @@
+signal_id,created_at_utc,city,weather_date_local,market_slug,condition_id,token_id,outcome,side,forecast_temperature,forecast_probability,market_probability_at_signal,intended_usd,max_entry_price,source,notes
+demo_weather_signal_v5_001,2026-07-21T05:42:17.170355+00:00,Demo City,2099-01-01,demo-weather-market-v5,demo_condition_v5,demo_token_yes_v5,YES,BUY,30,0.62,0.11,100,0.12,demo_fixture_not_formal,fixture signal; must never enter formal stats

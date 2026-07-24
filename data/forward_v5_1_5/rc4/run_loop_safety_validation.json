@@ -1,0 +1,20 @@
+{
+  "ctrl_c_releases_lock": "implemented_by_context_manager",
+  "generated_at_utc": "2026-07-22T05:24:55.292704+00:00",
+  "heartbeat": "implemented",
+  "iterations_0_requires_confirm_infinite": "implemented",
+  "iterations_0_three_round_sleep_calls": [
+    60.0,
+    60.0
+  ],
+  "iterations_1_sleep_calls": [],
+  "iterations_3_sleep_calls": [
+    60.0,
+    60.0
+  ],
+  "pause_poll_sleep_seconds": 5.0,
+  "pause_resume_stop": "implemented",
+  "recoverable_backoff_seconds": 2.0,
+  "single_instance_lock": "implemented",
+  "token_errors_isolated": "implemented_by_token_batch_error_handling"
+}

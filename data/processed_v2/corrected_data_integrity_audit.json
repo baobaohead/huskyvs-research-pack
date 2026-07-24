@@ -1,0 +1,38 @@
+{
+  "critical_parameter_checks": {
+    "activity_has_trade_split_merge_redeem": true,
+    "trades_takerOnly_false": true
+  },
+  "current_zero_value_added_pnl": -15051.8084,
+  "current_zero_value_added_positions": 1566,
+  "missing_timezone_cities": [],
+  "row_consistency": {
+    "activity": {
+      "consistent": true,
+      "csv_rows": 19498,
+      "jsonl_rows": 19498,
+      "manifest_rows": 19498
+    },
+    "closed_positions": {
+      "consistent": true,
+      "csv_rows": 2197,
+      "jsonl_rows": 2197,
+      "manifest_rows": 2197
+    },
+    "current_positions": {
+      "consistent": true,
+      "csv_rows": 1653,
+      "jsonl_rows": 1653,
+      "manifest_rows": 1653
+    },
+    "trades": {
+      "consistent": true,
+      "csv_rows": 18308,
+      "jsonl_rows": 18308,
+      "manifest_rows": 18308
+    }
+  },
+  "settled_rows_have_local_cutoff": true,
+  "snapshot_zip_valid": true,
+  "timezone_mapping_complete": true
+}

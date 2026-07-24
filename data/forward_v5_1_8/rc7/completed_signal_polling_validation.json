@@ -1,0 +1,37 @@
+{
+  "before": {
+    "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_8.yaml",
+    "entry_fills": 1,
+    "event_results": 4,
+    "exit_fills": 2,
+    "formal_started_at_utc": "",
+    "heartbeat": {
+      "heartbeat_at_utc": "2099-01-03T00:00:00+00:00",
+      "hostname": "baobaotoudeMac-mini.local",
+      "mode": "demo",
+      "pid": 62890,
+      "process_start_time": "2026-07-23T05:38:52+00:00",
+      "run_id": "demo_run_settlement",
+      "status": "running",
+      "version": "forward_simulation_v5.1.8-rc7"
+    },
+    "ledger_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/demo/ledger.sqlite3",
+    "lock_held": false,
+    "lock_info": {},
+    "mode": "demo",
+    "paused": "false",
+    "runs": 3,
+    "settlements": 4,
+    "signals": 1,
+    "snapshots": 2,
+    "stopped": "false",
+    "version": "forward_simulation_v5.1.8-rc7"
+  },
+  "monitor_result": {
+    "results": [],
+    "run_id": "completed_signal_no_poll"
+  },
+  "new_run_count": 1,
+  "new_snapshot_count": 0,
+  "status": "pass"
+}

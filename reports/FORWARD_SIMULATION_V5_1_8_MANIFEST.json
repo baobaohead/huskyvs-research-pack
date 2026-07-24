@@ -1,0 +1,879 @@
+{
+  "generated_at_utc": "2026-07-23T05:38:54.309541+00:00",
+  "validations": {
+    "completed_signal_polling": {
+      "before": {
+        "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_8.yaml",
+        "entry_fills": 1,
+        "event_results": 4,
+        "exit_fills": 2,
+        "formal_started_at_utc": "",
+        "heartbeat": {
+          "heartbeat_at_utc": "2099-01-03T00:00:00+00:00",
+          "hostname": "baobaotoudeMac-mini.local",
+          "mode": "demo",
+          "pid": 62890,
+          "process_start_time": "2026-07-23T05:38:52+00:00",
+          "run_id": "demo_run_settlement",
+          "status": "running",
+          "version": "forward_simulation_v5.1.8-rc7"
+        },
+        "ledger_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/demo/ledger.sqlite3",
+        "lock_held": false,
+        "lock_info": {},
+        "mode": "demo",
+        "paused": "false",
+        "runs": 3,
+        "settlements": 4,
+        "signals": 1,
+        "snapshots": 2,
+        "stopped": "false",
+        "version": "forward_simulation_v5.1.8-rc7"
+      },
+      "monitor_result": {
+        "results": [],
+        "run_id": "completed_signal_no_poll"
+      },
+      "new_run_count": 1,
+      "new_snapshot_count": 0,
+      "status": "pass"
+    },
+    "demo_end_to_end": {
+      "entry_fills": 3,
+      "entry_monitor": {
+        "results": [
+          {
+            "filled_shares": "100",
+            "signal_id": "demo-three-entry-1",
+            "snapshot_id": "ob_c7354b137041f879f61e411e",
+            "status": "filled"
+          },
+          {
+            "filled_shares": "100",
+            "signal_id": "demo-three-entry-2",
+            "snapshot_id": "ob_c7354b137041f879f61e411e",
+            "status": "filled"
+          },
+          {
+            "filled_shares": "100",
+            "signal_id": "demo-three-entry-3",
+            "snapshot_id": "ob_c7354b137041f879f61e411e",
+            "status": "filled"
+          },
+          {
+            "signal_id": "demo-three-entry-1",
+            "status": "not_triggered",
+            "strategy_id": "tp_2x_sell_50pct",
+            "threshold": "0.209",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-three-entry-2",
+            "status": "not_triggered",
+            "strategy_id": "tp_2x_sell_50pct",
+            "threshold": "0.209",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-three-entry-3",
+            "status": "not_triggered",
+            "strategy_id": "tp_2x_sell_50pct",
+            "threshold": "0.209",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-three-entry-1",
+            "status": "not_triggered",
+            "strategy_id": "tp_2x_sell_75pct",
+            "threshold": "0.209",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-three-entry-2",
+            "status": "not_triggered",
+            "strategy_id": "tp_2x_sell_75pct",
+            "threshold": "0.209",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-three-entry-3",
+            "status": "not_triggered",
+            "strategy_id": "tp_2x_sell_75pct",
+            "threshold": "0.209",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-three-entry-1",
+            "status": "not_triggered",
+            "strategy_id": "tp_5x_sell_25pct",
+            "threshold": "0.5225",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-three-entry-2",
+            "status": "not_triggered",
+            "strategy_id": "tp_5x_sell_25pct",
+            "threshold": "0.5225",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-three-entry-3",
+            "status": "not_triggered",
+            "strategy_id": "tp_5x_sell_25pct",
+            "threshold": "0.5225",
+            "vwap": "0.09"
+          }
+        ],
+        "run_id": "three_entry_demo_entry"
+      },
+      "exit_fills": 6,
+      "exit_monitor": {
+        "results": [
+          {
+            "filled_shares": "50",
+            "signal_id": "demo-three-entry-1",
+            "status": "exit_filled",
+            "strategy_id": "tp_2x_sell_50pct"
+          },
+          {
+            "filled_shares": "50",
+            "signal_id": "demo-three-entry-2",
+            "status": "exit_filled",
+            "strategy_id": "tp_2x_sell_50pct"
+          },
+          {
+            "filled_shares": "50",
+            "signal_id": "demo-three-entry-3",
+            "status": "exit_filled",
+            "strategy_id": "tp_2x_sell_50pct"
+          },
+          {
+            "filled_shares": "75",
+            "signal_id": "demo-three-entry-1",
+            "status": "exit_filled",
+            "strategy_id": "tp_2x_sell_75pct"
+          },
+          {
+            "filled_shares": "75",
+            "signal_id": "demo-three-entry-2",
+            "status": "exit_filled",
+            "strategy_id": "tp_2x_sell_75pct"
+          },
+          {
+            "filled_shares": "50",
+            "signal_id": "demo-three-entry-3",
+            "status": "exit_filled",
+            "strategy_id": "tp_2x_sell_75pct"
+          },
+          {
+            "signal_id": "demo-three-entry-1",
+            "status": "not_triggered",
+            "strategy_id": "tp_5x_sell_25pct",
+            "threshold": "0.5225",
+            "vwap": "0.3"
+          },
+          {
+            "signal_id": "demo-three-entry-2",
+            "status": "not_triggered",
+            "strategy_id": "tp_5x_sell_25pct",
+            "threshold": "0.5225",
+            "vwap": "0.3"
+          },
+          {
+            "signal_id": "demo-three-entry-3",
+            "status": "not_triggered",
+            "strategy_id": "tp_5x_sell_25pct",
+            "threshold": "0.5225",
+            "vwap": "0.3"
+          }
+        ],
+        "run_id": "three_entry_demo_exit"
+      },
+      "full_replay_ok": true,
+      "settlement_monitor": {
+        "results": [
+          {
+            "signal_id": "demo-three-entry-1",
+            "status": "settled",
+            "strategy_id": "hold_to_settlement",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-1",
+            "status": "settled",
+            "strategy_id": "tp_2x_sell_50pct",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-1",
+            "status": "settled",
+            "strategy_id": "tp_2x_sell_75pct",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-1",
+            "status": "settled",
+            "strategy_id": "tp_5x_sell_25pct",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-2",
+            "status": "settled",
+            "strategy_id": "hold_to_settlement",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-2",
+            "status": "settled",
+            "strategy_id": "tp_2x_sell_50pct",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-2",
+            "status": "settled",
+            "strategy_id": "tp_2x_sell_75pct",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-2",
+            "status": "settled",
+            "strategy_id": "tp_5x_sell_25pct",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-3",
+            "status": "settled",
+            "strategy_id": "hold_to_settlement",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-3",
+            "status": "settled",
+            "strategy_id": "tp_2x_sell_50pct",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-3",
+            "status": "settled",
+            "strategy_id": "tp_2x_sell_75pct",
+            "value": "1"
+          },
+          {
+            "signal_id": "demo-three-entry-3",
+            "status": "settled",
+            "strategy_id": "tp_5x_sell_25pct",
+            "value": "1"
+          }
+        ],
+        "run_id": "three_entry_demo_settlement"
+      },
+      "settlements": 12,
+      "status": "pass",
+      "strategy_lots": 12,
+      "work_root": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/demo/three_entry_work"
+    },
+    "formal_empty": {
+      "entry_fills": 0,
+      "event_results": 0,
+      "exit_fills": 0,
+      "formal_started_at_utc": null,
+      "generated_at_utc": "2026-07-23T05:38:54.308857+00:00",
+      "ok": true,
+      "settlements": 0,
+      "signals": 0,
+      "snapshots": 0
+    },
+    "full_replay": {
+      "checks": {
+        "ENTRY_STATE_CACHE_CORRUPTED": 0,
+        "ENTRY_STATE_DEADLINE_MISMATCH": 0,
+        "ENTRY_STATE_FILLED_USD_MISMATCH": 0,
+        "ENTRY_STATE_REMAINING_USD_MISMATCH": 0,
+        "ENTRY_STATE_REOPENED_AFTER_EXPIRED": 0,
+        "ENTRY_STATE_REOPENED_AFTER_FILLED": 0,
+        "ENTRY_STATE_SHARES_MISMATCH": 0,
+        "ENTRY_STATE_STATUS_MISMATCH": 0,
+        "EVENT_PNL_MISMATCH": 0,
+        "EXIT_ALLOCATION_FEE_MISMATCH": 0,
+        "EXIT_ALLOCATION_GROSS_PROCEEDS_MISMATCH": 0,
+        "EXIT_ALLOCATION_NET_PROCEEDS_MISMATCH": 0,
+        "EXIT_ALLOCATION_ORDER_MISMATCH": 0,
+        "EXIT_ALLOCATION_SHARES_MISMATCH": 0,
+        "FILL_CONFLICT_FEE_USED": 0,
+        "FILL_FEE_EXPONENT_MISMATCH": 0,
+        "FILL_FEE_MISMATCH": 0,
+        "FILL_FEE_RATE_MISMATCH": 0,
+        "FILL_FEE_SOURCE_MISMATCH": 0,
+        "FILL_FEE_STATUS_MISMATCH": 0,
+        "FILL_FULLY_FILLED_FLAG_MISMATCH": 0,
+        "FILL_GROSS_AMOUNT_MISMATCH": 0,
+        "FILL_LEVEL_COUNT_MISMATCH": 0,
+        "FILL_MIN_ORDER_SIZE_MISMATCH": 0,
+        "FILL_NET_AMOUNT_MISMATCH": 0,
+        "FILL_NOTIONAL_MISMATCH": 0,
+        "FILL_ORDERING_MISMATCH": 0,
+        "FILL_SHARED_DEPTH_EXCEEDED": 0,
+        "FILL_SHARES_MISMATCH": 0,
+        "FILL_SNAPSHOT_NOT_FOUND": 0,
+        "FILL_TICK_SIZE_MISMATCH": 0,
+        "FILL_TRACE_MISMATCH": 0,
+        "FILL_TRACE_MISSING": 0,
+        "FILL_UNFILLED_AMOUNT_MISMATCH": 0,
+        "FILL_UNKNOWN_FEE_USED": 0,
+        "FILL_UNSUPPORTED_FEE_EXPONENT": 0,
+        "FILL_VISIBLE_DEPTH_EXCEEDED": 0,
+        "FILL_VWAP_MISMATCH": 0,
+        "FILL_WRONG_BOOK_SIDE": 0,
+        "INCOMPLETE_TAKE_PROFIT_MISMATCH": 0,
+        "LOT_ENTRY_COST_MISMATCH": 0,
+        "LOT_ENTRY_FEE_MISMATCH": 0,
+        "LOT_ENTRY_SHARES_MISMATCH": 0,
+        "LOT_EXIT_PROCEEDS_MISMATCH": 0,
+        "LOT_PNL_MISMATCH": 0,
+        "LOT_REMAINING_SHARES_MISMATCH": 0,
+        "LOT_SETTLEMENT_PROCEEDS_MISMATCH": 0,
+        "LOT_SOLD_SHARES_MISMATCH": 0,
+        "MARKET_CANONICAL_HASH_MISMATCH": 0,
+        "MARKET_CONSTRAINT_CONFLICT_IGNORED": 0,
+        "MARKET_CONSTRAINT_HASH_MISMATCH": 0,
+        "MARKET_CONSTRAINT_SOURCE_MISMATCH": 0,
+        "MARKET_EVIDENCE_MISSING": 0,
+        "MARKET_MIN_ORDER_SIZE_MISMATCH": 0,
+        "MARKET_RAW_HTTP_HASH_MISMATCH": 0,
+        "MARKET_RESPONSE_PARSE_FAILED": 0,
+        "MARKET_TICK_SIZE_MISMATCH": 0,
+        "ORDERBOOK_ASKS_MISMATCH": 0,
+        "ORDERBOOK_ASSET_ID_MISMATCH": 0,
+        "ORDERBOOK_BEST_ASK_MISMATCH": 0,
+        "ORDERBOOK_BEST_BID_MISMATCH": 0,
+        "ORDERBOOK_BIDS_MISMATCH": 0,
+        "ORDERBOOK_CANONICAL_HASH_MISMATCH": 0,
+        "ORDERBOOK_CONDITION_ID_MISMATCH": 0,
+        "ORDERBOOK_CROSSED": 0,
+        "ORDERBOOK_DEPTH_TOTAL_MISMATCH": 0,
+        "ORDERBOOK_NEGATIVE_SIZE": 0,
+        "ORDERBOOK_NORMALIZED_HASH_MISMATCH": 0,
+        "ORDERBOOK_RAW_EVIDENCE_MISSING": 0,
+        "ORDERBOOK_RAW_HASH_MISMATCH": 0,
+        "ORDERBOOK_RAW_HTTP_HASH_MISMATCH": 0,
+        "ORDERBOOK_SPREAD_MISMATCH": 0,
+        "ORDERBOOK_TICK_VIOLATION": 0,
+        "POSITION_COST_BASIS_MISMATCH": 0,
+        "POSITION_PNL_MISMATCH": 0,
+        "POSITION_SHARE_CONSERVATION_FAILED": 0,
+        "SETTLEMENT_ALLOCATION_NET_PROCEEDS_MISMATCH": 0,
+        "SETTLEMENT_ALLOCATION_SHARES_MISMATCH": 0,
+        "SETTLEMENT_ALLOCATION_VALUE_MISMATCH": 0,
+        "SETTLEMENT_CLOB_HASH_MISMATCH": 0,
+        "SETTLEMENT_EVIDENCE_MISSING": 0,
+        "SETTLEMENT_FINALITY_CONFLICT": 0,
+        "SETTLEMENT_GAMMA_HASH_MISMATCH": 0,
+        "SETTLEMENT_PENDING_MARKED_FINAL": 0,
+        "SETTLEMENT_PROCEEDS_MISMATCH": 0,
+        "SETTLEMENT_PROPOSED_MARKED_FINAL": 0,
+        "SETTLEMENT_RAW_HTTP_HASH_MISMATCH": 0,
+        "SETTLEMENT_UNKNOWN_WINNER_ASSIGNED_VALUE": 0,
+        "SETTLEMENT_VALUE_MISMATCH": 0,
+        "SETTLEMENT_WINNER_MISMATCH": 0,
+        "SIGNAL_BUCKET_MISMATCH": 0,
+        "SIGNAL_CANONICAL_HASH_MISMATCH": 0,
+        "SIGNAL_ENTRY_DEADLINE_MISMATCH": 0,
+        "SIGNAL_EVENT_KEY_MISMATCH": 0,
+        "SIGNAL_FIELD_MISMATCH": 0,
+        "SIGNAL_INTENDED_USD_MISMATCH": 0,
+        "SIGNAL_MAX_ENTRY_PRICE_MISMATCH": 0,
+        "SIGNAL_RAW_HASH_MISMATCH": 0,
+        "SIGNAL_REGISTRATION_EVIDENCE_MISSING": 0,
+        "SIGNAL_TOKEN_PNL_MISMATCH": 0,
+        "STRATEGY_PNL_MISMATCH": 0,
+        "TOTAL_LEDGER_PNL_MISMATCH": 0,
+        "TRIGGER_STATUS_MISMATCH": 0,
+        "TRIGGER_TARGET_EXCEEDED": 0,
+        "accepting_unknown_entered": 0,
+        "audit_violation_events": 0,
+        "below_min_order_fill": 0,
+        "constraint_conflict_entered": 0,
+        "duplicate_signal_id": 0,
+        "duplicate_snapshot_content_in_run": 0,
+        "duplicate_snapshot_in_run": 0,
+        "entry_after_settlement": 0,
+        "entry_shared_depth_overfill": 0,
+        "exit_shared_depth_overfill": 0,
+        "fee_conflicts_entered": 0,
+        "fill_missing_source_hash": 0,
+        "formal_adapter_hash_mismatch": 0,
+        "formal_missing_source_fields": 0,
+        "formal_non_official_adapter_rows": 0,
+        "future_signal_too_far": 0,
+        "gross_minus_fees_net_mismatch": 0,
+        "hash_freeze_drift": 0,
+        "illegal_tick_price_entered": 0,
+        "inventory_oversold": 0,
+        "mapping_invalid_entered": 0,
+        "missing_constraints_for_fill": 0,
+        "missing_settlement_raw_response": 0,
+        "missing_token_validation_for_fill": 0,
+        "non_final_settlement": 0,
+        "proposed_final_settlement": 0,
+        "run_manifest_hash_mismatch": 0,
+        "settled_after_exit": 0,
+        "settlement_raw_hash_mismatch": 0,
+        "signal_before_formal_start": 0,
+        "signal_event_key_mismatch": 0,
+        "signal_registration_delay_exceeded": 0,
+        "signal_temperature_bucket_unparseable": 0,
+        "status_conflict_entered": 0,
+        "unsupported_fee_exponent_entered": 0
+      },
+      "level": "full-replay",
+      "ok": true,
+      "replay_summary": {
+        "allocations_rebuilt": 6,
+        "entry_states_rebuilt": 1,
+        "error_counts_by_code": {},
+        "events_rebuilt": 4,
+        "fee_evidence_replayed": 6,
+        "fills_replayed": 3,
+        "lots_rebuilt": 4,
+        "settlements_replayed": 4,
+        "signals_replayed": 1,
+        "snapshots_replayed": 2
+      }
+    },
+    "illegal_bucket_registration": {
+      "registered_count": 0,
+      "status": "pass",
+      "stored_signal_count": 0
+    },
+    "negative_detected": 30,
+    "negative_temperature": [
+      {
+        "bucket_type": "exact",
+        "canonical_label": "exact:-1C",
+        "input": "-1C",
+        "parsing_status": "ok",
+        "threshold_value": "-1",
+        "unit": "C"
+      },
+      {
+        "bucket_type": "exact",
+        "canonical_label": "exact:-10C",
+        "input": "-10C",
+        "parsing_status": "ok",
+        "threshold_value": "-10",
+        "unit": "C"
+      },
+      {
+        "bucket_type": "exact",
+        "canonical_label": "exact:-20F",
+        "input": "-20F",
+        "parsing_status": "ok",
+        "threshold_value": "-20",
+        "unit": "F"
+      },
+      {
+        "bucket_type": "exact",
+        "canonical_label": "exact:-1C",
+        "input": "-1c",
+        "parsing_status": "ok",
+        "threshold_value": "-1",
+        "unit": "C"
+      },
+      {
+        "bucket_type": "exact",
+        "canonical_label": "exact:-1C",
+        "input": "minus-1c",
+        "parsing_status": "ok",
+        "threshold_value": "-1",
+        "unit": "C"
+      }
+    ],
+    "quick_audit": {
+      "checks": {
+        "SETTLEMENT_CLOB_HASH_MISMATCH": 0,
+        "SETTLEMENT_EVIDENCE_MISSING": 0,
+        "SETTLEMENT_FINALITY_CONFLICT": 0,
+        "SETTLEMENT_GAMMA_HASH_MISMATCH": 0,
+        "SETTLEMENT_PENDING_MARKED_FINAL": 0,
+        "SETTLEMENT_PROCEEDS_MISMATCH": 0,
+        "SETTLEMENT_PROPOSED_MARKED_FINAL": 0,
+        "SETTLEMENT_UNKNOWN_WINNER_ASSIGNED_VALUE": 0,
+        "SETTLEMENT_VALUE_MISMATCH": 0,
+        "SETTLEMENT_WINNER_MISMATCH": 0,
+        "accepting_unknown_entered": 0,
+        "audit_violation_events": 0,
+        "below_min_order_fill": 0,
+        "constraint_conflict_entered": 0,
+        "duplicate_signal_id": 0,
+        "duplicate_snapshot_content_in_run": 0,
+        "duplicate_snapshot_in_run": 0,
+        "entry_after_settlement": 0,
+        "entry_shared_depth_overfill": 0,
+        "exit_shared_depth_overfill": 0,
+        "fee_conflicts_entered": 0,
+        "fill_missing_source_hash": 0,
+        "formal_adapter_hash_mismatch": 0,
+        "formal_missing_source_fields": 0,
+        "formal_non_official_adapter_rows": 0,
+        "future_signal_too_far": 0,
+        "gross_minus_fees_net_mismatch": 0,
+        "hash_freeze_drift": 0,
+        "illegal_tick_price_entered": 0,
+        "inventory_oversold": 0,
+        "mapping_invalid_entered": 0,
+        "missing_constraints_for_fill": 0,
+        "missing_settlement_raw_response": 0,
+        "missing_token_validation_for_fill": 0,
+        "non_final_settlement": 0,
+        "proposed_final_settlement": 0,
+        "run_manifest_hash_mismatch": 0,
+        "settled_after_exit": 0,
+        "settlement_raw_hash_mismatch": 0,
+        "signal_before_formal_start": 0,
+        "signal_event_key_mismatch": 0,
+        "signal_registration_delay_exceeded": 0,
+        "signal_temperature_bucket_unparseable": 0,
+        "status_conflict_entered": 0,
+        "unsupported_fee_exponent_entered": 0
+      },
+      "level": "quick",
+      "ok": true,
+      "replay_summary": {
+        "allocations_rebuilt": 0,
+        "entry_states_rebuilt": 0,
+        "error_counts_by_code": {},
+        "events_rebuilt": 0,
+        "fee_evidence_replayed": 0,
+        "fills_replayed": 0,
+        "lots_rebuilt": 0,
+        "settlements_replayed": 0,
+        "signals_replayed": 0,
+        "snapshots_replayed": 0
+      }
+    },
+    "rc7_validations": {
+      "files": [
+        "fee_source_replay_validation.json",
+        "signal_registration_validation.json",
+        "entry_state_rebuild_validation.json",
+        "lot_allocation_rebuild_validation.json",
+        "pnl_rebuild_validation.json",
+        "state_preflight_validation.json"
+      ],
+      "full_replay_ok": true,
+      "real_replay_status": "pass",
+      "statuses": {
+        "entry_state_rebuild_validation.json": "pass",
+        "fee_source_replay_validation.json": "pass",
+        "lot_allocation_rebuild_validation.json": "pass",
+        "pnl_rebuild_validation.json": "pass",
+        "signal_registration_validation.json": "pass",
+        "state_preflight_validation.json": "pass"
+      }
+    },
+    "real_signal_to_fill": {
+      "audit_ok": true,
+      "demo_result": {
+        "results": [
+          {
+            "filled_shares": "200",
+            "signal_id": "demo-signal-1",
+            "snapshot_id": "ob_f312d8b2ce72bc65b3b66fc4",
+            "status": "filled"
+          },
+          {
+            "signal_id": "demo-signal-1",
+            "status": "not_triggered",
+            "strategy_id": "tp_2x_sell_50pct",
+            "threshold": "0.209",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-signal-1",
+            "status": "not_triggered",
+            "strategy_id": "tp_2x_sell_75pct",
+            "threshold": "0.209",
+            "vwap": "0.09"
+          },
+          {
+            "signal_id": "demo-signal-1",
+            "status": "not_triggered",
+            "strategy_id": "tp_5x_sell_25pct",
+            "threshold": "0.5225",
+            "vwap": "0.09"
+          }
+        ],
+        "run_id": "demo_run_fixture"
+      },
+      "entry_fills": 1,
+      "exact_and_boundary_bucket_examples": {
+        "exact_demo": "exact:30C",
+        "or_below_demo": "or_below:25C"
+      },
+      "exit_fills": 2,
+      "saved_public_response_replay": {
+        "audit_ok": true,
+        "bucket_types": [
+          "exact",
+          "or_below"
+        ],
+        "build_hash": {
+          "adapter_code_sha256": "28072d207cfb0e68427c2505e306ab38439c8dc2317fbb7f144c140b32e3acfa",
+          "api_contract_sha256": "c3aad42ff053f078f3b699e72dee05aa3d3c33f8619c69d6f9dd975869697bfb",
+          "config_sha256": "f7775bebdce3fa57f52cae912d1166243351f626a8cea655fde20e84842c93f6",
+          "core_code_sha256": "9407ee87504b4116711d9159839247db98535c87667a056b10fe2c6c7979d75e",
+          "fee_contract_sha256": "32ed4f8251643f224ee12e2a70983257b5236850eff7d18363da7b6266340b55",
+          "preregistration_sha256": "e862b2287539e1e19dc66b3155cf90ef63c2a427caa4be5ba25cb66522fed4a2",
+          "reporting_code_sha256": "c042ddc3f8e883f50abd64b962a9b63ad2d149041de70417e7ee0596fe3f6bfa",
+          "schema_sha256": "cb65f81da51e4d7e685e4b41338a19ddb7bd54cd829a871a85e0b8128dbe19dc",
+          "settlement_finality_contract_sha256": "e41d816d1d705293cfe184f8beb46bf9c73e73b702c3dc3e8b23518160892c2c"
+        },
+        "entry_fills": 3,
+        "monitor_rounds": [
+          {
+            "results": [
+              {
+                "filled_shares": "10000",
+                "signal_id": "real-saved-1",
+                "snapshot_id": "ob_b3a3d536899bd1adb1f3c64e",
+                "status": "filled"
+              },
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              },
+              {
+                "filled_shares": "10000",
+                "signal_id": "real-saved-2",
+                "snapshot_id": "ob_c2d3abae23991676d29f02a4",
+                "status": "filled"
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              },
+              {
+                "filled_shares": "10000",
+                "signal_id": "real-saved-3",
+                "snapshot_id": "ob_717614a7613147943abf6c52",
+                "status": "filled"
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              }
+            ],
+            "run_id": "real_saved_response_replay_round_1"
+          },
+          {
+            "results": [
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              }
+            ],
+            "run_id": "real_saved_response_replay_round_2"
+          },
+          {
+            "results": [
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-1",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-2",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_50pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_2x_sell_75pct",
+                "threshold": "0.0020999",
+                "vwap": null
+              },
+              {
+                "signal_id": "real-saved-3",
+                "status": "not_triggered",
+                "strategy_id": "tp_5x_sell_25pct",
+                "threshold": "0.00524975",
+                "vwap": null
+              }
+            ],
+            "run_id": "real_saved_response_replay_round_3"
+          }
+        ],
+        "replay_root": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/live_integration/real_saved_response_replay_work",
+        "signal_count": 3,
+        "simulated_duration_seconds": 120,
+        "snapshots": 9,
+        "snapshots_by_token": {
+          "109644598776046108708215544048760195529874448367370183373343350346816220605264": 3,
+          "57405213645557461549191886203867858953892828891706620093356332496034092608597": 3,
+          "94748732915349195546448713444722756080968626922653917934033369521339618987721": 3
+        },
+        "source": "saved_public_gamma_clob_orderbook_responses_from_v5_1_6_rc5",
+        "status": "pass",
+        "token_count": 3,
+        "weather_events": [
+          "beijing|2026-07-22|high",
+          "tokyo|2026-07-22|high"
+        ]
+      },
+      "snapshots": 2,
+      "status": "pass",
+      "uses_formal_ledger": false
+    }
+  },
+  "version": "forward_simulation_v5.1.8-rc7"
+}

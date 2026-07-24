@@ -1,0 +1,5 @@
+trigger_id,signal_id,strategy_id,trigger_stage_id,event_key,token_id,trigger_created_at,trigger_target_shares,trigger_filled_shares,trigger_remaining_shares,trigger_status,trigger_completed_at,rolling_avg_cost_at_trigger,threshold_price,mode
+trig_859a332d72a732eb2b11fb0b,demo_v5_1_sig_001,tp_2x_sell_50pct,tp_2x_once,demo city|2099-01-01|high,demo-token,2026-07-21T06:43:24.358149+00:00,500.0,0.0,500.0,open,,0.10010000000000001,0.20020000000000002,demo
+trig_859a332d72a732eb2b11fb0b,demo_v5_1_sig_001,tp_2x_sell_50pct,tp_2x_once,demo city|2099-01-01|high,demo-token,2026-07-21T06:43:24.358149+00:00,500.0,500.0,0.0,completed,2026-07-21T06:43:24.358149+00:00,0.10010000000000001,0.20020000000000002,demo
+trig_317528a1d52912ec7658c652,demo_v5_1_sig_001,tp_2x_sell_75pct,tp_2x_once,demo city|2099-01-01|high,demo-token,2026-07-21T06:43:24.358149+00:00,750.0,0.0,750.0,open,,0.10010000000000001,0.20020000000000002,demo
+trig_317528a1d52912ec7658c652,demo_v5_1_sig_001,tp_2x_sell_75pct,tp_2x_once,demo city|2099-01-01|high,demo-token,2026-07-21T06:43:24.358149+00:00,750.0,750.0,0.0,completed,2026-07-21T06:43:24.358149+00:00,0.10010000000000001,0.20020000000000002,demo

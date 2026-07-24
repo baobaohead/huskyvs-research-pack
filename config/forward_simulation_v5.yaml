@@ -1,0 +1,44 @@
+version: forward_simulation_v5.0.0
+status: pending_user_formal_start
+
+paths:
+  formal_data_dir: data/forward_v5
+  demo_data_dir: data/forward_v5/demo
+
+api:
+  clob_base_url: https://clob.polymarket.com
+  orderbook_path: /book
+  batch_orderbook_path: /books
+  orderbook_docs_url: https://docs.polymarket.com/api-reference/market-data/get-order-book
+
+execution:
+  trade_enabled: false
+  wallet_connection_enabled: false
+  private_key_required: false
+  order_submission_enabled: false
+  formal_monitor_requires_user_command: true
+  long_running_monitor_requires_confirmation: true
+
+polling:
+  default_interval_seconds: 60
+  default_iterations: 1
+
+fees:
+  entry_fee_bps: 0
+  exit_fee_bps: 0
+  settlement_fee_bps: 0
+  conservative_fee_bps: 10
+  fee_note: Fees are not confirmed; store gross results and optional conservative fee scenario.
+
+sample_rules:
+  formal_start_utc: null
+  minimum_first_review_events: 50
+  second_review_events: 100
+  reject_signals_before_formal_start: true
+  demo_data_excluded_from_formal_stats: true
+
+strategies:
+  hold_to_settlement: completely hold until settlement
+  tp_2x_sell_50pct: sell 50 percent of current remaining inventory when executable bid-depth VWAP is at least 2x rolling average cost
+  tp_2x_sell_75pct: sell 75 percent of current remaining inventory when executable bid-depth VWAP is at least 2x rolling average cost
+  tp_5x_sell_25pct: sell 25 percent of current remaining inventory when executable bid-depth VWAP is at least 5x rolling average cost

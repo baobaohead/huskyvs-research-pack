@@ -1,0 +1,19 @@
+{
+  "audit_integrity_formal_source_checks": [
+    "formal_missing_source_fields",
+    "formal_non_official_adapter_rows",
+    "formal_adapter_hash_mismatch"
+  ],
+  "cli_fixture_argument_exposed": false,
+  "fixture_result": {
+    "fatal_error": true,
+    "run_id": "formal_fixture_rejected",
+    "status": "formal_adapter_injection_rejected"
+  },
+  "formal_adapter_class": "PolymarketPublicAdapterV5_1_5",
+  "formal_data_source": "polymarket_public_api",
+  "formal_fixture_adapter_rejected_before_public_calls": true,
+  "formal_run_environment": "formal",
+  "generated_at_utc": "2026-07-22T05:24:55.292246+00:00",
+  "wallet_or_order_methods_exposed": false
+}

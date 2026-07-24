@@ -1,0 +1,84 @@
+{
+  "business_row_counts": {
+    "audit_log.jsonl": 0,
+    "entry_fills.csv": 0,
+    "entry_order_state.csv": 0,
+    "errors.jsonl": 0,
+    "event_results.csv": 0,
+    "exit_fill_allocations.csv": 0,
+    "exit_fills.csv": 0,
+    "heartbeat.jsonl": 0,
+    "orderbook_snapshots.jsonl": 0,
+    "settlement_allocations.csv": 0,
+    "settlements.csv": 0,
+    "signals.csv": 0,
+    "strategy_lots.csv": 0,
+    "strategy_triggers.csv": 0
+  },
+  "files": {
+    "audit_log.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "entry_fills.csv": {
+      "sha256": "4b15f9debbaae459a1b0bf61d8e5079198c4b43211a08260fa4c94f21719f0fa",
+      "size_bytes": 225
+    },
+    "entry_order_state.csv": {
+      "sha256": "c83955c8a1f71f2a1204f77eb98f5557b40fbbec699f0be40467240fd0fb4363",
+      "size_bytes": 215
+    },
+    "errors.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "event_results.csv": {
+      "sha256": "2d9bfe1836de5f4ecab7c89fd5ecd72f7bb0feb1a699a67d843e748bf532e006",
+      "size_bytes": 260
+    },
+    "exit_fill_allocations.csv": {
+      "sha256": "23c0772ac0720d1be27954c4b1361f1e52a6678586d9fa286e2231945f628006",
+      "size_bytes": 138
+    },
+    "exit_fills.csv": {
+      "sha256": "e09c715325d0ada922057ba6519cee8494440bfb63e8e20db55732ad43be3708",
+      "size_bytes": 297
+    },
+    "heartbeat.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "orderbook_snapshots.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "settlement_allocations.csv": {
+      "sha256": "8aeddb3648e59673ece6345b72c53a1df46cd34660deb59ea3b0738fee046794",
+      "size_bytes": 143
+    },
+    "settlements.csv": {
+      "sha256": "cc74423789a5da031cfbe56afa2a4afd4fcd51ffa7ffdca20a237d0a9a3f5c32",
+      "size_bytes": 273
+    },
+    "signals.csv": {
+      "sha256": "47693936f556dc07ff1fbf260b314596460e04dada490b80999a43cddc434aa3",
+      "size_bytes": 293
+    },
+    "strategy_lots.csv": {
+      "sha256": "f0c6582f169ac001ee015161f11b56e3793e3cbcb93754fc1da9c72d0f4712c8",
+      "size_bytes": 123
+    },
+    "strategy_triggers.csv": {
+      "sha256": "e713fba2a088df7cdfa8dc42587109ff0530a40f7ccc91506f5370b684565151",
+      "size_bytes": 243
+    },
+    "system_state.json": {
+      "sha256": "a050697befb3651571cfb9a08eff9b7ee18026cc2094156bad671eaa99d3fc51",
+      "size_bytes": 141
+    }
+  },
+  "formal_started_at_utc": null,
+  "generated_at_utc": "2026-07-21T07:15:04.751241+00:00",
+  "ok": true,
+  "path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1/formal"
+}

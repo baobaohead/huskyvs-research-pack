@@ -1,0 +1,13 @@
+{
+  "canonical_label": "or_below:29C",
+  "entry_vwap": "0.001",
+  "event_key": "tokyo|2026-07-22|high",
+  "filled_shares": "10000",
+  "filled_usd": "10",
+  "mapping_errors": [],
+  "mapping_valid": true,
+  "market_slug": "highest-temperature-in-tokyo-on-july-22-2026-29corbelow",
+  "status": "pass",
+  "uses_formal_ledger": false,
+  "uses_wallet_or_real_order": false
+}

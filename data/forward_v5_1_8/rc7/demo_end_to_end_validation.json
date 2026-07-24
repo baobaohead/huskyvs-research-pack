@@ -1,0 +1,234 @@
+{
+  "entry_fills": 3,
+  "entry_monitor": {
+    "results": [
+      {
+        "filled_shares": "100",
+        "signal_id": "demo-three-entry-1",
+        "snapshot_id": "ob_c7354b137041f879f61e411e",
+        "status": "filled"
+      },
+      {
+        "filled_shares": "100",
+        "signal_id": "demo-three-entry-2",
+        "snapshot_id": "ob_c7354b137041f879f61e411e",
+        "status": "filled"
+      },
+      {
+        "filled_shares": "100",
+        "signal_id": "demo-three-entry-3",
+        "snapshot_id": "ob_c7354b137041f879f61e411e",
+        "status": "filled"
+      },
+      {
+        "signal_id": "demo-three-entry-1",
+        "status": "not_triggered",
+        "strategy_id": "tp_2x_sell_50pct",
+        "threshold": "0.209",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-three-entry-2",
+        "status": "not_triggered",
+        "strategy_id": "tp_2x_sell_50pct",
+        "threshold": "0.209",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-three-entry-3",
+        "status": "not_triggered",
+        "strategy_id": "tp_2x_sell_50pct",
+        "threshold": "0.209",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-three-entry-1",
+        "status": "not_triggered",
+        "strategy_id": "tp_2x_sell_75pct",
+        "threshold": "0.209",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-three-entry-2",
+        "status": "not_triggered",
+        "strategy_id": "tp_2x_sell_75pct",
+        "threshold": "0.209",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-three-entry-3",
+        "status": "not_triggered",
+        "strategy_id": "tp_2x_sell_75pct",
+        "threshold": "0.209",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-three-entry-1",
+        "status": "not_triggered",
+        "strategy_id": "tp_5x_sell_25pct",
+        "threshold": "0.5225",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-three-entry-2",
+        "status": "not_triggered",
+        "strategy_id": "tp_5x_sell_25pct",
+        "threshold": "0.5225",
+        "vwap": "0.09"
+      },
+      {
+        "signal_id": "demo-three-entry-3",
+        "status": "not_triggered",
+        "strategy_id": "tp_5x_sell_25pct",
+        "threshold": "0.5225",
+        "vwap": "0.09"
+      }
+    ],
+    "run_id": "three_entry_demo_entry"
+  },
+  "exit_fills": 6,
+  "exit_monitor": {
+    "results": [
+      {
+        "filled_shares": "50",
+        "signal_id": "demo-three-entry-1",
+        "status": "exit_filled",
+        "strategy_id": "tp_2x_sell_50pct"
+      },
+      {
+        "filled_shares": "50",
+        "signal_id": "demo-three-entry-2",
+        "status": "exit_filled",
+        "strategy_id": "tp_2x_sell_50pct"
+      },
+      {
+        "filled_shares": "50",
+        "signal_id": "demo-three-entry-3",
+        "status": "exit_filled",
+        "strategy_id": "tp_2x_sell_50pct"
+      },
+      {
+        "filled_shares": "75",
+        "signal_id": "demo-three-entry-1",
+        "status": "exit_filled",
+        "strategy_id": "tp_2x_sell_75pct"
+      },
+      {
+        "filled_shares": "75",
+        "signal_id": "demo-three-entry-2",
+        "status": "exit_filled",
+        "strategy_id": "tp_2x_sell_75pct"
+      },
+      {
+        "filled_shares": "50",
+        "signal_id": "demo-three-entry-3",
+        "status": "exit_filled",
+        "strategy_id": "tp_2x_sell_75pct"
+      },
+      {
+        "signal_id": "demo-three-entry-1",
+        "status": "not_triggered",
+        "strategy_id": "tp_5x_sell_25pct",
+        "threshold": "0.5225",
+        "vwap": "0.3"
+      },
+      {
+        "signal_id": "demo-three-entry-2",
+        "status": "not_triggered",
+        "strategy_id": "tp_5x_sell_25pct",
+        "threshold": "0.5225",
+        "vwap": "0.3"
+      },
+      {
+        "signal_id": "demo-three-entry-3",
+        "status": "not_triggered",
+        "strategy_id": "tp_5x_sell_25pct",
+        "threshold": "0.5225",
+        "vwap": "0.3"
+      }
+    ],
+    "run_id": "three_entry_demo_exit"
+  },
+  "full_replay_ok": true,
+  "settlement_monitor": {
+    "results": [
+      {
+        "signal_id": "demo-three-entry-1",
+        "status": "settled",
+        "strategy_id": "hold_to_settlement",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-1",
+        "status": "settled",
+        "strategy_id": "tp_2x_sell_50pct",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-1",
+        "status": "settled",
+        "strategy_id": "tp_2x_sell_75pct",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-1",
+        "status": "settled",
+        "strategy_id": "tp_5x_sell_25pct",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-2",
+        "status": "settled",
+        "strategy_id": "hold_to_settlement",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-2",
+        "status": "settled",
+        "strategy_id": "tp_2x_sell_50pct",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-2",
+        "status": "settled",
+        "strategy_id": "tp_2x_sell_75pct",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-2",
+        "status": "settled",
+        "strategy_id": "tp_5x_sell_25pct",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-3",
+        "status": "settled",
+        "strategy_id": "hold_to_settlement",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-3",
+        "status": "settled",
+        "strategy_id": "tp_2x_sell_50pct",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-3",
+        "status": "settled",
+        "strategy_id": "tp_2x_sell_75pct",
+        "value": "1"
+      },
+      {
+        "signal_id": "demo-three-entry-3",
+        "status": "settled",
+        "strategy_id": "tp_5x_sell_25pct",
+        "value": "1"
+      }
+    ],
+    "run_id": "three_entry_demo_settlement"
+  },
+  "settlements": 12,
+  "status": "pass",
+  "strategy_lots": 12,
+  "work_root": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/demo/three_entry_work"
+}

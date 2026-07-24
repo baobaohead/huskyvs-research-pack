@@ -1,0 +1,2 @@
+signal_id,created_at_utc,city,weather_date_local,weather_metric,bucket_type,temperature_threshold,temperature_unit,market_slug,condition_id,token_id,outcome,side,intended_usd,max_entry_price,forecast_probability,source,notes
+,,,,,exact,,C,,,,,BUY,,,,manual,

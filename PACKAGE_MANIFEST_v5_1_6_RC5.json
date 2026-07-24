@@ -1,0 +1,413 @@
+{
+  "adapter_source_validation": {
+    "audit_integrity_formal_source_checks": [
+      "formal_missing_source_fields",
+      "formal_non_official_adapter_rows",
+      "formal_adapter_hash_mismatch"
+    ],
+    "cli_fixture_argument_exposed": false,
+    "fixture_result": {
+      "fatal_error": true,
+      "run_id": "formal_fixture_rejected",
+      "status": "formal_adapter_injection_rejected"
+    },
+    "formal_adapter_class": "PolymarketPublicAdapterV5_1_6",
+    "formal_data_source": "polymarket_public_api",
+    "formal_fixture_adapter_rejected_before_public_calls": true,
+    "formal_run_environment": "formal",
+    "generated_at_utc": "2026-07-22T07:51:05.341433+00:00",
+    "wallet_or_order_methods_exposed": false
+  },
+  "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_6.yaml",
+  "demo_audit": {
+    "checks": {
+      "SETTLEMENT_CLOB_HASH_MISMATCH": 0,
+      "SETTLEMENT_EVIDENCE_MISSING": 0,
+      "SETTLEMENT_FINALITY_CONFLICT": 0,
+      "SETTLEMENT_GAMMA_HASH_MISMATCH": 0,
+      "SETTLEMENT_PENDING_MARKED_FINAL": 0,
+      "SETTLEMENT_PROCEEDS_MISMATCH": 0,
+      "SETTLEMENT_PROPOSED_MARKED_FINAL": 0,
+      "SETTLEMENT_UNKNOWN_WINNER_ASSIGNED_VALUE": 0,
+      "SETTLEMENT_VALUE_MISMATCH": 0,
+      "SETTLEMENT_WINNER_MISMATCH": 0,
+      "accepting_unknown_entered": 0,
+      "audit_violation_events": 0,
+      "below_min_order_fill": 0,
+      "constraint_conflict_entered": 0,
+      "duplicate_signal_id": 0,
+      "duplicate_snapshot_content_in_run": 0,
+      "duplicate_snapshot_in_run": 0,
+      "entry_after_settlement": 0,
+      "entry_shared_depth_overfill": 0,
+      "exit_shared_depth_overfill": 0,
+      "fee_conflicts_entered": 0,
+      "fill_missing_source_hash": 0,
+      "formal_adapter_hash_mismatch": 0,
+      "formal_missing_source_fields": 0,
+      "formal_non_official_adapter_rows": 0,
+      "future_signal_too_far": 0,
+      "gross_minus_fees_net_mismatch": 0,
+      "hash_freeze_drift": 0,
+      "illegal_tick_price_entered": 0,
+      "inventory_oversold": 0,
+      "mapping_invalid_entered": 0,
+      "missing_constraints_for_fill": 0,
+      "missing_settlement_raw_response": 0,
+      "missing_token_validation_for_fill": 0,
+      "non_final_settlement": 0,
+      "proposed_final_settlement": 0,
+      "run_manifest_hash_mismatch": 0,
+      "settled_after_exit": 0,
+      "settlement_raw_hash_mismatch": 0,
+      "signal_before_formal_start": 0,
+      "signal_event_key_mismatch": 0,
+      "signal_registration_delay_exceeded": 0,
+      "signal_temperature_bucket_unparseable": 0,
+      "status_conflict_entered": 0,
+      "unsupported_fee_exponent_entered": 0
+    },
+    "ok": true
+  },
+  "demo_runs": [],
+  "formal_audit": {
+    "checks": {
+      "formal_ledger_absent": 0
+    },
+    "ok": true
+  },
+  "formal_empty_proof": {
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "generated_at_utc": "2026-07-22T07:51:04.637720+00:00",
+    "ok": true,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0
+  },
+  "formal_runs": [],
+  "generated_at_utc": "2026-07-22T07:51:05.368141+00:00",
+  "hashes": {
+    "adapter_code_sha256": "3938efe08efef5aa0d86b5a3306898a44c0a7ad1f0ab6890a8734bb017354ba6",
+    "api_contract_sha256": "fbbf2cd5d99749448b1cd778cddd154e796f004dd4e526740561ff654bc721fd",
+    "config_sha256": "85528bc1dd65b6ba1857f6c4c5fbb6568059b63b0954d62f2a0a82f0e4d99be8",
+    "core_code_sha256": "cad3ceeefe472bea45f51139061d0a998dda93e4bcad479f37c48f9f4d2a7eb0",
+    "fee_contract_sha256": "21dc714105da05d2a666c0057a0f9a620c241c44306cf86e31748f4afb6ba450",
+    "preregistration_sha256": "e41591f4eebb8388269fb316a949413ddc2952a5fd79944c2a8b3b2e8c367856",
+    "reporting_code_sha256": "24365b250b6a7bbc950a60aba8e2fd36a01f14d5bf1b221fda480cca49c1a79e",
+    "schema_sha256": "5027b778d753ace8c0b88eda893206104714ae1cbf57bb0dfc288cb08ca498ba",
+    "settlement_finality_contract_sha256": "43e2b178b32328f6ab6345a09acea51e2b16d0e383b83be25a4d241bd7b44f5a"
+  },
+  "lock_recovery_validation": {
+    "active_pid_expired_heartbeat_recoverable": false,
+    "cases": {
+      "active_pid_expired_heartbeat": {
+        "heartbeat_stale": true,
+        "pid_alive": true,
+        "process_start_match": true,
+        "reason": "active_pid",
+        "recoverable": false
+      },
+      "dead_pid_explicit_recovery": {
+        "heartbeat_stale": true,
+        "pid_alive": false,
+        "process_start_match": false,
+        "reason": "pid_dead_stale",
+        "recoverable": true
+      },
+      "different_hostname": {
+        "heartbeat_stale": true,
+        "pid_alive": null,
+        "process_start_match": null,
+        "reason": "different_hostname",
+        "recoverable": false
+      }
+    },
+    "dead_pid_explicit_recovery_recoverable": true,
+    "generated_at_utc": "2026-07-22T07:51:05.344356+00:00"
+  },
+  "market_constraints_validation": {
+    "blocked_cases": 6,
+    "count": 8
+  },
+  "negative_audit_tests": {
+    "count": 30,
+    "passed": 30
+  },
+  "official_docs": {
+    "fees": "https://docs.polymarket.com/trading/fees",
+    "market_by_slug": "https://docs.polymarket.com/api-reference/markets/get-market-by-slug",
+    "orderbook": "https://docs.polymarket.com/api-reference/market-data/get-order-book",
+    "public_methods": "https://docs.polymarket.com/trading/clients/public"
+  },
+  "pending_market_validation": {
+    "all_non_final": true,
+    "generated_at_utc": "2026-07-22T07:51:05.341766+00:00",
+    "source_type": "fixture_pending_or_proposed_market",
+    "validations": [
+      {
+        "case": "proposed_outcome_prices_not_final",
+        "evidence": {
+          "active": false,
+          "closed": true,
+          "conflict_details": "",
+          "error": "resolution_proposed_not_final",
+          "evidence_tier": "",
+          "evidence_valid": false,
+          "finality_status": "proposed",
+          "market_status": "resolved",
+          "raw_response_hash": "92b234e354c7af6a37bb5c1f7f751cd53599578695258329085f301dff659dc9",
+          "resolution_status": "proposed",
+          "resolved": true,
+          "settlement_status": "proposed",
+          "token_settlement_values": {
+            "no-token": null,
+            "yes-token": null
+          },
+          "uma_status": "proposed",
+          "winning_asset_id": "",
+          "winning_outcome": ""
+        },
+        "raw_fixture": {
+          "active": false,
+          "automaticallyResolved": false,
+          "clobTokenIds": "[\"yes-token\",\"no-token\"]",
+          "closed": true,
+          "conditionId": "0xpending",
+          "outcomePrices": "[\"1\",\"0\"]",
+          "outcomes": "[\"Yes\",\"No\"]",
+          "resolved": true,
+          "slug": "rc5-proposed-weather-fixture",
+          "umaResolutionStatus": "proposed",
+          "winningOutcome": "Yes"
+        }
+      },
+      {
+        "case": "automatically_resolved_plus_proposed_conflict",
+        "evidence": {
+          "active": false,
+          "closed": true,
+          "conflict_details": "automaticallyResolved_with_proposed",
+          "error": "automatically_resolved_proposed_conflict",
+          "evidence_tier": "",
+          "evidence_valid": false,
+          "finality_status": "status_conflict",
+          "market_status": "resolved",
+          "raw_response_hash": "7a0a6a1bb0062d23406c030774d64ea4842c349308ed32e0154bda2af14d7848",
+          "resolution_status": "proposed",
+          "resolved": true,
+          "settlement_status": "conflict",
+          "token_settlement_values": {
+            "no-token": null,
+            "yes-token": null
+          },
+          "uma_status": "proposed",
+          "winning_asset_id": "",
+          "winning_outcome": ""
+        },
+        "raw_fixture": {
+          "active": false,
+          "automaticallyResolved": true,
+          "clobTokenIds": "[\"yes-token\",\"no-token\"]",
+          "closed": true,
+          "conditionId": "0xpending",
+          "outcomePrices": "[\"1\",\"0\"]",
+          "outcomes": "[\"Yes\",\"No\"]",
+          "resolved": true,
+          "slug": "rc5-auto-resolved-proposed-conflict-fixture",
+          "umaResolutionStatus": "proposed",
+          "winningOutcome": "Yes"
+        }
+      }
+    ]
+  },
+  "settlement_evidence_revalidation": {
+    "audit_ok": true,
+    "checks": {
+      "SETTLEMENT_CLOB_HASH_MISMATCH": 0,
+      "SETTLEMENT_EVIDENCE_MISSING": 0,
+      "SETTLEMENT_FINALITY_CONFLICT": 0,
+      "SETTLEMENT_GAMMA_HASH_MISMATCH": 0,
+      "SETTLEMENT_PENDING_MARKED_FINAL": 0,
+      "SETTLEMENT_PROCEEDS_MISMATCH": 0,
+      "SETTLEMENT_PROPOSED_MARKED_FINAL": 0,
+      "SETTLEMENT_UNKNOWN_WINNER_ASSIGNED_VALUE": 0,
+      "SETTLEMENT_VALUE_MISMATCH": 0,
+      "SETTLEMENT_WINNER_MISMATCH": 0,
+      "accepting_unknown_entered": 0,
+      "audit_violation_events": 0,
+      "below_min_order_fill": 0,
+      "constraint_conflict_entered": 0,
+      "duplicate_signal_id": 0,
+      "duplicate_snapshot_content_in_run": 0,
+      "duplicate_snapshot_in_run": 0,
+      "entry_after_settlement": 0,
+      "entry_shared_depth_overfill": 0,
+      "exit_shared_depth_overfill": 0,
+      "fee_conflicts_entered": 0,
+      "fill_missing_source_hash": 0,
+      "formal_adapter_hash_mismatch": 0,
+      "formal_missing_source_fields": 0,
+      "formal_non_official_adapter_rows": 0,
+      "future_signal_too_far": 0,
+      "gross_minus_fees_net_mismatch": 0,
+      "hash_freeze_drift": 0,
+      "illegal_tick_price_entered": 0,
+      "inventory_oversold": 0,
+      "mapping_invalid_entered": 0,
+      "missing_constraints_for_fill": 0,
+      "missing_settlement_raw_response": 0,
+      "missing_token_validation_for_fill": 0,
+      "non_final_settlement": 0,
+      "proposed_final_settlement": 0,
+      "run_manifest_hash_mismatch": 0,
+      "settled_after_exit": 0,
+      "settlement_raw_hash_mismatch": 0,
+      "signal_before_formal_start": 0,
+      "signal_event_key_mismatch": 0,
+      "signal_registration_delay_exceeded": 0,
+      "signal_temperature_bucket_unparseable": 0,
+      "status_conflict_entered": 0,
+      "unsupported_fee_exponent_entered": 0
+    },
+    "demo_settlement_rows_revalidated": 4,
+    "generated_at_utc": "2026-07-22T07:51:05.367399+00:00",
+    "recomputed_gamma_clob_hashes": true
+  },
+  "signal_to_fill_validation": {
+    "entry_vwap_probe_available": true,
+    "generated_at_utc": "2026-07-22T07:51:05.367693+00:00",
+    "mapping_validation": {
+      "clob_pairs": [
+        {
+          "outcome": "Yes",
+          "token_id": "yes-token"
+        },
+        {
+          "outcome": "No",
+          "token_id": "no-token"
+        }
+      ],
+      "errors": [],
+      "gamma_pairs": [
+        {
+          "outcome": "Yes",
+          "token_id": "yes-token"
+        },
+        {
+          "outcome": "No",
+          "token_id": "no-token"
+        }
+      ],
+      "mapping_valid": true,
+      "market_event_key": "demo city|2099-01-02|high",
+      "market_parse": {
+        "bucket_type": "exact",
+        "canonical_label": "exact:30C",
+        "city": "Demo City",
+        "event_key": "demo city|2099-01-02|high",
+        "parsing_errors": [],
+        "parsing_status": "ok",
+        "question_parse": {
+          "bucket_type": "exact",
+          "canonical_label": "exact:30C",
+          "city": "Demo City",
+          "missing_fields": [],
+          "parsing_status": "ok",
+          "threshold_value": "30",
+          "unit": "C",
+          "weather_date_local": "2099-01-02",
+          "weather_metric": "high"
+        },
+        "slug_parse": {
+          "bucket_type": "exact",
+          "canonical_label": "exact:30C",
+          "city": "Demo City",
+          "missing_fields": [],
+          "parsing_status": "ok",
+          "threshold_value": "30",
+          "unit": "C",
+          "weather_date_local": "2099-01-02",
+          "weather_metric": "high"
+        },
+        "temperature_bucket": "exact:30C",
+        "threshold_value": "30",
+        "unit": "C",
+        "weather_date_local": "2099-01-02",
+        "weather_metric": "high"
+      },
+      "parsed_temperature_bucket": "exact:30C",
+      "raw_clob_market_hash": "f108000e2f558c29bb126c9f1e4389f486da617fdb1d6d17baf9ef852f8424a3",
+      "raw_gamma_market_hash": "93eeaa3c8fd052a54f41588a250fc3ae6e81a0a8670517d4b0c7ad0b30b6fd4f",
+      "raw_orderbook_hash": "57ef014ce2bf75f72f2f217b7be74e0ffcc9ed91f36abadc8595dadaec45f1e4",
+      "signal_event_key": "demo city|2099-01-02|high",
+      "signal_temperature_bucket": "exact:30C"
+    },
+    "market_parse": {
+      "bucket_type": "exact",
+      "canonical_label": "exact:30C",
+      "city": "Demo City",
+      "event_key": "demo city|2099-01-02|high",
+      "parsing_errors": [],
+      "parsing_status": "ok",
+      "question_parse": {
+        "bucket_type": "exact",
+        "canonical_label": "exact:30C",
+        "city": "Demo City",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "30",
+        "unit": "C",
+        "weather_date_local": "2099-01-02",
+        "weather_metric": "high"
+      },
+      "slug_parse": {
+        "bucket_type": "exact",
+        "canonical_label": "exact:30C",
+        "city": "Demo City",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "30",
+        "unit": "C",
+        "weather_date_local": "2099-01-02",
+        "weather_metric": "high"
+      },
+      "temperature_bucket": "exact:30C",
+      "threshold_value": "30",
+      "unit": "C",
+      "weather_date_local": "2099-01-02",
+      "weather_metric": "high"
+    },
+    "market_state": {
+      "accepting_orders": true,
+      "accepting_orders_fields": {
+        "acceptingOrders": true
+      },
+      "accepting_orders_status": "true",
+      "active": true,
+      "closed": false,
+      "disputed": false,
+      "market_status": "active_trading",
+      "raw_status": "",
+      "resolution_pending": false,
+      "resolved": false,
+      "status_conflicts": []
+    },
+    "signal_to_parse_to_mapping_to_vwap": true,
+    "source": "offline_fixture_until_live_readonly_overwrites_with_real_public_market",
+    "wallet_or_order_methods_used": false
+  },
+  "version": "forward_simulation_v5.1.6-rc5",
+  "weather_semantics_validation": {
+    "beijing_city": "Beijing",
+    "count": 17,
+    "integer_temperature_regression": {
+      "0C": "exact:0C",
+      "100F": "exact:100F",
+      "20C": "exact:20C",
+      "30C": "exact:30C"
+    }
+  }
+}

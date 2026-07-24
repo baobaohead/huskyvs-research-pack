@@ -1,0 +1,21 @@
+case_id,detected,evidence,verification
+resolved_after_entry_exit,true,resolved markets run settlement only; entry/exit blocked,pytest
+closed_unresolved_entry_exit,true,closed unresolved markets block entry/exit and do not settle,pytest
+shared_entry_depth_100_to_200,true,two 100-share entry intents consume one 100-share ask book for total fill 100,pytest
+same_strategy_shared_exit_depth,true,same-strategy exit triggers share one bid-depth copy,pytest
+different_strategy_independent_counterfactual,true,different strategy branches replay independent counterfactual bid books,pytest
+future_31s_signal,true,created_at 31 seconds in the future rejected,pytest
+future_1h_signal,true,created_at 1 hour in the future rejected,pytest
+non_utc_literal_signal,true,non-UTC created_at literal rejected,pytest
+user_registered_at_bypass,true,user-supplied registered_at_utc rejected,pytest
+frozen_deletion_bypass,true,deleted frozen file blocks formal write,pytest
+run_loop_infinite_without_confirm,true,iterations=0 requires --confirm-infinite,pytest
+run_loop_lock_heartbeat,true,foreground lock releases cleanly and heartbeat records run_id,pytest
+pause_resume_stop,true,pause/resume/stop mutate state without fills,pytest
+gamma_disabled_clob_nonzero_fee,true,fee conflict blocks official simulation,pytest
+clob_disabled_gamma_nonzero_fee,true,fee conflict blocks official simulation,pytest
+unsupported_fee_exponent,true,non-1 CLOB fee exponent rejected,pytest
+missing_tick_size,true,orderbook missing tick_size rejected,pytest
+missing_min_order_size,true,orderbook missing min_order_size rejected,pytest
+gamma_orderbook_tick_conflict,true,Gamma/orderbook constraint conflict rejected,pytest
+settlement_raw_hash_recompute,true,resolved Gamma/CLOB raw evidence hashes recomputable,pytest

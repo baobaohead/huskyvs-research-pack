@@ -1,0 +1,12 @@
+test_area,test_name,result,details
+shared_orderbook_depth,same_token_two_entry_signals_share_1000_ask_depth,pass,"aggregate entry fills <= 1000; stable allocation by created_at_utc, signal_id"
+shared_orderbook_depth,three_exit_triggers_share_500_bid_depth_inside_strategy,pass,per-strategy exit fills <= 500; different strategy branches replay independent counterfactual books
+shared_orderbook_depth,reversed_input_order_same_allocation,pass,input order does not affect allocation
+transaction_recovery,entry_exit_settlement_state_failpoints_rollback,pass,SQLite transaction rollback leaves no orphan fills/lots/allocations/state
+hash_freeze,report_schema_config_code_hash_drift_rejected,pass,formal writes reject drift; no force bypass
+event_counting,50_event_semantics,pass,city-date-metric event key; unfilled/demo/unsettled bins excluded
+signal_authenticity,freshness_timezone_duplicate_metadata_rejections,pass,UTC required; system registered_at only; duplicate conflict rejected; metadata mismatch rejected when provided
+fees_conservation,gross_net_fee_multilevel_conservation,pass,gross_pnl - total_fees = net_pnl; partial and multi-exit fees proportional
+settlement_evidence,evidence_idempotency_conflict_invalid_after_settlement,pass,evidence hash required; identical repeats idempotent; conflicts/invalid values rejected
+run_loop_safety,lock_pause_resume_stop_network_recovery_token_isolation,pass,"foreground lock, stale lock recovery, pause no snapshots, stop no loop, one token failure isolated"
+offline_reproducibility,frozen_time_fixture_only,pass,tests use frozen 2026-07-21T00:00:00+00:00 and local fixtures; no network/wallet

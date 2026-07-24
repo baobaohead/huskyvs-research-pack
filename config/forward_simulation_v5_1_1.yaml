@@ -1,0 +1,62 @@
+version: forward_simulation_v5.1.1-rc1
+schema_version: forward_v5_1_1_schema_001
+status: rc1_not_formally_started
+
+paths:
+  formal_data_dir: data/forward_v5_1_1/formal
+  demo_data_dir: data/forward_v5_1_1/demo
+  schema_file: schemas/forward_simulation_v5_1_1.sql
+  preregistration_file: reports/FORWARD_SIMULATION_V5_1_PREREGISTRATION.md
+
+api:
+  clob_base_url: https://clob.polymarket.com
+  orderbook_path: /book
+  live_network_enabled_by_default: false
+
+execution:
+  trade_enabled: false
+  wallet_connection_enabled: false
+  private_key_required: false
+  order_submission_enabled: false
+  long_running_monitor_requires_confirmation: true
+  run_loop_foreground_only: true
+  lock_stale_seconds: 300
+
+entry:
+  entry_valid_minutes: 10
+
+sample_rules:
+  reject_signals_before_formal_start: true
+  max_signal_registration_delay_seconds: 300
+  allowed_future_skew_seconds: 30
+  first_review_settled_traded_events: 50
+  second_review_settled_traded_events: 100
+  demo_data_excluded_from_formal_stats: true
+
+accounting:
+  main_ledger: sqlite
+  lot_method: signal_independent_fifo_lots
+  event_key: normalized_city + weather_date_local + weather_metric
+  orderbook_depth_allocation: stable_created_at_then_signal_id
+  strategy_branches_are_mutually_exclusive_counterfactuals: true
+  trigger_stage_once_only: true
+
+fees:
+  entry_fee_bps: 10
+  exit_fee_bps: 10
+  settlement_fee_bps: 0
+  applied_to_notional: gross_notional
+  rounding_method: round_half_even_python_builtin
+  decimal_precision: 8
+  exchange_fee_status: simulation_assumption_not_confirmed_real_fee
+
+polling:
+  default_interval_seconds: 60
+  retry_backoff_seconds: 2
+  max_network_retries_per_market: 2
+
+strategies:
+  hold_to_settlement: completely hold until settlement
+  tp_2x_sell_50pct: one trigger stage; sell 50 percent of current signal-level inventory once when executable bid-depth VWAP is at least 2x rolling average cost
+  tp_2x_sell_75pct: one trigger stage; sell 75 percent of current signal-level inventory once when executable bid-depth VWAP is at least 2x rolling average cost
+  tp_5x_sell_25pct: one trigger stage; sell 25 percent of current signal-level inventory once when executable bid-depth VWAP is at least 5x rolling average cost

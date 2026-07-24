@@ -1,0 +1,1 @@
+entry_state_id,signal_id,token_id,updated_at_utc,intended_usd,filled_entry_usd,remaining_entry_usd,filled_entry_shares,entry_status,max_entry_price,entry_deadline_utc,last_entry_attempt_at,last_attempt_reason,mode

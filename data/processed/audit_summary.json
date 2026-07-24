@@ -1,0 +1,46 @@
+{
+  "basket_state_payoff_rows": 3118,
+  "city_day_baskets": 1565,
+  "city_day_pnl_rows": 1629,
+  "closed_realized_pnl": {
+    "count": 2079,
+    "mean": 18.22720566089466,
+    "median": -0.077789,
+    "stdev": 66.6816402214537,
+    "sum": 37894.360569
+  },
+  "closed_weather_assets_with_authoritative_pnl": 2079,
+  "counterfactual_basket_rows": 1565,
+  "end_epoch": 1784592000,
+  "exit_modes": {
+    "hold_to_resolution": 547,
+    "mixed_sell_and_resolution": 1379,
+    "no_public_exit_yet": 1369,
+    "pre_resolution_sell": 212,
+    "transform_affected": 156
+  },
+  "generated_at_utc": "2026-07-20T08:06:37.474801+00:00",
+  "portfolio_drawdown": {
+    "drawdown_peak_date": "2026-04-16",
+    "drawdown_trough_date": "2026-04-17",
+    "ending_cumulative_pnl": 37894.360569000004,
+    "max_drawdown_usd": 371.01146100000005
+  },
+  "raw_counts": {
+    "activity": 19498,
+    "closed_positions": 2197,
+    "current_positions": 1653,
+    "trades": 18308
+  },
+  "start_epoch": 1761955200,
+  "wallet": "0xaf17116ae2b1476032785a67bd5b7c8c05905c20",
+  "warnings": [
+    "SPLIT/MERGE/CONVERSION rows make naive cash-flow PnL unreliable.",
+    "Closed-position realizedPnl is treated as the authoritative position-level PnL.",
+    "Unequal-share baskets require state-dependent payouts; price sums alone are insufficient.",
+    "Market endDate is midnight UTC for many weather rows, so entry lead time uses a weather-date-end UTC proxy.",
+    "Open/current positions are excluded from authoritative realized-PnL conclusions."
+  ],
+  "weather_assets": 3663,
+  "weather_trade_rows": 17964
+}

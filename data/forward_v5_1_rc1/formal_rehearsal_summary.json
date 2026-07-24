@@ -1,0 +1,104 @@
+{
+  "audit_integrity_ok": true,
+  "entry_results": [
+    {
+      "filled_shares": 100.0,
+      "filled_usd": 10.0,
+      "signal_id": "rc1_formal_sig",
+      "snapshot_id": "ob_7764da19cde5d78b28229763",
+      "status": "partial"
+    },
+    {
+      "filled_shares": 900.0,
+      "filled_usd": 90.0,
+      "signal_id": "rc1_formal_sig",
+      "snapshot_id": "ob_2f5359552b63d4d3bf68883b",
+      "status": "filled"
+    }
+  ],
+  "event_results_count": 4,
+  "exit_partial_results": [
+    {
+      "filled_shares": 200.0,
+      "remaining_after": 800.0,
+      "signal_id": "rc1_formal_sig",
+      "status": "exit_filled",
+      "strategy_id": "tp_2x_sell_50pct"
+    },
+    {
+      "filled_shares": 200.0,
+      "remaining_after": 800.0,
+      "signal_id": "rc1_formal_sig",
+      "status": "exit_filled",
+      "strategy_id": "tp_2x_sell_75pct"
+    },
+    {
+      "executable_vwap": 0.25,
+      "signal_id": "rc1_formal_sig",
+      "status": "not_triggered",
+      "strategy_id": "tp_5x_sell_25pct",
+      "threshold": 0.5005000000000001
+    }
+  ],
+  "exit_remainder_results": [
+    {
+      "filled_shares": 300.0,
+      "remaining_after": 500.0,
+      "signal_id": "rc1_formal_sig",
+      "status": "exit_filled",
+      "strategy_id": "tp_2x_sell_50pct"
+    },
+    {
+      "filled_shares": 550.0,
+      "remaining_after": 250.0,
+      "signal_id": "rc1_formal_sig",
+      "status": "exit_filled",
+      "strategy_id": "tp_2x_sell_75pct"
+    },
+    {
+      "executable_vwap": 0.25,
+      "signal_id": "rc1_formal_sig",
+      "status": "not_triggered",
+      "strategy_id": "tp_5x_sell_25pct",
+      "threshold": 0.5005000000000001
+    }
+  ],
+  "formal_start_status": "started",
+  "network_failure_recovery_calls": 2,
+  "pause_status": {
+    "status": "pause"
+  },
+  "paused_status_observed": true,
+  "positions_after_entry": {
+    "hold_to_settlement": 1000.0,
+    "tp_2x_sell_50pct": 1000.0,
+    "tp_2x_sell_75pct": 1000.0,
+    "tp_5x_sell_25pct": 1000.0
+  },
+  "registered_signals": 1,
+  "resume_status": {
+    "status": "resume"
+  },
+  "run_loop_result": {
+    "iterations_completed": 1
+  },
+  "settlement_rows_written": 4,
+  "status": {
+    "config_path": "/var/folders/wj/x6wd3s8j3lzgrlbbczqgck880000gn/T/tmp5u2oljtu/rcroot/config/forward_simulation_v5_1_1.yaml",
+    "formal_started_at_utc": "2026-07-21T00:00:00+00:00",
+    "hash_match": true,
+    "ledger_path": "/var/folders/wj/x6wd3s8j3lzgrlbbczqgck880000gn/T/tmp5u2oljtu/rcroot/data/forward_v5_1_1/formal/ledger.sqlite3",
+    "mode": "formal",
+    "paused": false,
+    "registered_signal_count": 1,
+    "remaining_to_50_settled_events": 49,
+    "schema_version": "forward_v5_1_1_schema_001",
+    "settled_event_count": 1,
+    "settled_position_count": 1,
+    "stopped": false,
+    "traded_event_count": 1,
+    "traded_position_count": 1,
+    "version": "forward_simulation_v5.1.1-rc1"
+  },
+  "temp_root_deleted_after_run": true
+}

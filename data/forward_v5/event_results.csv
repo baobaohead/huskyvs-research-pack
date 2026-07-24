@@ -1,0 +1,1 @@
+event_id,strategy_id,mode,city,weather_date_local,market_slug,position_count,simulated_buy_usd,simulated_entry_spent_usd,unfilled_entry_usd,avg_entry_vwap,avg_exit_vwap,gross_pnl,net_pnl,triggered_take_profit,incomplete_take_profit,settled

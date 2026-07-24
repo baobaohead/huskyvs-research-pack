@@ -1,0 +1,313 @@
+{
+  "actual_endpoints": [
+    {
+      "latency_ms": "2274.2785839363933",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "1606.078082928434",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "1945.8617500495166",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+    },
+    {
+      "latency_ms": "1526.3847918249667",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+    },
+    {
+      "latency_ms": "1701.1019580531865",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "1142.9484589025378",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+    },
+    {
+      "latency_ms": "4318.6780421528965",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "3335.8078331220895",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "2807.590916985646",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=109644598776046108708215544048760195529874448367370183373343350346816220605264"
+    },
+    {
+      "latency_ms": "2193.9338750671595",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+    },
+    {
+      "latency_ms": "2007.2933749761432",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+    },
+    {
+      "latency_ms": "1873.0566669255495",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=94748732915349195546448713444722756080968626922653917934033369521339618987721"
+    },
+    {
+      "latency_ms": "2804.683209164068",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "2847.436415962875",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+    },
+    {
+      "latency_ms": "1398.3204578980803",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=57405213645557461549191886203867858953892828891706620093356332496034092608597"
+    },
+    {
+      "latency_ms": "2134.3731249216944",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "2602.2140830755234",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "2436.410749796778",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=109644598776046108708215544048760195529874448367370183373343350346816220605264"
+    },
+    {
+      "latency_ms": "2146.0646248888224",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+    },
+    {
+      "latency_ms": "2103.827000129968",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+    },
+    {
+      "latency_ms": "1793.9129578880966",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=94748732915349195546448713444722756080968626922653917934033369521339618987721"
+    },
+    {
+      "latency_ms": "1901.5281670726836",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "1286.002374952659",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+    },
+    {
+      "latency_ms": "2114.126834087074",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=57405213645557461549191886203867858953892828891706620093356332496034092608597"
+    },
+    {
+      "latency_ms": "2948.489125119522",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "2307.2072088252753",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "2169.8012079577893",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=109644598776046108708215544048760195529874448367370183373343350346816220605264"
+    },
+    {
+      "latency_ms": "2137.2969578951597",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-beijing-on-july-22-2026-25corbelow"
+    },
+    {
+      "latency_ms": "1698.445833986625",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc"
+    },
+    {
+      "latency_ms": "1431.7862919997424",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=94748732915349195546448713444722756080968626922653917934033369521339618987721"
+    },
+    {
+      "latency_ms": "1412.0879580732435",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-30c"
+    },
+    {
+      "latency_ms": "1983.709332998842",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61"
+    },
+    {
+      "latency_ms": "2186.9070418179035",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=57405213645557461549191886203867858953892828891706620093356332496034092608597"
+    },
+    {
+      "latency_ms": "2581.6865828819573",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-hong-kong-on-july-20-2026-31c"
+    },
+    {
+      "latency_ms": "2098.8081661053",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xffefd886a73174e57a57b5683ffa5897555e0ed1d718198ef1bb7c1a7414d501"
+    },
+    {
+      "latency_ms": "2162.4316670931876",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/markets/0xffefd886a73174e57a57b5683ffa5897555e0ed1d718198ef1bb7c1a7414d501"
+    },
+    {
+      "latency_ms": "1951.220874907449",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-tokyo-on-july-22-2026-29corbelow"
+    },
+    {
+      "latency_ms": "1433.754957979545",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d"
+    },
+    {
+      "latency_ms": "2887.8711669240147",
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=109644598776046108708215544048760195529874448367370183373343350346816220605264"
+    }
+  ],
+  "adapter_version": "polymarket_public_adapter_v5.1.6-rc5",
+  "bucket_types": [
+    "exact",
+    "or_below"
+  ],
+  "code_hash": {
+    "adapter_code_sha256": "3938efe08efef5aa0d86b5a3306898a44c0a7ad1f0ab6890a8734bb017354ba6",
+    "api_contract_sha256": "fbbf2cd5d99749448b1cd778cddd154e796f004dd4e526740561ff654bc721fd",
+    "config_sha256": "85528bc1dd65b6ba1857f6c4c5fbb6568059b63b0954d62f2a0a82f0e4d99be8",
+    "core_code_sha256": "cad3ceeefe472bea45f51139061d0a998dda93e4bcad479f37c48f9f4d2a7eb0",
+    "fee_contract_sha256": "21dc714105da05d2a666c0057a0f9a620c241c44306cf86e31748f4afb6ba450",
+    "preregistration_sha256": "e41591f4eebb8388269fb316a949413ddc2952a5fd79944c2a8b3b2e8c367856",
+    "reporting_code_sha256": "24365b250b6a7bbc950a60aba8e2fd36a01f14d5bf1b221fda480cca49c1a79e",
+    "schema_sha256": "5027b778d753ace8c0b88eda893206104714ae1cbf57bb0dfc288cb08ca498ba",
+    "settlement_finality_contract_sha256": "43e2b178b32328f6ab6345a09acea51e2b16d0e383b83be25a4d241bd7b44f5a"
+  },
+  "duration_seconds": "673.530116",
+  "ended_at_utc": "2026-07-22T08:02:36.629718+00:00",
+  "error_count": 0,
+  "formal_signal_fill_position_counts": {
+    "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_6.yaml",
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "heartbeat": {},
+    "ledger_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_6/formal/ledger.sqlite3",
+    "lock_held": false,
+    "lock_info": {},
+    "mode": "formal",
+    "runs": 0,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0,
+    "version": "forward_simulation_v5.1.6-rc5"
+  },
+  "real_signal_to_fill_validation": {
+    "canonical_label": "or_below:29C",
+    "entry_vwap": "0.001",
+    "event_key": "tokyo|2026-07-22|high",
+    "filled_shares": "10000",
+    "filled_usd": "10",
+    "mapping_errors": [],
+    "mapping_valid": true,
+    "market_slug": "highest-temperature-in-tokyo-on-july-22-2026-29corbelow",
+    "status": "pass",
+    "uses_formal_ledger": false,
+    "uses_wallet_or_real_order": false
+  },
+  "resolved_evidence_status": "final",
+  "run_id": "live_v5_1_6_rc5_final_preferred",
+  "selected_city_date_count": 2,
+  "selected_city_date_keys": [
+    "beijing|2026-07-22",
+    "tokyo|2026-07-22"
+  ],
+  "selected_event_count": 2,
+  "selected_event_keys": [
+    "beijing|2026-07-22|high",
+    "tokyo|2026-07-22|high"
+  ],
+  "selected_market_count": 3,
+  "selected_token_count": 3,
+  "selected_tokens": [
+    "109644598776046108708215544048760195529874448367370183373343350346816220605264",
+    "57405213645557461549191886203867858953892828891706620093356332496034092608597",
+    "94748732915349195546448713444722756080968626922653917934033369521339618987721"
+  ],
+  "snapshot_count": 9,
+  "snapshots_per_token": {
+    "109644598776046108708215544048760195529874448367370183373343350346816220605264": 3,
+    "57405213645557461549191886203867858953892828891706620093356332496034092608597": 3,
+    "94748732915349195546448713444722756080968626922653917934033369521339618987721": 3
+  },
+  "started_at_utc": "2026-07-22T07:51:23.099602+00:00"
+}

@@ -1,0 +1,1 @@
+trigger_id,signal_id,strategy_id,trigger_stage_id,event_key,token_id,trigger_created_at,trigger_target_shares,trigger_filled_shares,trigger_remaining_shares,trigger_status,trigger_completed_at,rolling_avg_cost_at_trigger,threshold_price,mode

@@ -1,0 +1,1 @@
+signal_id,created_at_utc,registered_at_utc,city,city_normalized,weather_date_local,weather_metric,event_key,market_slug,condition_id,token_id,outcome,side,forecast_temperature,forecast_probability,market_probability_at_signal,intended_usd,max_entry_price,entry_deadline_utc,source,notes,mode

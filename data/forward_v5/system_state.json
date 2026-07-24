@@ -1,0 +1,7 @@
+{
+  "formal_started_at_utc": null,
+  "last_run_at_utc": null,
+  "mode": "formal",
+  "notes": "State file may be updated; raw ledgers remain append-only.",
+  "version": "forward_simulation_v5.0.0"
+}

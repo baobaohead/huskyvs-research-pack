@@ -1,0 +1,104 @@
+{
+  "books": [
+    {
+      "asks": [
+        {
+          "price": "0.10",
+          "size": "1000"
+        }
+      ],
+      "asset_id": "yes-token",
+      "bids": [
+        {
+          "price": "0.09",
+          "size": "1000"
+        }
+      ],
+      "hash": "h1",
+      "market": "0xdemo",
+      "min_order_size": "5",
+      "neg_risk": false,
+      "tick_size": "0.001",
+      "timestamp": "1"
+    },
+    {
+      "asks": [
+        {
+          "price": "0.31",
+          "size": "1000"
+        }
+      ],
+      "asset_id": "yes-token",
+      "bids": [
+        {
+          "price": "0.30",
+          "size": "200"
+        }
+      ],
+      "hash": "h2",
+      "market": "0xdemo",
+      "min_order_size": "5",
+      "neg_risk": false,
+      "tick_size": "0.001",
+      "timestamp": "2"
+    }
+  ],
+  "clob": {
+    "condition_id": "0xdemo",
+    "fd": {
+      "e": "1",
+      "r": "0.05",
+      "to": true
+    },
+    "t": [
+      {
+        "o": "Yes",
+        "t": "yes-token"
+      },
+      {
+        "o": "No",
+        "t": "no-token"
+      }
+    ]
+  },
+  "market": {
+    "acceptingOrders": true,
+    "active": true,
+    "clobTokenIds": "[\"yes-token\", \"no-token\"]",
+    "closed": false,
+    "conditionId": "0xdemo",
+    "endDate": "2099-01-02T23:59:00Z",
+    "feeSchedule": {
+      "exponent": "1",
+      "rate": "0.05"
+    },
+    "feesEnabled": true,
+    "groupItemTitle": "30C",
+    "outcomePrices": "[\"0\", \"1\"]",
+    "outcomes": "[\"Yes\", \"No\"]",
+    "question": "Highest temperature in Demo City on January 2?",
+    "resolved": false,
+    "slug": "highest-temperature-in-demo-city-on-january-2-2099-30c",
+    "title": "Highest temperature in Demo City on January 2?"
+  },
+  "signal": {
+    "city": "Demo City",
+    "condition_id": "0xdemo",
+    "created_at_utc": "2099-01-01T00:00:00+00:00",
+    "forecast_probability": "0.66",
+    "forecast_temperature": "30",
+    "intended_usd": "20",
+    "market_probability_at_signal": "0.10",
+    "market_slug": "highest-temperature-in-demo-city-on-january-2-2099-30c",
+    "max_entry_price": "0.11",
+    "notes": "",
+    "outcome": "Yes",
+    "side": "BUY",
+    "signal_id": "demo-signal-1",
+    "source": "v5.1.3_demo_fixture",
+    "temperature_bucket": "30C",
+    "token_id": "yes-token",
+    "weather_date_local": "2099-01-02",
+    "weather_metric": "high"
+  }
+}

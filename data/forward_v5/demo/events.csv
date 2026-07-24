@@ -1,0 +1,2 @@
+event_id,signal_id,city,weather_date_local,market_slug,condition_id,token_id,outcome,created_at_utc,mode
+evt_ffa314f8f075ff7a,demo_weather_signal_v5_001,Demo City,2099-01-01,demo-weather-market-v5,demo_condition_v5,demo_token_yes_v5,YES,2026-07-21T05:42:17.170355+00:00,demo

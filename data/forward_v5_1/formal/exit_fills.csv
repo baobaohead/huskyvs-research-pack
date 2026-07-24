@@ -1,0 +1,1 @@
+exit_fill_id,trigger_id,signal_id,strategy_id,trigger_stage_id,event_key,token_id,snapshot_id,filled_at_utc,planned_sell_shares,filled_shares,gross_exit_proceeds,exit_fee,net_exit_proceeds,exit_vwap,best_bid,best_ask,spread,complete_fill,unfilled_trigger_shares_after_fill,depth_levels_json,mode

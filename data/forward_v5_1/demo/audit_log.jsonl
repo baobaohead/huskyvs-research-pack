@@ -1,0 +1,8 @@
+{"audit_id":"aud_a892f7a5171649e023793523","created_at_utc":"2026-07-21T06:43:22.360349+00:00","event_type":"signal_registered","payload":{"event_key":"demo city|2099-01-01|high","signal_id":"demo_v5_1_sig_001"}}
+{"audit_id":"aud_a9992313a5ef1da20024b113","created_at_utc":"2026-07-21T06:43:22.362247+00:00","event_type":"entry_fill_recorded","payload":{"entry_fill_id":"entry_a999e8bba2bd6e983867813d","signal_id":"demo_v5_1_sig_001","status":"partial"}}
+{"audit_id":"aud_20116d6bd8460b5a28814d67","created_at_utc":"2026-07-21T06:43:22.363073+00:00","event_type":"entry_fill_recorded","payload":{"entry_fill_id":"entry_22b0fac1d7579b3065d52468","signal_id":"demo_v5_1_sig_001","status":"filled"}}
+{"audit_id":"aud_f976b41104677548b2a4e15a","created_at_utc":"2026-07-21T06:43:22.363702+00:00","event_type":"trigger_created","payload":{"target_shares":500.0,"trigger_id":"trig_859a332d72a732eb2b11fb0b"}}
+{"audit_id":"aud_913267654d4dcb300722008b","created_at_utc":"2026-07-21T06:43:22.364320+00:00","event_type":"exit_fill_recorded","payload":{"exit_fill_id":"exit_596fb6a497ea661798920553","shares":500.0,"trigger_id":"trig_859a332d72a732eb2b11fb0b"}}
+{"audit_id":"aud_0b61fd1aebc04069714d5b35","created_at_utc":"2026-07-21T06:43:22.364918+00:00","event_type":"trigger_created","payload":{"target_shares":750.0,"trigger_id":"trig_317528a1d52912ec7658c652"}}
+{"audit_id":"aud_d89897483fe023d8bfbc07fe","created_at_utc":"2026-07-21T06:43:22.365939+00:00","event_type":"exit_fill_recorded","payload":{"exit_fill_id":"exit_d4dcfdc754c234eb38dab81b","shares":750.0,"trigger_id":"trig_317528a1d52912ec7658c652"}}
+{"audit_id":"aud_929d48c28acaf8bd57e2b819","created_at_utc":"2026-07-21T06:43:22.368099+00:00","event_type":"settlements_recorded","payload":{"count":4}}

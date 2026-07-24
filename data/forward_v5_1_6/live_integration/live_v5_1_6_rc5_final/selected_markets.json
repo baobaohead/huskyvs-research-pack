@@ -1,0 +1,180 @@
+[
+  {
+    "condition_id": "0xa08fa7b4231ef79ceb38a901a97cff1fe53b4b7ac9dc94e3e03eb78e77bb6b7d",
+    "market_question": "Will the highest temperature in Tokyo be 29°C or below on July 22?",
+    "market_slug": "highest-temperature-in-tokyo-on-july-22-2026-29corbelow",
+    "market_state": {
+      "accepting_orders": true,
+      "accepting_orders_fields": {
+        "acceptingOrders": true,
+        "enableOrderBook": true
+      },
+      "accepting_orders_status": "true",
+      "active": true,
+      "closed": false,
+      "disputed": false,
+      "market_status": "active_trading",
+      "raw_status": "[]",
+      "resolution_pending": false,
+      "resolved": false,
+      "status_conflicts": []
+    },
+    "outcome": "Yes",
+    "semantic": {
+      "bucket_type": "or_below",
+      "canonical_label": "or_below:29C",
+      "city": "Tokyo",
+      "event_key": "tokyo|2026-07-22|high",
+      "parsing_errors": [],
+      "parsing_status": "ok",
+      "question_parse": {
+        "bucket_type": "or_below",
+        "canonical_label": "or_below:29C",
+        "city": "Tokyo",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "29",
+        "unit": "C",
+        "weather_date_local": "2026-07-22",
+        "weather_metric": "high"
+      },
+      "slug_parse": {
+        "bucket_type": "",
+        "canonical_label": "",
+        "city": "Tokyo",
+        "missing_fields": [
+          "temperature_bucket"
+        ],
+        "parsing_status": "unknown",
+        "threshold_value": null,
+        "unit": "",
+        "weather_date_local": "2026-07-22",
+        "weather_metric": "high"
+      },
+      "temperature_bucket": "or_below:29C",
+      "threshold_value": "29",
+      "unit": "C",
+      "weather_date_local": "2026-07-22",
+      "weather_metric": "high"
+    },
+    "token_id": "109644598776046108708215544048760195529874448367370183373343350346816220605264"
+  },
+  {
+    "condition_id": "0x53aa032f60a5896428253ceb181a38755287755f5cfd1f70b34455ac18d30a58",
+    "market_question": "Will the lowest temperature in Tokyo be 22°C or below on July 22?",
+    "market_slug": "lowest-temperature-in-tokyo-on-july-22-2026-22corbelow",
+    "market_state": {
+      "accepting_orders": true,
+      "accepting_orders_fields": {
+        "acceptingOrders": true,
+        "enableOrderBook": true
+      },
+      "accepting_orders_status": "true",
+      "active": true,
+      "closed": false,
+      "disputed": false,
+      "market_status": "active_trading",
+      "raw_status": "[]",
+      "resolution_pending": false,
+      "resolved": false,
+      "status_conflicts": []
+    },
+    "outcome": "Yes",
+    "semantic": {
+      "bucket_type": "or_below",
+      "canonical_label": "or_below:22C",
+      "city": "Tokyo",
+      "event_key": "tokyo|2026-07-22|low",
+      "parsing_errors": [],
+      "parsing_status": "ok",
+      "question_parse": {
+        "bucket_type": "or_below",
+        "canonical_label": "or_below:22C",
+        "city": "Tokyo",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "22",
+        "unit": "C",
+        "weather_date_local": "2026-07-22",
+        "weather_metric": "low"
+      },
+      "slug_parse": {
+        "bucket_type": "",
+        "canonical_label": "",
+        "city": "Tokyo",
+        "missing_fields": [
+          "temperature_bucket"
+        ],
+        "parsing_status": "unknown",
+        "threshold_value": null,
+        "unit": "",
+        "weather_date_local": "2026-07-22",
+        "weather_metric": "low"
+      },
+      "temperature_bucket": "or_below:22C",
+      "threshold_value": "22",
+      "unit": "C",
+      "weather_date_local": "2026-07-22",
+      "weather_metric": "low"
+    },
+    "token_id": "81712844389070966939528021691385494937191556647904220869880426280544346238749"
+  },
+  {
+    "condition_id": "0xc32824b1f18002092177d9aed3bb5aee858064b4be31ff8fee88527bb0fbca61",
+    "market_question": "Will the highest temperature in Tokyo be 30°C on July 22?",
+    "market_slug": "highest-temperature-in-tokyo-on-july-22-2026-30c",
+    "market_state": {
+      "accepting_orders": true,
+      "accepting_orders_fields": {
+        "acceptingOrders": true,
+        "enableOrderBook": true
+      },
+      "accepting_orders_status": "true",
+      "active": true,
+      "closed": false,
+      "disputed": false,
+      "market_status": "active_trading",
+      "raw_status": "[]",
+      "resolution_pending": false,
+      "resolved": false,
+      "status_conflicts": []
+    },
+    "outcome": "Yes",
+    "semantic": {
+      "bucket_type": "exact",
+      "canonical_label": "exact:30C",
+      "city": "Tokyo",
+      "event_key": "tokyo|2026-07-22|high",
+      "parsing_errors": [],
+      "parsing_status": "ok",
+      "question_parse": {
+        "bucket_type": "exact",
+        "canonical_label": "exact:30C",
+        "city": "Tokyo",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "30",
+        "unit": "C",
+        "weather_date_local": "2026-07-22",
+        "weather_metric": "high"
+      },
+      "slug_parse": {
+        "bucket_type": "exact",
+        "canonical_label": "exact:30C",
+        "city": "Tokyo",
+        "missing_fields": [],
+        "parsing_status": "ok",
+        "threshold_value": "30",
+        "unit": "C",
+        "weather_date_local": "2026-07-22",
+        "weather_metric": "high"
+      },
+      "temperature_bucket": "exact:30C",
+      "threshold_value": "30",
+      "unit": "C",
+      "weather_date_local": "2026-07-22",
+      "weather_metric": "high"
+    },
+    "token_id": "57405213645557461549191886203867858953892828891706620093356332496034092608597"
+  }
+]

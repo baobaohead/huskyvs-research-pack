@@ -1,0 +1,2 @@
+signal_id,created_at_utc,city,weather_date_local,market_slug,condition_id,token_id,outcome,side,forecast_temperature,forecast_probability,market_probability_at_signal,intended_usd,max_entry_price,source,notes
+example_replace_me,2026-07-21T00:00:00+00:00,Example City,2026-07-22,example-weather-market-slug,0x_replace_condition_id,replace_token_id,YES,BUY,30,0.62,0.11,100,0.12,manual_forecast,Replace this example row before formal use.

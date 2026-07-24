@@ -1,0 +1,4 @@
+validation,book_depth_shares,signal_count,strategy,total_fill_shares,status
+entry_shared_depth,100,2,,100,pass
+same_strategy_exit_depth,50,2,tp_2x_sell_50pct,50,pass
+different_strategy_counterfactual,50,2,tp_2x_sell_75pct,50,pass

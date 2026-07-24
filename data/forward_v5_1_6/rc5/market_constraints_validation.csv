@@ -1,0 +1,9 @@
+validation_case,expected_status_or_error,actual_status_or_error,expected_result,blocked,gamma_tick_size,gamma_min_order_size,selected_tick_size,selected_min_order_size,details
+gamma_real_fields_match,official,official,pass,false,0.001,5,0.001,5,
+clob_only_allowed,official_clob_only,official_clob_only,pass,false,,,0.001,5,gamma_missing
+tick_conflict_blocked,constraints_conflict,constraints_conflict,blocked,true,0.01,5,,,gamma_tick=0.01 clob_tick=0.001
+min_conflict_blocked,constraints_conflict,constraints_conflict,blocked,true,0.001,10,,,gamma_min_order=10 clob_min_order=5
+gamma_only_blocked,constraints_unknown,constraints_unknown,blocked,true,0.001,5,,,clob_missing
+both_missing_blocked,constraints_unknown,constraints_unknown,blocked,true,,,,,constraints_missing
+illegal_tick_blocked,invalid_tick,invalid_tick,blocked,true,0.001,5,,,price 0.3005 does not align with tick 0.001
+below_min_probe_blocked_by_consumer,official,below_min_order_size,below_min_order_size,true,0.001,5,0.001,5,

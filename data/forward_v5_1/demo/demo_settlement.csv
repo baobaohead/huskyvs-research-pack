@@ -1,0 +1,2 @@
+signal_id,condition_id,token_id,settlement_outcome,settlement_value,source,source_reference,observed_at_utc,operator_notes
+demo_v5_1_sig_001,demo-cond,demo-token,NO,0,demo_fixture,offline,2026-07-21T06:43:25.358149+00:00,demo settles to zero

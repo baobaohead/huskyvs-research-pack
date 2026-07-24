@@ -1,0 +1,4 @@
+entry_state_id,signal_id,token_id,updated_at_utc,intended_usd,filled_entry_usd,remaining_entry_usd,filled_entry_shares,entry_status,max_entry_price,entry_deadline_utc,last_entry_attempt_at,last_attempt_reason,mode
+entry_state_992524cc356c54838c979864,demo_v5_1_sig_001,demo-token,2026-07-21T06:43:22.359851+00:00,100.0,0.0,100.0,0.0,pending,0.10,2026-07-21T06:53:22.358149+00:00,,,demo
+entry_state_eb0ce2a45529ea0e36e2bb2f,demo_v5_1_sig_001,demo-token,2026-07-21T06:43:22.362040+00:00,100.0,10.0,90.0,100.0,partial,0.10,2026-07-21T06:53:22.358149+00:00,2026-07-21T06:43:22.358149+00:00,partial_fill,demo
+entry_state_d42e69c172f64689da1230b7,demo_v5_1_sig_001,demo-token,2026-07-21T06:43:22.362910+00:00,100.0,100.0,0.0,1000.0,filled,0.10,2026-07-21T06:53:22.358149+00:00,2026-07-21T06:43:23.358149+00:00,filled,demo

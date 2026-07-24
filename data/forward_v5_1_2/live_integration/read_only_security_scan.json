@@ -1,0 +1,234 @@
+{
+  "actual_endpoints": [
+    {
+      "latency_ms": 19191.56683399342,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/public-search?q=July+22+temperature&events_status=active&limit_per_type=10&page=1&keep_closed_markets=0"
+    },
+    {
+      "latency_ms": 2548.641791800037,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-london-on-july-22-2026-20corbelow"
+    },
+    {
+      "latency_ms": 2248.362041078508,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x3da92175d262e0d7ae2137a7f5ee935b268400da9922d58490520385e7653895"
+    },
+    {
+      "latency_ms": 2545.45974987559,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-london-on-july-22-2026-29c"
+    },
+    {
+      "latency_ms": 2230.8301250450313,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/clob-markets/0x0f86c8ac72cd5d327fbac1ef1a49870307f08936f62485bd2bea72b8519ab8d3"
+    },
+    {
+      "latency_ms": 788.5024580173194,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 845.2043749857694,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 931.4425000920892,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1007.2390830609947,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 2026.335084112361,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 4128.155790967867,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1685.1230000611395,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 803.8952918723226,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1652.8289997950196,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1233.1956669222564,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1489.3807501066476,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1071.2394169531763,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1635.363542009145,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1358.9738749433309,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1706.7529170308262,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1091.6456670966,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1436.6487499792129,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 838.6324590537697,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 6073.520416859537,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 2082.9765829257667,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1586.4005419425666,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1813.1897910498083,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 2093.68308307603,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1559.0746670495719,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1087.6570409163833,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 907.694083172828,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1006.5103750675917,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1437.7466249279678,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 2177.925541996956,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 2432.143540820107,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    },
+    {
+      "latency_ms": 1167.4827081151307,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=99916145971954331743274190232900605244495246389623912597847059611334107103447"
+    },
+    {
+      "latency_ms": 1833.893416915089,
+      "method": "GET",
+      "status_code": 200,
+      "url": "https://clob.polymarket.com/book?token_id=103306058920268763309060905573851377046617711635544108348191667888602923948830"
+    }
+  ],
+  "code_files_scanned": [
+    "src/polymarket_public_adapter_v5_1_2.py",
+    "src/forward_simulation_v5_1_2.py",
+    "src/forward_reporting_v5_1_2.py"
+  ],
+  "forbidden_findings": [],
+  "generated_at_utc": "2026-07-21T08:36:27.928871+00:00",
+  "ok": true
+}

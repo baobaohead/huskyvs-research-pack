@@ -1,0 +1,117 @@
+{
+  "analysis_asof_utc": "2026-07-21T02:26:57+00:00",
+  "capital_at_risk_usd_v2": 70714.22064014865,
+  "closed_positions_weather_assets": 2079,
+  "current_zero_value_added_pnl": -15051.8084,
+  "current_zero_value_added_positions": 1566,
+  "delivery_zip": {
+    "zip_file_count": 17,
+    "zip_path": "huskyvs_corrected_audit_v2.zip",
+    "zip_size_bytes": 1445039,
+    "zip_testzip_bad_file": null
+  },
+  "exit_mode_pnl": [
+    {
+      "capital_at_risk_usd": 23518.416651040498,
+      "current_zero_value_added_positions": 1351,
+      "exit_mode_v2": "never_sold",
+      "positions": 1898,
+      "realized_pnl_v2": -5463.38106,
+      "roi_v2": -0.232302248108964,
+      "sell_before_local_day_end_positions": 0,
+      "settled_positions": 1898,
+      "win_rate_v2": 0.08377239199157008
+    },
+    {
+      "capital_at_risk_usd": 10271.78870227102,
+      "current_zero_value_added_positions": 201,
+      "exit_mode_v2": "partially_sold",
+      "positions": 319,
+      "realized_pnl_v2": -827.5782320000001,
+      "roi_v2": -0.08056807397303922,
+      "sell_before_local_day_end_positions": 319,
+      "settled_positions": 319,
+      "win_rate_v2": 0.2476489028213166
+    },
+    {
+      "capital_at_risk_usd": 27757.46175546668,
+      "current_zero_value_added_positions": 11,
+      "exit_mode_v2": "mostly_or_fully_sold",
+      "positions": 1272,
+      "realized_pnl_v2": 26681.280677,
+      "roi_v2": 0.9612291250566262,
+      "sell_before_local_day_end_positions": 1260,
+      "settled_positions": 1272,
+      "win_rate_v2": 0.5683962264150944
+    },
+    {
+      "capital_at_risk_usd": 9166.553531370446,
+      "current_zero_value_added_positions": 3,
+      "exit_mode_v2": "transform_affected",
+      "positions": 156,
+      "realized_pnl_v2": 2452.230784,
+      "roi_v2": 0.26751938726019514,
+      "sell_before_local_day_end_positions": 62,
+      "settled_positions": 156,
+      "win_rate_v2": 0.5
+    }
+  ],
+  "generated_at_utc": "2026-07-21T02:26:58.090512+00:00",
+  "integrity_audit": {
+    "critical_parameter_checks": {
+      "activity_has_trade_split_merge_redeem": true,
+      "trades_takerOnly_false": true
+    },
+    "current_zero_value_added_pnl": -15051.8084,
+    "current_zero_value_added_positions": 1566,
+    "missing_timezone_cities": [],
+    "row_consistency": {
+      "activity": {
+        "consistent": true,
+        "csv_rows": 19498,
+        "jsonl_rows": 19498,
+        "manifest_rows": 19498
+      },
+      "closed_positions": {
+        "consistent": true,
+        "csv_rows": 2197,
+        "jsonl_rows": 2197,
+        "manifest_rows": 2197
+      },
+      "current_positions": {
+        "consistent": true,
+        "csv_rows": 1653,
+        "jsonl_rows": 1653,
+        "manifest_rows": 1653
+      },
+      "trades": {
+        "consistent": true,
+        "csv_rows": 18308,
+        "jsonl_rows": 18308,
+        "manifest_rows": 18308
+      }
+    },
+    "settled_rows_have_local_cutoff": true,
+    "snapshot_zip_valid": true,
+    "timezone_mapping_complete": true
+  },
+  "portfolio_drawdown": {
+    "drawdown_peak_date": "2026-06-17",
+    "drawdown_trough_date": "2026-06-25",
+    "ending_cumulative_pnl": 22842.552169000013,
+    "max_drawdown_usd": 843.9784040000013
+  },
+  "raw_counts": {
+    "activity": 19498,
+    "closed_positions": 2197,
+    "current_positions": 1653,
+    "trades": 18308
+  },
+  "roi_on_capital_at_risk_v2": 0.3230262875305018,
+  "settled_weather_assets_v2": 3645,
+  "total_net_pnl_v2": 22842.552169,
+  "v1_roi_on_buy_usd": 0.743811828723291,
+  "wallet": "0xaf17116ae2b1476032785a67bd5b7c8c05905c20",
+  "weather_assets": 3663,
+  "weather_trade_rows": 17964
+}

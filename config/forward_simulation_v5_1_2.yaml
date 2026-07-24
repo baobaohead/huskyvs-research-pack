@@ -1,0 +1,42 @@
+version: forward_simulation_v5.1.2-live-integration
+schema_version: forward_v5_1_2_schema_001
+mode: live_integration_read_only
+
+paths:
+  live_integration_dir: data/forward_v5_1_2/live_integration
+  schema_file: schemas/forward_simulation_v5_1_2.sql
+
+public_api:
+  gamma_base: https://gamma-api.polymarket.com
+  clob_base: https://clob.polymarket.com
+  timeout_seconds: 10
+  max_retries: 2
+  backoff_seconds: 0.5
+  methods_allowed:
+    - GET
+
+live_rehearsal:
+  default_interval_seconds: 60
+  default_iterations: 15
+  max_iterations: 30
+  virtual_buy_usd:
+    - 1
+    - 5
+    - 10
+    - 25
+    - 50
+  virtual_sell_shares:
+    - 10
+    - 50
+    - 100
+
+fee_policy:
+  official_formula: fee = shares * fee_rate * price * (1 - price)
+  precision_decimal_places: 5
+  unknown_fee_is_not_zero: true
+  fallback_fee_is_separate: true
+
+safety:
+  formal_write_allowed: false
+  trading_actions_allowed: false
+  background_service_allowed: false

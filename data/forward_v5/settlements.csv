@@ -1,0 +1,1 @@
+settlement_id,strategy_id,signal_id,event_id,token_id,settled_at_utc,settlement_price,remaining_shares,settlement_value,realized_gross_proceeds,total_buy_cost,gross_pnl,fee_scenario_bps,simulated_fee_usd,net_pnl,mode,notes

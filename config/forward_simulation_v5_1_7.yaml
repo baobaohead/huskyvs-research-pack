@@ -1,0 +1,92 @@
+version: forward_simulation_v5.1.7-rc6
+schema_version: forward_v5_1_7_schema_001
+status: rc6_not_formally_started
+
+paths:
+  formal_data_dir: data/forward_v5_1_7/formal
+  demo_data_dir: data/forward_v5_1_7/demo
+  live_integration_dir: data/forward_v5_1_7/live_integration
+  schema_file: schemas/forward_simulation_v5_1_7.sql
+  preregistration_file: reports/FORWARD_SIMULATION_V5_1_7_PREREGISTRATION.md
+
+public_api:
+  gamma_base: https://gamma-api.polymarket.com
+  clob_base: https://clob.polymarket.com
+  timeout_seconds: 10
+  max_retries: 2
+  backoff_seconds: 0.5
+  methods_allowed:
+    - GET
+
+execution:
+  trade_enabled: false
+  account_connection_enabled: false
+  secret_material_required: false
+  real_trade_action_enabled: false
+  formal_monitor_uses_public_adapter_only: true
+  run_loop_foreground_only: true
+  long_running_monitor_requires_confirmation: true
+  lock_stale_seconds: 300
+  pause_poll_seconds: 5
+  formal_adapter_class: PolymarketPublicAdapterV5_1_7
+
+entry:
+  entry_valid_minutes: 10
+  require_temperature_bucket: true
+
+sample_rules:
+  reject_signals_before_formal_start: true
+  max_signal_registration_delay_seconds: 300
+  allowed_future_skew_seconds: 30
+  first_review_settled_traded_events: 50
+  second_review_settled_traded_events: 100
+  demo_data_excluded_from_formal_stats: true
+
+accounting:
+  main_ledger: sqlite
+  decimal_precision: 28
+  decimal_rounding: ROUND_HALF_EVEN
+  event_key: normalized_city + weather_date_local + weather_metric
+  orderbook_depth_allocation: stable_created_at_then_signal_id
+  strategy_branches_are_mutually_exclusive_counterfactuals: true
+  trigger_stage_once_only: true
+  same_run_same_content_hash: idempotent_no_duplicate_fill
+  different_run_same_content_hash: allowed_new_observation_but_not_reused_within_run
+
+fees:
+  official_formula: fee = shares * fee_rate * price * (1 - price)
+  precision_decimal_places: 5
+  source_priority: clob_fee_fields_then_gamma_crosscheck
+  unknown_fee_is_not_zero: true
+  conflict_blocks_official_simulation: true
+  settlement_fee_status: no_official_settlement_fee_confirmed
+
+polling:
+  default_interval_seconds: 60
+  retry_backoff_seconds: 2
+  max_network_retries_per_market: 2
+
+strategies:
+  hold_to_settlement: completely hold until settlement
+  tp_2x_sell_50pct: one trigger stage; sell 50 percent of current signal-level inventory once when executable bid-depth VWAP is at least 2x rolling average cost
+  tp_2x_sell_75pct: one trigger stage; sell 75 percent of current signal-level inventory once when executable bid-depth VWAP is at least 2x rolling average cost
+  tp_5x_sell_25pct: one trigger stage; sell 25 percent of current signal-level inventory once when executable bid-depth VWAP is at least 5x rolling average cost
+
+live_integration:
+  default_iterations: 1
+  max_iterations: 30
+  default_interval_seconds: 0
+  preferred_weather_slugs:
+    - highest-temperature-in-tokyo-on-july-22-2026-29corbelow
+    - highest-temperature-in-beijing-on-july-22-2026-25corbelow
+    - highest-temperature-in-tokyo-on-july-22-2026-30c
+  search_terms:
+    - Tokyo temperature July 22
+    - Beijing temperature July 22
+    - Paris temperature July 22
+    - July 22 temperature
+    - highest temperature July 22
+    - weather July 22
+  resolved_weather_slugs:
+    - highest-temperature-in-hong-kong-on-july-20-2026-31c
+    - highest-temperature-in-hong-kong-on-july-20-2026-29c

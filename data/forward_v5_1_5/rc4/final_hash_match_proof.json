@@ -1,0 +1,54 @@
+{
+  "current_hashes": {
+    "adapter_code_sha256": "dc879f3e27106b13fc9b58a5ccb8e31bcdcee529f4722b8dd032a68fee48a035",
+    "api_contract_sha256": "e0851ce6a22f3789adafda970a896e639a6648cc8e3d91995862722eafd8dd14",
+    "config_sha256": "b99790d2485a6d802244a360386af960a288407d56c6c7a620c5b4e92915c06c",
+    "core_code_sha256": "ab48b5ae2978dfae76502981f3128ea1331e2a307ba96b032d68de19699062dd",
+    "fee_contract_sha256": "34d89355f7f472f52e7accaf8219e4531506d8a7afe4d60a872442b6d71fb0b6",
+    "preregistration_sha256": "d2c8a49e3ad6829fbafe8f421ab578ed75629e0868e3039fda4b4bce18977c61",
+    "reporting_code_sha256": "51a4a03c6b7c76998927b6141e40dc95922b71d7a57c4a926e63462c162ed1fe",
+    "schema_sha256": "400ecc8684e8cb491fd52ba2d2d8cb90f9c1dc46baa89502fa37d83911b0327c",
+    "settlement_finality_contract_sha256": "5e47cf5376a36d40b6a71ebf7013c5e9676dcded3582091aa56a0cef04950838"
+  },
+  "current_matches_live_manifest": true,
+  "frozen_hash_keys": [
+    "adapter_code_sha256",
+    "api_contract_sha256",
+    "config_sha256",
+    "core_code_sha256",
+    "fee_contract_sha256",
+    "preregistration_sha256",
+    "reporting_code_sha256",
+    "schema_sha256",
+    "settlement_finality_contract_sha256"
+  ],
+  "generated_at_utc": "2026-07-22T05:38:02.342760+00:00",
+  "live_hashes": {
+    "adapter_code_sha256": "dc879f3e27106b13fc9b58a5ccb8e31bcdcee529f4722b8dd032a68fee48a035",
+    "api_contract_sha256": "e0851ce6a22f3789adafda970a896e639a6648cc8e3d91995862722eafd8dd14",
+    "config_sha256": "b99790d2485a6d802244a360386af960a288407d56c6c7a620c5b4e92915c06c",
+    "core_code_sha256": "ab48b5ae2978dfae76502981f3128ea1331e2a307ba96b032d68de19699062dd",
+    "fee_contract_sha256": "34d89355f7f472f52e7accaf8219e4531506d8a7afe4d60a872442b6d71fb0b6",
+    "preregistration_sha256": "d2c8a49e3ad6829fbafe8f421ab578ed75629e0868e3039fda4b4bce18977c61",
+    "reporting_code_sha256": "51a4a03c6b7c76998927b6141e40dc95922b71d7a57c4a926e63462c162ed1fe",
+    "schema_sha256": "400ecc8684e8cb491fd52ba2d2d8cb90f9c1dc46baa89502fa37d83911b0327c",
+    "settlement_finality_contract_sha256": "5e47cf5376a36d40b6a71ebf7013c5e9676dcded3582091aa56a0cef04950838"
+  },
+  "live_manifest_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_5/rc4/live_run_manifest.json",
+  "notes": "Frozen file hashes were recomputed from the ZIP entries and compared with data/forward_v5_1_5/rc4/live_run_manifest.json.",
+  "package_file_count": 186,
+  "run_id": "rc4_live_readonly_final",
+  "zip_entries_match_live_manifest": true,
+  "zip_entry_hashes": {
+    "adapter_code_sha256": "dc879f3e27106b13fc9b58a5ccb8e31bcdcee529f4722b8dd032a68fee48a035",
+    "api_contract_sha256": "e0851ce6a22f3789adafda970a896e639a6648cc8e3d91995862722eafd8dd14",
+    "config_sha256": "b99790d2485a6d802244a360386af960a288407d56c6c7a620c5b4e92915c06c",
+    "core_code_sha256": "ab48b5ae2978dfae76502981f3128ea1331e2a307ba96b032d68de19699062dd",
+    "fee_contract_sha256": "34d89355f7f472f52e7accaf8219e4531506d8a7afe4d60a872442b6d71fb0b6",
+    "preregistration_sha256": "d2c8a49e3ad6829fbafe8f421ab578ed75629e0868e3039fda4b4bce18977c61",
+    "reporting_code_sha256": "51a4a03c6b7c76998927b6141e40dc95922b71d7a57c4a926e63462c162ed1fe",
+    "schema_sha256": "400ecc8684e8cb491fd52ba2d2d8cb90f9c1dc46baa89502fa37d83911b0327c",
+    "settlement_finality_contract_sha256": "5e47cf5376a36d40b6a71ebf7013c5e9676dcded3582091aa56a0cef04950838"
+  },
+  "zip_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/huskyvs_forward_simulation_v5_1_5_rc4.zip"
+}

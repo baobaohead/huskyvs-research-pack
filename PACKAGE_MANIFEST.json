@@ -1,0 +1,21 @@
+{
+  "created_at_utc": "2026-07-20T07:09:11.332753+00:00",
+  "wallet": "0xaf17116ae2b1476032785a67bd5b7c8c05905c20",
+  "files": [
+    "CODEX_TASK.md",
+    "FIRST_FINDINGS.md",
+    "PACKAGE_MANIFEST.json",
+    "README.md",
+    "data/manual/visible_activity_from_user_screenshot.csv",
+    "data/manual/visible_basket_summary_2026-07-20.csv",
+    "data/manual/visible_positions_2026-07-20.csv",
+    "requirements.txt",
+    "run_all.sh",
+    "src/__init__.py",
+    "src/analyze_weather_strategy.py",
+    "src/collect_public_ledger.py",
+    "tests/test_parser.py"
+  ],
+  "network_fetch_executed_here": false,
+  "reason": "This runtime has no outbound DNS; scripts are syntax-checked and sample calculations are generated."
+}

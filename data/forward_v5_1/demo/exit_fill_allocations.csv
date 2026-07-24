@@ -1,0 +1,5 @@
+allocation_id,exit_fill_id,trigger_id,strategy_id,signal_id,event_key,token_id,lot_id,allocated_shares,gross_exit_proceeds,exit_fee,mode
+alloc_0f3c2869295d77430fe904e1,exit_596fb6a497ea661798920553,trig_859a332d72a732eb2b11fb0b,tp_2x_sell_50pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_a9cd81316f0c50fcdb7cb82d,100.0,25.0,0.025,demo
+alloc_0ec43305c30668fb0f33b27e,exit_596fb6a497ea661798920553,trig_859a332d72a732eb2b11fb0b,tp_2x_sell_50pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_b1cf5c1c15405e9e85ae33ff,400.0,100.0,0.1,demo
+alloc_e25d4dd20033745d20798a12,exit_d4dcfdc754c234eb38dab81b,trig_317528a1d52912ec7658c652,tp_2x_sell_75pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_2757634629041c51cbec2650,100.0,25.0,0.025,demo
+alloc_a565a23e04b0fc773b715e5d,exit_d4dcfdc754c234eb38dab81b,trig_317528a1d52912ec7658c652,tp_2x_sell_75pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_675cead2b4f47764af0a408a,650.0,162.5,0.1625,demo

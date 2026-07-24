@@ -1,0 +1,9 @@
+{
+  "heartbeat_at_utc": "2099-01-03T00:00:00+00:00",
+  "hostname": "baobaotoudeMac-mini.local",
+  "mode": "demo",
+  "pid": 18436,
+  "run_id": "demo_run_settlement",
+  "status": "running",
+  "version": "forward_simulation_v5.1.5-rc4"
+}

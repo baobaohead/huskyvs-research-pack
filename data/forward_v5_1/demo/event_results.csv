@@ -1,0 +1,5 @@
+event_key,strategy_id,mode,signal_count,position_count,traded_event_count,settled_event_count,gross_entry_cost,entry_fee,gross_exit_proceeds,exit_fee,settlement_proceeds,settlement_fee,total_fees,gross_pnl,net_pnl,triggered_take_profit,incomplete_take_profit
+demo city|2099-01-01|high,hold_to_settlement,demo,1,1,1,1,100.0,0.09999999999999999,0,0,0.0,0.0,0.09999999999999999,-100.0,-100.1,False,False
+demo city|2099-01-01|high,tp_2x_sell_50pct,demo,1,1,1,1,100.0,0.09999999999999999,125.0,0.125,0.0,0.0,0.22499999999999998,25.0,24.775,True,False
+demo city|2099-01-01|high,tp_2x_sell_75pct,demo,1,1,1,1,100.0,0.09999999999999999,187.5,0.1875,0.0,0.0,0.2875,87.5,87.2125,True,False
+demo city|2099-01-01|high,tp_5x_sell_25pct,demo,1,1,1,1,100.0,0.09999999999999999,0,0,0.0,0.0,0.09999999999999999,-100.0,-100.1,False,False

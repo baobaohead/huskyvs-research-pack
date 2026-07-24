@@ -1,0 +1,1 @@
+position_event_id,strategy_id,signal_id,event_id,token_id,updated_at_utc,event_type,delta_buy_shares,delta_buy_cost,delta_sell_shares,sell_proceeds,remaining_shares,remaining_cost_basis,rolling_avg_cost,realized_gross_proceeds,realized_cost_basis_removed,source_fill_id,mode,notes

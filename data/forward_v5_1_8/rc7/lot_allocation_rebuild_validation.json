@@ -1,0 +1,101 @@
+{
+  "cases": {
+    "15_modify_strategy_lot_entry_fee": {
+      "actual_error_codes": "LOT_ENTRY_FEE_MISMATCH,STRATEGY_PNL_MISMATCH,EVENT_PNL_MISMATCH,TOTAL_LEDGER_PNL_MISMATCH",
+      "corruption_case": "15_modify_strategy_lot_entry_fee",
+      "detected": "true",
+      "direct_business_data_modified": "true",
+      "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/15_modify_strategy_lot_entry_fee/data/forward_v5_1_8/demo/ledger.sqlite3",
+      "expected_error_codes": "LOT_ENTRY_FEE_MISMATCH",
+      "followup_extra_fill_created": "false",
+      "followup_monitor_attempted": "false",
+      "full_replay_executed": "true",
+      "synthetic_violation_event_inserted": "false"
+    },
+    "16_modify_strategy_lot_shares": {
+      "actual_error_codes": "LOT_ENTRY_SHARES_MISMATCH,LOT_REMAINING_SHARES_MISMATCH",
+      "corruption_case": "16_modify_strategy_lot_shares",
+      "detected": "true",
+      "direct_business_data_modified": "true",
+      "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/16_modify_strategy_lot_shares/data/forward_v5_1_8/demo/ledger.sqlite3",
+      "expected_error_codes": "LOT_ENTRY_SHARES_MISMATCH",
+      "followup_extra_fill_created": "false",
+      "followup_monitor_attempted": "false",
+      "full_replay_executed": "true",
+      "synthetic_violation_event_inserted": "false"
+    },
+    "17_modify_strategy_lot_remaining_shares": {
+      "actual_error_codes": "LOT_REMAINING_SHARES_MISMATCH",
+      "corruption_case": "17_modify_strategy_lot_remaining_shares",
+      "detected": "true",
+      "direct_business_data_modified": "true",
+      "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/17_modify_strategy_lot_remaining_shares/data/forward_v5_1_8/demo/ledger.sqlite3",
+      "expected_error_codes": "LOT_REMAINING_SHARES_MISMATCH",
+      "followup_extra_fill_created": "false",
+      "followup_monitor_attempted": "false",
+      "full_replay_executed": "true",
+      "synthetic_violation_event_inserted": "false"
+    },
+    "18_modify_strategy_lot_net_pnl": {
+      "actual_error_codes": "LOT_PNL_MISMATCH",
+      "corruption_case": "18_modify_strategy_lot_net_pnl",
+      "detected": "true",
+      "direct_business_data_modified": "true",
+      "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/18_modify_strategy_lot_net_pnl/data/forward_v5_1_8/demo/ledger.sqlite3",
+      "expected_error_codes": "LOT_PNL_MISMATCH",
+      "followup_extra_fill_created": "false",
+      "followup_monitor_attempted": "false",
+      "full_replay_executed": "true",
+      "synthetic_violation_event_inserted": "false"
+    },
+    "19_modify_exit_allocation_shares": {
+      "actual_error_codes": "inventory_oversold,LOT_SOLD_SHARES_MISMATCH,EXIT_ALLOCATION_SHARES_MISMATCH,POSITION_SHARE_CONSERVATION_FAILED",
+      "corruption_case": "19_modify_exit_allocation_shares",
+      "detected": "true",
+      "direct_business_data_modified": "true",
+      "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/19_modify_exit_allocation_shares/data/forward_v5_1_8/demo/ledger.sqlite3",
+      "expected_error_codes": "EXIT_ALLOCATION_SHARES_MISMATCH",
+      "followup_extra_fill_created": "false",
+      "followup_monitor_attempted": "false",
+      "full_replay_executed": "true",
+      "synthetic_violation_event_inserted": "false"
+    },
+    "20_modify_exit_allocation_net_proceeds": {
+      "actual_error_codes": "LOT_EXIT_PROCEEDS_MISMATCH,LOT_PNL_MISMATCH,EXIT_ALLOCATION_NET_PROCEEDS_MISMATCH",
+      "corruption_case": "20_modify_exit_allocation_net_proceeds",
+      "detected": "true",
+      "direct_business_data_modified": "true",
+      "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/20_modify_exit_allocation_net_proceeds/data/forward_v5_1_8/demo/ledger.sqlite3",
+      "expected_error_codes": "EXIT_ALLOCATION_NET_PROCEEDS_MISMATCH",
+      "followup_extra_fill_created": "false",
+      "followup_monitor_attempted": "false",
+      "full_replay_executed": "true",
+      "synthetic_violation_event_inserted": "false"
+    },
+    "21_modify_settlement_allocation_shares": {
+      "actual_error_codes": "inventory_oversold,SETTLEMENT_ALLOCATION_SHARES_MISMATCH,SETTLEMENT_ALLOCATION_VALUE_MISMATCH,POSITION_SHARE_CONSERVATION_FAILED",
+      "corruption_case": "21_modify_settlement_allocation_shares",
+      "detected": "true",
+      "direct_business_data_modified": "true",
+      "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/21_modify_settlement_allocation_shares/data/forward_v5_1_8/demo/ledger.sqlite3",
+      "expected_error_codes": "SETTLEMENT_ALLOCATION_SHARES_MISMATCH",
+      "followup_extra_fill_created": "false",
+      "followup_monitor_attempted": "false",
+      "full_replay_executed": "true",
+      "synthetic_violation_event_inserted": "false"
+    },
+    "22_modify_settlement_allocation_net_proceeds": {
+      "actual_error_codes": "LOT_SETTLEMENT_PROCEEDS_MISMATCH,LOT_PNL_MISMATCH,SETTLEMENT_ALLOCATION_NET_PROCEEDS_MISMATCH",
+      "corruption_case": "22_modify_settlement_allocation_net_proceeds",
+      "detected": "true",
+      "direct_business_data_modified": "true",
+      "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/22_modify_settlement_allocation_net_proceeds/data/forward_v5_1_8/demo/ledger.sqlite3",
+      "expected_error_codes": "SETTLEMENT_ALLOCATION_NET_PROCEEDS_MISMATCH",
+      "followup_extra_fill_created": "false",
+      "followup_monitor_attempted": "false",
+      "full_replay_executed": "true",
+      "synthetic_violation_event_inserted": "false"
+    }
+  },
+  "status": "pass"
+}

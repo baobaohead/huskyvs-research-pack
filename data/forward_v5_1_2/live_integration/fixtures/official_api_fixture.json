@@ -1,0 +1,73 @@
+{
+  "market": {
+    "question": "Highest temperature in London on July 22?",
+    "title": "Highest temperature in London on July 22?",
+    "slug": "highest-temperature-in-london-on-july-22-2026-22c",
+    "conditionId": "0xcondition",
+    "outcomes": "[\"Yes\", \"No\"]",
+    "clobTokenIds": "[\"yes-token\", \"no-token\"]",
+    "outcomePrices": "[\"0.07\", \"0.93\"]",
+    "active": true,
+    "closed": false,
+    "resolved": false,
+    "feesEnabled": true,
+    "feeSchedule": {
+      "rate": 0.05,
+      "exponent": 1
+    },
+    "endDate": "2026-07-22T23:59:00Z",
+    "groupItemTitle": "22C",
+    "acceptingOrders": true
+  },
+  "clob_market_info": {
+    "t": [
+      {
+        "t": "yes-token",
+        "o": "Yes"
+      },
+      {
+        "t": "no-token",
+        "o": "No"
+      }
+    ],
+    "mos": 1,
+    "mts": 0.001,
+    "mbf": 0,
+    "tbf": 500,
+    "fd": {
+      "r": 0.05,
+      "e": 1,
+      "to": true
+    }
+  },
+  "orderbook": {
+    "market": "0xcondition",
+    "asset_id": "yes-token",
+    "timestamp": "123",
+    "hash": "bookhash",
+    "bids": [
+      {
+        "price": "0.18",
+        "size": "5"
+      },
+      {
+        "price": "0.17",
+        "size": "10"
+      }
+    ],
+    "asks": [
+      {
+        "price": "0.22",
+        "size": "10"
+      },
+      {
+        "price": "0.25",
+        "size": "20"
+      }
+    ],
+    "min_order_size": "1",
+    "tick_size": "0.001",
+    "neg_risk": false,
+    "last_trade_price": "0.20"
+  }
+}

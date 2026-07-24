@@ -1,0 +1,14 @@
+{
+  "generated_at_utc": "2026-07-22T03:46:47.882222+00:00",
+  "validations": [
+    {
+      "evidence_valid": true,
+      "settlement_status": "final",
+      "slug": "highest-temperature-in-hong-kong-on-july-20-2026-31c",
+      "token_settlement_values": {
+        "7532539283825001065361366930116963791181438830940284558599957467951037851556": "1",
+        "78935786363684456842678571414465807747253557126226143484570285693101914811902": "0"
+      }
+    }
+  ]
+}

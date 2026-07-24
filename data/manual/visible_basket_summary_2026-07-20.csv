@@ -1,0 +1,7 @@
+city,weather_date,metric,unit,visible_bucket_count,visible_buckets,visible_entry_cost,min_state_payout,max_state_payout,min_state_profit,max_state_profit,payoff_floor_ratio
+Beijing,2026-07-20,high,C,3,"28,29,30",44.4101,65.0,350.0,20.5899,305.5899,1.463631
+Sao Paulo,2026-07-20,high,C,2,"28,29",51.55,181.0,300.0,129.45,248.45,3.511154
+Seoul,2026-07-20,high,C,3,"23,24,25",32.5693,96.0,565.7,63.4307,533.1307,2.947561
+Seoul,2026-07-20,low,C,3,"<=18,19,20",14.0293,111.4,245.3,97.3707,231.2707,7.940524
+Wuhan,2026-07-20,high,C,2,"31,32",10.0855,59.5,300.0,49.4145,289.9145,5.899559
+Wuhan,2026-07-21,high,C,4,"29,30,31,32",48.65,130.0,220.0,81.35,171.35,2.672148

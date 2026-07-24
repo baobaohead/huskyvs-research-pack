@@ -1,0 +1,7 @@
+settlement_allocation_id,settlement_id,strategy_id,signal_id,event_key,token_id,lot_id,settled_shares,settlement_proceeds,settlement_fee,mode
+set_alloc_dfe826abcb4a6d1298489cd5,set_69ea08dcf57b9fc0ed826511,hold_to_settlement,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_e4822039eb1883590f93758d,100.0,0.0,0.0,demo
+set_alloc_2c4c28d1ac318bfb49040266,set_69ea08dcf57b9fc0ed826511,hold_to_settlement,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_7b2e07006080e6d030bbb680,900.0,0.0,0.0,demo
+set_alloc_915d0762a95fa0313bb53840,set_c106b696882a91cdb1cff23d,tp_2x_sell_50pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_b1cf5c1c15405e9e85ae33ff,500.0,0.0,0.0,demo
+set_alloc_e533b6c26c89ee8ecaab11e8,set_783f5ebe09c438bf2873c5f7,tp_2x_sell_75pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_675cead2b4f47764af0a408a,250.0,0.0,0.0,demo
+set_alloc_75190044ef702d888a8f5d5f,set_3fe0bcf6000e2243a3797b85,tp_5x_sell_25pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_dfb8dbd5d3e7b236aa26d0d1,100.0,0.0,0.0,demo
+set_alloc_79e74bfa067c88b43bf33231,set_3fe0bcf6000e2243a3797b85,tp_5x_sell_25pct,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,lot_7f1432ae41cd2308e34e1163,900.0,0.0,0.0,demo

@@ -1,0 +1,160 @@
+{
+  "audit_object_v5_1_post_hashes": [
+    {
+      "path": "src/forward_simulation_v5_1.py",
+      "sha256": "6d259a6836e19a38cdfeff82e18afbbf6a6734885caab0ad379014f4480322f8",
+      "size_bytes": 61126
+    },
+    {
+      "path": "src/forward_reporting_v5_1.py",
+      "sha256": "c52c5f0f92ae1e1a4127281bd4ce1da83d23f83e52abd0a36b1630c9a9678656",
+      "size_bytes": 6330
+    },
+    {
+      "path": "config/forward_simulation_v5_1.yaml",
+      "sha256": "159429609cf2c6a71243ec0cf84e5f29ca6964c0bc65479d386a69882f63b15e",
+      "size_bytes": 2026
+    },
+    {
+      "path": "reports/FORWARD_SIMULATION_V5_1_PREREGISTRATION.md",
+      "sha256": "1db3a58d4e387e242960c5b998a51cb08daeb358fbd408d04636f1454b0b2100",
+      "size_bytes": 3791
+    },
+    {
+      "path": "tests/test_forward_simulation_v5_1.py",
+      "sha256": "4b7ee5bb013b0ff8ca91bf7441a0c4801fd3f79433de8a8095f369fd9bce213b",
+      "size_bytes": 16612
+    }
+  ],
+  "audit_object_v5_1_pre_hashes": [
+    {
+      "path": "src/forward_simulation_v5_1.py",
+      "sha256": "6d259a6836e19a38cdfeff82e18afbbf6a6734885caab0ad379014f4480322f8",
+      "size_bytes": 61126
+    },
+    {
+      "path": "src/forward_reporting_v5_1.py",
+      "sha256": "c52c5f0f92ae1e1a4127281bd4ce1da83d23f83e52abd0a36b1630c9a9678656",
+      "size_bytes": 6330
+    },
+    {
+      "path": "config/forward_simulation_v5_1.yaml",
+      "sha256": "159429609cf2c6a71243ec0cf84e5f29ca6964c0bc65479d386a69882f63b15e",
+      "size_bytes": 2026
+    },
+    {
+      "path": "reports/FORWARD_SIMULATION_V5_1_PREREGISTRATION.md",
+      "sha256": "1db3a58d4e387e242960c5b998a51cb08daeb358fbd408d04636f1454b0b2100",
+      "size_bytes": 3791
+    },
+    {
+      "path": "tests/test_forward_simulation_v5_1.py",
+      "sha256": "4b7ee5bb013b0ff8ca91bf7441a0c4801fd3f79433de8a8095f369fd9bce213b",
+      "size_bytes": 16612
+    }
+  ],
+  "code_modified": true,
+  "conclusion": "PASS_FOR_FORMAL_START",
+  "frozen_test_time_utc": "2026-07-21T00:00:00+00:00",
+  "generated_at_utc": "2026-07-21T07:18:16.271721+00:00",
+  "hash_freeze_coverage": [
+    "config",
+    "core_code",
+    "reporting_code",
+    "schema",
+    "preregistration"
+  ],
+  "integrity_negative_detected": "17/17",
+  "modification_policy": "v5.1 original files were not overwritten; fixes are in v5.1.1 files",
+  "os": "macOS-15.7.3-arm64-arm-64bit-Mach-O",
+  "pytest_version": "pytest 8.4.2",
+  "python_version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+  "random_seed": "not used; deterministic fixtures only",
+  "release_candidate": "v5.1-RC1",
+  "result_files": [
+    {
+      "path": "reports/FORWARD_SIMULATION_V5_1_RC1_AUDIT.md",
+      "sha256": "1545e1c76999132bcf2ef950f5c5bc5f17aa3d8fd5e6350a772ad36d3c8f2e8e",
+      "size_bytes": 3539
+    },
+    {
+      "path": "reports/FORWARD_SIMULATION_V5_1_RC1_RELEASE_CHECKLIST.md",
+      "sha256": "193ca3b520aea64cdf5987a6e3169d3d8c2d02dc33b18ae1ae697de5813b8f29",
+      "size_bytes": 1792
+    },
+    {
+      "path": "reports/FORWARD_SIMULATION_V5_1_RC1_OPERATIONS.md",
+      "sha256": "fdf8c59c0a28d9bb48db0d23509d0a07964d968a6de7280678c1e06781d466d7",
+      "size_bytes": 2047
+    },
+    {
+      "path": "reports/FORWARD_SIMULATION_V5_1_RC1_STATUS.md",
+      "sha256": "c4b42386728d6d7e55ac1787264883b211e2d6be9f34f25673a68447a023682b",
+      "size_bytes": 1495
+    },
+    {
+      "path": "data/forward_v5_1_rc1/integrity_negative_tests.csv",
+      "sha256": "412b59f1ada7a81c9dfb4253fc6e3dfcbc05665a98bc6f7f9f766ac5c4d0293b",
+      "size_bytes": 3009
+    },
+    {
+      "path": "data/forward_v5_1_rc1/adversarial_test_results.csv",
+      "sha256": "c36af4defafdbe1e0d696e89fb02ac9418a151bf0c3005e2b8f394eda2023a9c",
+      "size_bytes": 1655
+    },
+    {
+      "path": "data/forward_v5_1_rc1/formal_empty_proof.json",
+      "sha256": "04d2b4fca598c28915537ba2085713490d693dd8b180bdc35187cd4f57582918",
+      "size_bytes": 2798
+    },
+    {
+      "path": "data/forward_v5_1_rc1/formal_rehearsal_summary.json",
+      "sha256": "dae93470e0017424fff2e0b3423a950f037b6d202c19439c77ddaa8b41340040",
+      "size_bytes": 2885
+    }
+  ],
+  "schema_files": [
+    {
+      "path": "schemas/forward_simulation_v5_1_1.sql",
+      "sha256": "88c558e484e20b02ea0a00953cfc7f773ad92051da6de815e6043d9ede40e936",
+      "size_bytes": 6429
+    }
+  ],
+  "shared_orderbook_depth": "pass",
+  "test_summary": {
+    "full_project_tests": 69,
+    "pytest_run_1": "69 passed in 0.67s",
+    "pytest_run_2": "69 passed in 0.65s",
+    "rc1_new_tests": 28,
+    "skip_xfail_warnings": "none reported by pytest -q"
+  },
+  "transaction_recovery": "pass",
+  "v5_1_1_rc1_files": [
+    {
+      "path": "src/forward_simulation_v5_1_1.py",
+      "sha256": "7a3aa959000158e96da92406ff440dc52276e766abcd7ccd1e407fbdec37ae2b",
+      "size_bytes": 70830
+    },
+    {
+      "path": "src/forward_reporting_v5_1_1.py",
+      "sha256": "c0f72a0a1a0c78b74684e8002e4b15f70aed8aa385688fafede1fe0e738d413d",
+      "size_bytes": 4621
+    },
+    {
+      "path": "config/forward_simulation_v5_1_1.yaml",
+      "sha256": "2d28ea185ca1fc05a09cd03467817fa6ab145d3c2a3cf471d39f343f1eb57405",
+      "size_bytes": 2207
+    },
+    {
+      "path": "tests/test_forward_simulation_v5_1_1.py",
+      "sha256": "cf4f9cb35eff750209fcd1e8bcb980f25f18852fc212b41f39c30fd1ee22b7d1",
+      "size_bytes": 29976
+    },
+    {
+      "path": "schemas/forward_simulation_v5_1_1.sql",
+      "sha256": "88c558e484e20b02ea0a00953cfc7f773ad92051da6de815e6043d9ede40e936",
+      "size_bytes": 6429
+    }
+  ],
+  "v5_1_hashes_unchanged_after_audit": true
+}

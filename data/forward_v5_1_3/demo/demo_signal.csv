@@ -1,0 +1,2 @@
+signal_id,created_at_utc,city,weather_date_local,weather_metric,temperature_bucket,market_slug,condition_id,token_id,outcome,side,forecast_temperature,forecast_probability,market_probability_at_signal,intended_usd,max_entry_price,source,notes
+demo-signal-1,2099-01-01T00:00:00+00:00,Demo City,2099-01-02,high,30C,highest-temperature-in-demo-city-on-january-2-2099-30c,0xdemo,yes-token,Yes,BUY,30,0.66,0.10,20,0.11,v5.1.3_demo_fixture,

@@ -1,0 +1,9 @@
+{
+  "ctrl_c_releases_lock": "implemented_by_context_manager",
+  "generated_at_utc": "2026-07-22T03:34:39.429004+00:00",
+  "heartbeat": "implemented",
+  "iterations_0_requires_confirm_infinite": "implemented",
+  "pause_resume_stop": "implemented",
+  "single_instance_lock": "implemented",
+  "token_errors_isolated": "implemented_by_token_batch_error_handling"
+}

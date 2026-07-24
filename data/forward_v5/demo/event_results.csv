@@ -1,0 +1,5 @@
+event_id,strategy_id,mode,city,weather_date_local,market_slug,position_count,simulated_buy_usd,simulated_entry_spent_usd,unfilled_entry_usd,avg_entry_vwap,avg_exit_vwap,gross_pnl,net_pnl,triggered_take_profit,incomplete_take_profit,settled
+evt_ffa314f8f075ff7a,hold_to_settlement,demo,Demo City,2099-01-01,demo-weather-market-v5,1,100.0,100.0,0.0,0.10476190476190476,nan,-100.0,-100.0,False,False,True
+evt_ffa314f8f075ff7a,tp_2x_sell_50pct,demo,Demo City,2099-01-01,demo-weather-market-v5,1,100.0,100.0,0.0,0.10476190476190476,0.5025714285714286,139.86363636363635,139.86363636363635,True,False,True
+evt_ffa314f8f075ff7a,tp_2x_sell_75pct,demo,Demo City,2099-01-01,demo-weather-market-v5,1,100.0,100.0,0.0,0.10476190476190476,0.49838095238095237,256.7954545454545,256.7954545454545,True,False,True
+evt_ffa314f8f075ff7a,tp_5x_sell_25pct,demo,Demo City,2099-01-01,demo-weather-market-v5,1,100.0,100.0,0.0,0.10476190476190476,nan,-100.0,-100.0,False,False,True

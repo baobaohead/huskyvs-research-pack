@@ -1,0 +1,36 @@
+{
+  "formal_audit": {
+    "checks": {
+      "formal_ledger_absent": 0
+    },
+    "ok": true
+  },
+  "formal_empty_proof": {
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "generated_at_utc": "2026-07-22T08:05:32.588512+00:00",
+    "ok": true,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0
+  },
+  "formal_status": {
+    "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_6.yaml",
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "heartbeat": {},
+    "ledger_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_6/formal/ledger.sqlite3",
+    "lock_held": false,
+    "lock_info": {},
+    "mode": "formal",
+    "runs": 0,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0,
+    "version": "forward_simulation_v5.1.6-rc5"
+  }
+}

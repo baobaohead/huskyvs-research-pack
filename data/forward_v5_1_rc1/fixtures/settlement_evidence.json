@@ -1,0 +1,7 @@
+{
+  "evidence_hash": "05006203bb7e10e0c961c98e838f0ad1696a8e52fc04779bd323a061210d649e",
+  "raw_response": "{\"result\": \"NO\", \"source\": \"rc1_fixture\", \"value\": 0}",
+  "source": "rc1",
+  "source_reference": "fixture://rc1-settlement",
+  "source_type": "fixture"
+}

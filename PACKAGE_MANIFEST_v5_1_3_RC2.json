@@ -1,0 +1,70 @@
+{
+  "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_3.yaml",
+  "demo_audit": {
+    "checks": {
+      "duplicate_snapshot_in_run": 0,
+      "fee_conflicts_entered": 0,
+      "gross_minus_fees_net_mismatch": 0,
+      "inventory_oversold": 0,
+      "mapping_invalid_entered": 0,
+      "settled_after_exit": 0
+    },
+    "ok": true
+  },
+  "demo_runs": [
+    {
+      "command": "monitor_once",
+      "ended_at_utc": "2099-01-01T00:00:02+00:00",
+      "error_count": 0,
+      "mode": "demo",
+      "run_id": "demo_run_fixture",
+      "selected_tokens_json": "[\"yes-token\"]",
+      "snapshot_count": 2,
+      "started_at_utc": "2099-01-01T00:00:02+00:00"
+    },
+    {
+      "command": "monitor_once",
+      "ended_at_utc": "2099-01-03T00:00:00+00:00",
+      "error_count": 0,
+      "mode": "demo",
+      "run_id": "demo_run_settlement",
+      "selected_tokens_json": "[\"yes-token\"]",
+      "snapshot_count": 1,
+      "started_at_utc": "2099-01-03T00:00:00+00:00"
+    }
+  ],
+  "formal_audit": {
+    "checks": {
+      "formal_ledger_absent": 0
+    },
+    "ok": true
+  },
+  "formal_empty_proof": {
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "generated_at_utc": "2026-07-22T02:28:23.912702+00:00",
+    "ok": true,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0
+  },
+  "formal_runs": [],
+  "generated_at_utc": "2026-07-22T02:28:23.913743+00:00",
+  "hashes": {
+    "adapter_code_sha256": "845e65f2e9c66b2a936d39ce068dba3c03064f7d5bd1f0482295467fa418662a",
+    "config_sha256": "29f6be77c3cd297406dcefa83091a1cd9cae957e629a3807d4e5802277da05ea",
+    "core_code_sha256": "dbff9bba30f7a498e5b0e2d632e654c4233209442518ada9e678c764a4ea23ef",
+    "preregistration_sha256": "a6c337bc8991311db4afc20b96d883e99a03db247dbc7a6df6d6c589f99060b6",
+    "reporting_code_sha256": "7a4db18fbef13897c4b311924cd0c9ca88df864fdeda7d959079af32c08b6524",
+    "schema_sha256": "0cbd1cac2a987d45099eb3d0c93231512e0a0526aa5a5310b37c6176130cc9de"
+  },
+  "official_docs": {
+    "fees": "https://docs.polymarket.com/trading/fees",
+    "market_by_slug": "https://docs.polymarket.com/api-reference/markets/get-market-by-slug",
+    "orderbook": "https://docs.polymarket.com/api-reference/market-data/get-order-book",
+    "public_methods": "https://docs.polymarket.com/trading/clients/public"
+  },
+  "version": "forward_simulation_v5.1.3-rc2"
+}

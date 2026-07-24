@@ -1,0 +1,81 @@
+{
+  "all_non_final": true,
+  "generated_at_utc": "2026-07-22T05:24:55.292533+00:00",
+  "source_type": "fixture_pending_or_proposed_market",
+  "validations": [
+    {
+      "case": "proposed_outcome_prices_not_final",
+      "evidence": {
+        "active": false,
+        "closed": true,
+        "conflict_details": "",
+        "error": "resolution_proposed_not_final",
+        "evidence_tier": "",
+        "evidence_valid": false,
+        "finality_status": "proposed",
+        "market_status": "resolved",
+        "raw_response_hash": "f573e44f9f65694d9346849eba02d98a4b35844aa70ec8fbc2f6a652726adac6",
+        "resolution_status": "proposed",
+        "resolved": true,
+        "settlement_status": "proposed",
+        "token_settlement_values": {
+          "no-token": null,
+          "yes-token": null
+        },
+        "uma_status": "proposed",
+        "winning_asset_id": "",
+        "winning_outcome": ""
+      },
+      "raw_fixture": {
+        "active": false,
+        "automaticallyResolved": false,
+        "clobTokenIds": "[\"yes-token\",\"no-token\"]",
+        "closed": true,
+        "conditionId": "0xpending",
+        "outcomePrices": "[\"1\",\"0\"]",
+        "outcomes": "[\"Yes\",\"No\"]",
+        "resolved": true,
+        "slug": "rc4-proposed-weather-fixture",
+        "umaResolutionStatus": "proposed",
+        "winningOutcome": "Yes"
+      }
+    },
+    {
+      "case": "automatically_resolved_plus_proposed_conflict",
+      "evidence": {
+        "active": false,
+        "closed": true,
+        "conflict_details": "automaticallyResolved_with_proposed",
+        "error": "automatically_resolved_proposed_conflict",
+        "evidence_tier": "",
+        "evidence_valid": false,
+        "finality_status": "status_conflict",
+        "market_status": "resolved",
+        "raw_response_hash": "f9e6fce321a326c4b282098c830587bfd3591fa449efd0ec2a8703e0bdc11330",
+        "resolution_status": "proposed",
+        "resolved": true,
+        "settlement_status": "conflict",
+        "token_settlement_values": {
+          "no-token": null,
+          "yes-token": null
+        },
+        "uma_status": "proposed",
+        "winning_asset_id": "",
+        "winning_outcome": ""
+      },
+      "raw_fixture": {
+        "active": false,
+        "automaticallyResolved": true,
+        "clobTokenIds": "[\"yes-token\",\"no-token\"]",
+        "closed": true,
+        "conditionId": "0xpending",
+        "outcomePrices": "[\"1\",\"0\"]",
+        "outcomes": "[\"Yes\",\"No\"]",
+        "resolved": true,
+        "slug": "rc4-auto-resolved-proposed-conflict-fixture",
+        "umaResolutionStatus": "proposed",
+        "winningOutcome": "Yes"
+      }
+    }
+  ]
+}

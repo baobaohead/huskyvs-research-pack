@@ -1,0 +1,6 @@
+input,canonical_label,bucket_type,threshold_value,unit,parsing_status
+-1C,exact:-1C,exact,-1,C,ok
+-10C,exact:-10C,exact,-10,C,ok
+-20F,exact:-20F,exact,-20,F,ok
+-1c,exact:-1C,exact,-1,C,ok
+minus-1c,exact:-1C,exact,-1,C,ok

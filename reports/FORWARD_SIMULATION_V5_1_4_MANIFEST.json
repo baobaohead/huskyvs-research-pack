@@ -1,0 +1,85 @@
+{
+  "config_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/config/forward_simulation_v5_1_4.yaml",
+  "demo_audit": {
+    "checks": {
+      "duplicate_signal_id": 0,
+      "duplicate_snapshot_in_run": 0,
+      "entry_shared_depth_overfill": 0,
+      "exit_shared_depth_overfill": 0,
+      "fee_conflicts_entered": 0,
+      "future_signal_too_far": 0,
+      "gross_minus_fees_net_mismatch": 0,
+      "hash_freeze_drift": 0,
+      "inventory_oversold": 0,
+      "mapping_invalid_entered": 0,
+      "missing_settlement_raw_response": 0,
+      "settled_after_exit": 0,
+      "settlement_raw_hash_mismatch": 0,
+      "signal_before_formal_start": 0,
+      "signal_registration_delay_exceeded": 0
+    },
+    "ok": true
+  },
+  "demo_runs": [
+    {
+      "command": "monitor_once",
+      "ended_at_utc": "2099-01-01T00:00:02+00:00",
+      "error_count": 0,
+      "mode": "demo",
+      "run_id": "demo_run_fixture",
+      "selected_tokens_json": "[\"yes-token\"]",
+      "snapshot_count": 1,
+      "started_at_utc": "2099-01-01T00:00:02+00:00"
+    },
+    {
+      "command": "monitor_once",
+      "ended_at_utc": "2099-01-03T00:00:00+00:00",
+      "error_count": 0,
+      "mode": "demo",
+      "run_id": "demo_run_settlement",
+      "selected_tokens_json": "[\"yes-token\"]",
+      "snapshot_count": 0,
+      "started_at_utc": "2099-01-03T00:00:00+00:00"
+    }
+  ],
+  "formal_audit": {
+    "checks": {
+      "formal_ledger_absent": 0
+    },
+    "ok": true
+  },
+  "formal_empty_proof": {
+    "entry_fills": 0,
+    "event_results": 0,
+    "exit_fills": 0,
+    "formal_started_at_utc": null,
+    "generated_at_utc": "2026-07-22T03:34:39.428131+00:00",
+    "ok": true,
+    "settlements": 0,
+    "signals": 0,
+    "snapshots": 0
+  },
+  "formal_runs": [],
+  "generated_at_utc": "2026-07-22T03:34:39.429083+00:00",
+  "hashes": {
+    "adapter_code_sha256": "7070b6eab27f0708a514b68224fe505932d73887b7f028c5a78d631f71d6b43b",
+    "api_contract_sha256": "08b8b45f00369f24f6a8c68129593e3b0e0a378ad485920546e7b8cba3eff6b4",
+    "config_sha256": "a48a513a68d6266fcc0eb2569d9c253c418d95e12e3d5f485663bfcf49364ead",
+    "core_code_sha256": "3de88101486e0e71f42b7377b10ea00f02c83f6d4511b5662bf5f55055de4325",
+    "fee_contract_sha256": "62c7dde55f7ab2b9836a323bd104b953faf8c8ade3671aa8458b56745233fec9",
+    "preregistration_sha256": "db092f298133b27600298220783aa6d874ea2db87a4e168e3a1d682b9f82f1a6",
+    "reporting_code_sha256": "19970d53623517f4c6d4a0577989849cb41cff469f5d668a873e535fac64645f",
+    "schema_sha256": "0cbd1cac2a987d45099eb3d0c93231512e0a0526aa5a5310b37c6176130cc9de"
+  },
+  "negative_audit_tests": {
+    "count": 20,
+    "passed": 20
+  },
+  "official_docs": {
+    "fees": "https://docs.polymarket.com/trading/fees",
+    "market_by_slug": "https://docs.polymarket.com/api-reference/markets/get-market-by-slug",
+    "orderbook": "https://docs.polymarket.com/api-reference/market-data/get-order-book",
+    "public_methods": "https://docs.polymarket.com/trading/clients/public"
+  },
+  "version": "forward_simulation_v5.1.4-rc3"
+}

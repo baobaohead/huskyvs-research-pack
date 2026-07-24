@@ -1,0 +1,3 @@
+entry_fill_id,signal_id,event_key,token_id,snapshot_id,filled_at_utc,gross_entry_cost,entry_fee,total_entry_cost,filled_shares,entry_vwap,best_bid,best_ask,spread,complete_fill,unfilled_usd_after_fill,depth_levels_json,mode
+entry_a999e8bba2bd6e983867813d,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,ob_ca40dfb0b5ffd601e1702a69,2026-07-21T06:43:22.358149+00:00,10.0,0.01,10.01,100.0,0.1,0.09,0.1,0.010000000000000009,False,90.0,"[{""price"":0.1,""shares"":100.0,""usd"":10.0}]",demo
+entry_22b0fac1d7579b3065d52468,demo_v5_1_sig_001,demo city|2099-01-01|high,demo-token,ob_5ce03cc2f6dd2db725f41d64,2026-07-21T06:43:23.358149+00:00,90.0,0.09,90.09,900.0,0.1,0.09,0.1,0.010000000000000009,True,0.0,"[{""price"":0.1,""shares"":900.0,""usd"":90.0}]",demo

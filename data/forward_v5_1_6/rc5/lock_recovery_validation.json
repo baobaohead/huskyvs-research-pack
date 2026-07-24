@@ -1,0 +1,28 @@
+{
+  "active_pid_expired_heartbeat_recoverable": false,
+  "cases": {
+    "active_pid_expired_heartbeat": {
+      "heartbeat_stale": true,
+      "pid_alive": true,
+      "process_start_match": true,
+      "reason": "active_pid",
+      "recoverable": false
+    },
+    "dead_pid_explicit_recovery": {
+      "heartbeat_stale": true,
+      "pid_alive": false,
+      "process_start_match": false,
+      "reason": "pid_dead_stale",
+      "recoverable": true
+    },
+    "different_hostname": {
+      "heartbeat_stale": true,
+      "pid_alive": null,
+      "process_start_match": null,
+      "reason": "different_hostname",
+      "recoverable": false
+    }
+  },
+  "dead_pid_explicit_recovery_recoverable": true,
+  "generated_at_utc": "2026-07-22T07:51:05.344356+00:00"
+}

@@ -1,0 +1,1 @@
+settlement_id,signal_id,strategy_id,event_key,condition_id,token_id,settlement_outcome,settlement_value,source,source_reference,observed_at_utc,recorded_at_utc,operator_notes,evidence_hash,settlement_status,remaining_shares_settled,settlement_proceeds,settlement_fee,mode

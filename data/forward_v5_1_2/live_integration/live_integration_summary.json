@@ -1,0 +1,16 @@
+{
+  "completed_at_utc": "2026-07-21T08:36:27.929099+00:00",
+  "duration_seconds": 953.097674,
+  "fee_rows": 20,
+  "formal_isolation_ok": true,
+  "iterations": 16,
+  "market_count": 2,
+  "network_failure_probe_ok": true,
+  "read_only_scan_ok": true,
+  "snapshot_count": 32,
+  "started_at_utc": "2026-07-21T08:20:34.821293+00:00",
+  "status_rows": 2,
+  "token_count": 2,
+  "token_mapping_rows": 4,
+  "vwap_rows": 248
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "condition_id": "0xfae59249666aaee4b27688ec195f98f70f79b3656cc41665a164d0627f38ccbc",
+    "market_question": "Will the highest temperature in Beijing be 25°C or below on July 22?",
+    "market_slug": "highest-temperature-in-beijing-on-july-22-2026-25corbelow",
+    "outcome": "Yes",
+    "token_id": "94748732915349195546448713444722756080968626922653917934033369521339618987721"
+  },
+  {
+    "condition_id": "0x1c1220cf78e724cef18de6080234a375e5a33fa5ecb6c4a5f2052b59a213657b",
+    "market_question": "Will the highest temperature in Beijing be 26°C on July 22?",
+    "market_slug": "highest-temperature-in-beijing-on-july-22-2026-26c",
+    "outcome": "Yes",
+    "token_id": "78608696928144203899113103572524300755214133117458098664721206160902611348763"
+  },
+  {
+    "condition_id": "0x8a7f9391487833c51598d6c245adcde81ad2941e590c3aa125f1899c4fc082bc",
+    "market_question": "Will the highest temperature in Beijing be 27°C on July 22?",
+    "market_slug": "highest-temperature-in-beijing-on-july-22-2026-27c",
+    "outcome": "Yes",
+    "token_id": "84604599121176894060011859823018624631807623987870880013304120047133627617638"
+  }
+]

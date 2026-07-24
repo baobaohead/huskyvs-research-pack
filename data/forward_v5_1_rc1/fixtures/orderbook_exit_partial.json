@@ -1,0 +1,15 @@
+{
+  "asks": [
+    {
+      "price": "0.26",
+      "size": "1000"
+    }
+  ],
+  "bids": [
+    {
+      "price": "0.25",
+      "size": "200"
+    }
+  ],
+  "timestamp": "rc1-exit-partial"
+}

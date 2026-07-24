@@ -1,0 +1,16 @@
+{
+  "wallet": "0xaf17116ae2b1476032785a67bd5b7c8c05905c20",
+  "start_epoch": 1761955200,
+  "end_epoch": 1784592000,
+  "generated_at": "2026-07-20T07:30:54.724715+00:00",
+  "counts": {
+    "trades": 18308,
+    "activity": 19498,
+    "current_positions": 1653,
+    "closed_positions": 2197
+  },
+  "critical_parameters": {
+    "takerOnly": false,
+    "activity_sort": "ASC"
+  }
+}

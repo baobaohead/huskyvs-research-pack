@@ -1,0 +1,2 @@
+signal_id,created_at_utc,city,weather_date_local,weather_metric,market_slug,condition_id,token_id,outcome,side,forecast_temperature,forecast_probability,market_probability_at_signal,intended_usd,max_entry_price,source,notes
+demo_v5_1_sig_001,2026-07-21T06:43:22.358149+00:00,Demo City,2099-01-01,high,demo-market,demo-cond,demo-token,YES,BUY,30,0.62,0.10,100,0.10,demo_fixture,offline demo only

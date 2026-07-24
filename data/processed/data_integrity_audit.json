@@ -1,0 +1,117 @@
+{
+  "activity_types": {
+    "MAKER_REBATE": 64,
+    "MERGE": 121,
+    "REDEEM": 783,
+    "REFERRAL_REWARD": 86,
+    "REWARD": 58,
+    "SPLIT": 8,
+    "TAKER_REBATE": 2,
+    "TRADE": 18309,
+    "YIELD": 67
+  },
+  "critical_parameter_checks": {
+    "activity_has_trade_split_merge_redeem": true,
+    "activity_sort_ascending": true,
+    "trades_takerOnly_false": true
+  },
+  "duplicate_audit": {
+    "activity": {
+      "duplicate_extra_rows": 412,
+      "duplicate_groups": 49,
+      "duplicate_rows_by_type": {
+        "REDEEM": 461
+      },
+      "largest_duplicate_group": 10,
+      "rows": 19498,
+      "unique_transaction_asset_side_timestamp_size_price": 19086
+    },
+    "trades": {
+      "duplicate_extra_rows": 0,
+      "duplicate_groups": 0,
+      "duplicate_rows_by_type": {},
+      "largest_duplicate_group": 1,
+      "rows": 18308,
+      "unique_transaction_asset_side_timestamp_size_price": 18308
+    }
+  },
+  "future_information_leakage_audit": {
+    "entry_lead_time_basis": "weather_date_end_utc_proxy",
+    "observed_winners_used_only_for_resolved_counterfactuals": true,
+    "positions_with_buy_after_market_endDate": 2600,
+    "positions_with_buy_after_observation_proxy": 4,
+    "reason_market_endDate_not_used_as_primary_cutoff": "public endDate is midnight UTC for many weather markets and creates negative lead times for same-day trades"
+  },
+  "manifest": {
+    "counts": {
+      "activity": 19498,
+      "closed_positions": 2197,
+      "current_positions": 1653,
+      "trades": 18308
+    },
+    "critical_parameters": {
+      "activity_sort": "ASC",
+      "takerOnly": false
+    },
+    "end_epoch": 1784592000,
+    "generated_at": "2026-07-20T07:30:54.724715+00:00",
+    "start_epoch": 1761955200,
+    "wallet": "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
+  },
+  "monthly_counts": {
+    "activity": {
+      "2025-11": 19,
+      "2025-12": 17,
+      "2026-01": 57,
+      "2026-02": 1135,
+      "2026-03": 3476,
+      "2026-04": 5179,
+      "2026-05": 3777,
+      "2026-06": 3730,
+      "2026-07": 2108
+    },
+    "trades": {
+      "2025-11": 17,
+      "2025-12": 17,
+      "2026-01": 53,
+      "2026-02": 1015,
+      "2026-03": 3299,
+      "2026-04": 4704,
+      "2026-05": 3628,
+      "2026-06": 3550,
+      "2026-07": 2025
+    }
+  },
+  "row_consistency": {
+    "activity": {
+      "consistent": true,
+      "csv_rows": 19498,
+      "jsonl_rows": 19498,
+      "manifest_rows": 19498
+    },
+    "closed_positions": {
+      "consistent": true,
+      "csv_rows": 2197,
+      "jsonl_rows": 2197,
+      "manifest_rows": 2197
+    },
+    "current_positions": {
+      "consistent": true,
+      "csv_rows": 1653,
+      "jsonl_rows": 1653,
+      "manifest_rows": 1653
+    },
+    "trades": {
+      "consistent": true,
+      "csv_rows": 18308,
+      "jsonl_rows": 18308,
+      "manifest_rows": 18308
+    }
+  },
+  "snapshot_zip_valid": true,
+  "truncation_audit": {
+    "method": "monthly row counts are below endpoint/page cap saturation indicators; collector would recursively split saturated windows",
+    "passed": true,
+    "warnings": []
+  }
+}

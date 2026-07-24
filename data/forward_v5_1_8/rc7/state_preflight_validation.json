@@ -1,0 +1,15 @@
+{
+  "case": {
+    "actual_error_codes": "ENTRY_STATE_REMAINING_USD_MISMATCH,ENTRY_STATE_STATUS_MISMATCH,ENTRY_STATE_REOPENED_AFTER_FILLED,ENTRY_STATE_CACHE_CORRUPTED",
+    "corruption_case": "30_forge_partial_then_monitor_no_extra_buy",
+    "detected": "true",
+    "direct_business_data_modified": "true",
+    "evidence_path": "/Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack/data/forward_v5_1_8/rc7/negative_audit_work/30_forge_partial_then_monitor_no_extra_buy/data/forward_v5_1_8/demo/ledger.sqlite3",
+    "expected_error_codes": "ENTRY_STATE_REOPENED_AFTER_FILLED",
+    "followup_extra_fill_created": "false",
+    "followup_monitor_attempted": "true",
+    "full_replay_executed": "true",
+    "synthetic_violation_event_inserted": "false"
+  },
+  "status": "pass"
+}

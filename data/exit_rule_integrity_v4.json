@@ -1,0 +1,25 @@
+{
+  "batch_price_history_endpoint": "https://clob.polymarket.com/batch-prices-history",
+  "candidate_nontransform_yes": 3022,
+  "candidate_yes": 3096,
+  "detail_rows": 199386,
+  "excluded_after_local_end": 1,
+  "history_missing_or_empty": 0,
+  "main_positions": 3021,
+  "no_future_sell_violations": 0,
+  "price_history_docs": "https://docs.polymarket.com/api-reference/markets/get-prices-history",
+  "price_history_endpoint": "https://clob.polymarket.com/prices-history",
+  "rules": 22,
+  "same_event_split_check": true,
+  "scenarios": 3,
+  "train_events": 1064,
+  "train_positions": 2023,
+  "transform_positions": 74,
+  "transform_summary": {
+    "actual_pnl": 5355.812824,
+    "buy_usd": 1467.7694214715273,
+    "positions": 74
+  },
+  "validation_events": 456,
+  "validation_positions": 998
+}

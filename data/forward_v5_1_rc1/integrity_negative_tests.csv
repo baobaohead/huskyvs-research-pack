@@ -1,0 +1,18 @@
+corruption_case,detected,error_code,error_message,expected_result,actual_result
+duplicate_signal_id,true,duplicate_signal_id,duplicate_signal_id,detected=true,detected=true; checks=duplicate_signal_id
+duplicate_fill_id,true,"duplicate_fill_id,repeated_orderbook_depth,event_result_mismatch","duplicate_fill_id,repeated_orderbook_depth,event_result_mismatch",detected=true,"detected=true; checks=duplicate_fill_id,repeated_orderbook_depth,event_result_mismatch"
+duplicate_snapshot_id,true,duplicate_snapshot_id,duplicate_snapshot_id,detected=true,detected=true; checks=duplicate_snapshot_id
+negative_inventory,true,"negative_inventory,over_sell","negative_inventory,over_sell",detected=true,"detected=true; checks=negative_inventory,over_sell"
+over_sell,true,"negative_inventory,over_sell","negative_inventory,over_sell",detected=true,"detected=true; checks=negative_inventory,over_sell"
+trigger_overfill,true,trigger_overfill,trigger_overfill,detected=true,detected=true; checks=trigger_overfill
+strategy_entry_inconsistent,true,"negative_inventory,over_sell,strategy_entry_inconsistent","negative_inventory,over_sell,strategy_entry_inconsistent",detected=true,"detected=true; checks=negative_inventory,over_sell,strategy_entry_inconsistent"
+signal_event_sum_inconsistent,true,event_result_mismatch,event_result_mismatch,detected=true,detected=true; checks=event_result_mismatch
+demo_pollution_formal,true,"unregistered_signal_rows,demo_pollution_formal","unregistered_signal_rows,demo_pollution_formal",detected=true,"detected=true; checks=unregistered_signal_rows,demo_pollution_formal"
+hash_drift,true,"unregistered_signal_rows,demo_pollution_formal,hash_drift","unregistered_signal_rows,demo_pollution_formal,hash_drift",detected=true,"detected=true; checks=unregistered_signal_rows,demo_pollution_formal,hash_drift"
+settled_after_exit,true,settled_after_exit,settled_after_exit,detected=true,detected=true; checks=settled_after_exit
+timestamp_order,true,timestamp_order,timestamp_order,detected=true,detected=true; checks=timestamp_order
+formal_timeout,true,"unregistered_signal_rows,demo_pollution_formal,formal_signal_registration_timeout","unregistered_signal_rows,demo_pollution_formal,formal_signal_registration_timeout",detected=true,"detected=true; checks=unregistered_signal_rows,demo_pollution_formal,formal_signal_registration_timeout"
+missing_settlement_evidence,true,missing_settlement_evidence,missing_settlement_evidence,detected=true,detected=true; checks=missing_settlement_evidence
+evidence_hash_mismatch,true,evidence_hash_mismatch,evidence_hash_mismatch,detected=true,detected=true; checks=evidence_hash_mismatch
+duplicate_settlement_result,true,duplicate_settlement_result,duplicate_settlement_result,detected=true,detected=true; checks=duplicate_settlement_result
+repeated_orderbook_depth,true,"duplicate_fill_id,repeated_orderbook_depth","duplicate_fill_id,repeated_orderbook_depth",detected=true,"detected=true; checks=duplicate_fill_id,repeated_orderbook_depth"

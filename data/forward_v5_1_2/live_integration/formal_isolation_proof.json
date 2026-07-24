@@ -1,0 +1,31 @@
+{
+  "formal_dirs": {
+    "data/forward_v5_1/formal": {
+      "exists": true,
+      "formal_started_at_utc": null,
+      "row_counts": {
+        "audit_log.jsonl": 0,
+        "entry_fills.csv": 0,
+        "entry_order_state.csv": 0,
+        "errors.jsonl": 0,
+        "event_results.csv": 0,
+        "exit_fill_allocations.csv": 0,
+        "exit_fills.csv": 0,
+        "heartbeat.jsonl": 0,
+        "orderbook_snapshots.jsonl": 0,
+        "settlement_allocations.csv": 0,
+        "settlements.csv": 0,
+        "signals.csv": 0,
+        "strategy_lots.csv": 0,
+        "strategy_triggers.csv": 0
+      }
+    },
+    "data/forward_v5_1_1/formal": {
+      "exists": false,
+      "formal_started_at_utc": null,
+      "row_counts": {}
+    }
+  },
+  "generated_at_utc": "2026-07-21T08:36:27.922223+00:00",
+  "ok": true
+}

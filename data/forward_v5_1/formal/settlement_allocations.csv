@@ -1,0 +1,1 @@
+settlement_allocation_id,settlement_id,strategy_id,signal_id,event_key,token_id,lot_id,settled_shares,settlement_proceeds,settlement_fee,mode

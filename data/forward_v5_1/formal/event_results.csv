@@ -1,0 +1,1 @@
+event_key,strategy_id,mode,signal_count,position_count,traded_event_count,settled_event_count,gross_entry_cost,entry_fee,gross_exit_proceeds,exit_fee,settlement_proceeds,settlement_fee,total_fees,gross_pnl,net_pnl,triggered_take_profit,incomplete_take_profit

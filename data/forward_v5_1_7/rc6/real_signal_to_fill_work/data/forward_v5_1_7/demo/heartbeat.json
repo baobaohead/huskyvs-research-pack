@@ -1,0 +1,10 @@
+{
+  "heartbeat_at_utc": "2026-07-22T07:51:02+00:00",
+  "hostname": "baobaotoudeMac-mini.local",
+  "mode": "demo",
+  "pid": 31133,
+  "process_start_time": "2026-07-23T03:30:17+00:00",
+  "run_id": "real_saved_response_replay",
+  "status": "running",
+  "version": "forward_simulation_v5.1.7-rc6"
+}

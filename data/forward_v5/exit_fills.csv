@@ -1,0 +1,1 @@
+exit_fill_id,strategy_id,signal_id,event_id,snapshot_id,token_id,filled_at_utc,trigger_multiple,planned_sell_fraction,planned_sell_shares,filled_shares,exit_vwap,gross_proceeds,best_bid,best_ask,spread,complete_fill,unfilled_shares,rolling_avg_cost_before,threshold_price,depth_levels_json,fee_scenario_bps,simulated_fee_usd,mode
