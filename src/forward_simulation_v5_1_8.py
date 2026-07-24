@@ -3438,6 +3438,9 @@ def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | No
             "raw_evidence_hash_result": "fail",
             "snapshot_replay_result": "fail",
             "same_run_evidence_chain": False,
+            "raw_payload_binding_result": "fail",
+            "raw_payload_binding_checked_count": 0,
+            "raw_payload_binding_failed_count": 0,
         }
 
     market_indexes = sorted((out_dir / "raw_markets").glob("*_index.json")) if (out_dir / "raw_markets").exists() else []
@@ -3460,7 +3463,35 @@ def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | No
 
     hash_ok = True
     replay_ok = True
+    binding_checked = 0
+    binding_failed = 0
     snapshot_by_id = {str(s.get("snapshot_id") or ""): s for s in snapshots}
+
+    def _check_evidence(meta_rel: str, label: str) -> dict[str, Any] | None:
+        nonlocal hash_ok, binding_checked, binding_failed
+        if not meta_rel:
+            blocked.append(f"missing_{label}_evidence_path")
+            hash_ok = False
+            binding_failed += 1
+            return None
+        meta_path = root / meta_rel
+        if not meta_path.exists():
+            blocked.append(f"missing_evidence_file:{meta_rel}")
+            hash_ok = False
+            binding_failed += 1
+            return None
+        binding_checked += 1
+        verified = verify_http_evidence_file(root, meta_path)
+        if not verified["ok"]:
+            binding_failed += 1
+            hash_ok = False
+            blocked.append(f"{label}_binding_fail:{meta_rel}:{','.join(verified['errors'])}")
+            return verified
+        if verified.get("parsed_payload_from_raw") is None:
+            binding_failed += 1
+            hash_ok = False
+            blocked.append(f"{label}_missing_parsed_payload_from_raw:{meta_rel}")
+        return verified
 
     for idx_path in market_indexes:
         try:
@@ -3470,20 +3501,7 @@ def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | No
             hash_ok = False
             continue
         for kind in ("gamma", "clob"):
-            meta_rel = str(index.get(f"{kind}_evidence_path") or "")
-            if not meta_rel:
-                blocked.append(f"missing_market_{kind}_evidence_path:{idx_path.name}")
-                hash_ok = False
-                continue
-            meta_path = root / meta_rel
-            if not meta_path.exists():
-                blocked.append(f"missing_evidence_file:{meta_rel}")
-                hash_ok = False
-                continue
-            verified = verify_http_evidence_file(root, meta_path)
-            if not verified["ok"]:
-                blocked.append(f"market_{kind}_hash_fail:{meta_rel}:{','.join(verified['errors'])}")
-                hash_ok = False
+            _check_evidence(str(index.get(f"{kind}_evidence_path") or ""), f"market_{kind}")
 
     for idx_path in orderbook_indexes:
         try:
@@ -3493,20 +3511,7 @@ def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | No
             hash_ok = False
             continue
         for kind in ("gamma", "clob", "orderbook"):
-            meta_rel = str(index.get(f"{kind}_evidence_path") or "")
-            if not meta_rel:
-                blocked.append(f"missing_{kind}_evidence_path:{idx_path.name}")
-                hash_ok = False
-                continue
-            meta_path = root / meta_rel
-            if not meta_path.exists():
-                blocked.append(f"missing_evidence_file:{meta_rel}")
-                hash_ok = False
-                continue
-            verified = verify_http_evidence_file(root, meta_path)
-            if not verified["ok"]:
-                blocked.append(f"{kind}_hash_fail:{meta_rel}:{','.join(verified['errors'])}")
-                hash_ok = False
+            _check_evidence(str(index.get(f"{kind}_evidence_path") or ""), kind)
         snap_id = str(index.get("snapshot_id") or "")
         snap = snapshot_by_id.get(snap_id)
         if snap is None:
@@ -3514,18 +3519,20 @@ def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | No
             replay_ok = False
             continue
         try:
-            book_meta_path = root / str(index["orderbook_evidence_path"])
-            gamma_meta_path = root / str(index["gamma_evidence_path"])
-            book_v = verify_http_evidence_file(root, book_meta_path)
-            gamma_v = verify_http_evidence_file(root, gamma_meta_path)
+            book_v = verify_http_evidence_file(root, root / str(index["orderbook_evidence_path"]))
+            gamma_v = verify_http_evidence_file(root, root / str(index["gamma_evidence_path"]))
             if not book_v["ok"] or not gamma_v["ok"]:
                 replay_ok = False
                 continue
+            if book_v.get("parsed_payload_from_raw") is None or gamma_v.get("parsed_payload_from_raw") is None:
+                blocked.append(f"snapshot_replay_missing_parsed_payload:{snap_id}")
+                replay_ok = False
+                continue
             normalized = normalize_orderbook(
-                book_v["meta"]["payload"],
+                book_v["parsed_payload_from_raw"],
                 str(snap.get("token_id") or ""),
                 str(snap.get("condition_id") or ""),
-                gamma_v["meta"]["payload"],
+                gamma_v["parsed_payload_from_raw"],
             )
             if normalized["content_hash"] != snap.get("content_hash"):
                 blocked.append(f"snapshot_replay_hash_mismatch:{snap_id}")
@@ -3548,6 +3555,9 @@ def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | No
         same_run = False
     if str(live_signal.get("run_id") or "") != run_id:
         blocked.append("signal_validation_run_id_mismatch")
+        same_run = False
+    if live_signal.get("uses_parsed_payload_from_raw") is not True:
+        blocked.append("signal_validation_missing_parsed_payload_from_raw_flag")
         same_run = False
     snap_id = str(live_signal.get("snapshot_id") or "")
     if snap_id and snap_id not in snapshot_by_id:
@@ -3573,6 +3583,10 @@ def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | No
     if live_signal.get("uses_wallet_or_real_order") is not False:
         blocked.append("uses_wallet_or_real_order_not_false")
 
+    binding_result = "pass" if binding_checked > 0 and binding_failed == 0 else "fail"
+    if binding_result != "pass":
+        blocked.append(f"raw_payload_binding_result={binding_result}")
+
     # Deduplicate while preserving order
     deduped: list[str] = []
     seen: set[str] = set()
@@ -3585,9 +3599,12 @@ def verify_live_readonly_evidence(root: Path, live_manifest: dict[str, Any] | No
         "blocked_reasons": deduped,
         "raw_market_evidence_count": raw_market_evidence_count,
         "raw_orderbook_evidence_count": raw_orderbook_evidence_count,
-        "raw_evidence_hash_result": "pass" if hash_ok and not any("hash" in r for r in deduped) else "fail",
+        "raw_evidence_hash_result": "pass" if hash_ok and not any("hash" in r or "binding_fail" in r for r in deduped) else "fail",
         "snapshot_replay_result": "pass" if replay_ok and not any("replay" in r for r in deduped) else "fail",
         "same_run_evidence_chain": same_run and not any("run_id" in r or "snapshot_not" in r or "signal_validation" in r for r in deduped),
+        "raw_payload_binding_result": binding_result,
+        "raw_payload_binding_checked_count": binding_checked,
+        "raw_payload_binding_failed_count": binding_failed,
         "live_run_dir": repository_relative_path(root, out_dir),
     }
 
@@ -3600,6 +3617,7 @@ def build_signal_to_fill_from_saved_evidence(root: Path, rid: str, selected: lis
             "validation_source": "live_readonly_saved_evidence",
             "uses_formal_ledger": False,
             "uses_wallet_or_real_order": False,
+            "uses_parsed_payload_from_raw": False,
         }
     first = selected[0]
     first_snap = next((s for s in snapshots if s.get("token_id") == first["token_id"]), None)
@@ -3611,6 +3629,7 @@ def build_signal_to_fill_from_saved_evidence(root: Path, rid: str, selected: lis
             "run_id": rid,
             "uses_formal_ledger": False,
             "uses_wallet_or_real_order": False,
+            "uses_parsed_payload_from_raw": False,
         }
     try:
         gamma_v = verify_http_evidence_file(root, root / str(first_snap["gamma_evidence_path"]))
@@ -3630,10 +3649,22 @@ def build_signal_to_fill_from_saved_evidence(root: Path, rid: str, selected: lis
                 },
                 "uses_formal_ledger": False,
                 "uses_wallet_or_real_order": False,
+                "uses_parsed_payload_from_raw": False,
             }
-        gamma_payload = gamma_v["meta"]["payload"]
-        clob_payload = clob_v["meta"]["payload"]
-        book_payload = book_v["meta"]["payload"]
+        gamma_payload = gamma_v["parsed_payload_from_raw"]
+        clob_payload = clob_v["parsed_payload_from_raw"]
+        book_payload = book_v["parsed_payload_from_raw"]
+        if gamma_payload is None or clob_payload is None or book_payload is None:
+            return {
+                "status": "blocked",
+                "reason": "missing_parsed_payload_from_raw",
+                "validation_source": "live_readonly_saved_evidence",
+                "run_id": rid,
+                "snapshot_id": first_snap.get("snapshot_id"),
+                "uses_formal_ledger": False,
+                "uses_wallet_or_real_order": False,
+                "uses_parsed_payload_from_raw": False,
+            }
         normalized = normalize_orderbook(book_payload, first["token_id"], first["condition_id"], gamma_payload)
         if normalized["content_hash"] != first_snap.get("content_hash"):
             return {
@@ -3646,6 +3677,7 @@ def build_signal_to_fill_from_saved_evidence(root: Path, rid: str, selected: lis
                 "replayed_content_hash": normalized["content_hash"],
                 "uses_formal_ledger": False,
                 "uses_wallet_or_real_order": False,
+                "uses_parsed_payload_from_raw": True,
             }
         signal = {
             "city": first["semantic"]["city"],
@@ -3681,8 +3713,12 @@ def build_signal_to_fill_from_saved_evidence(root: Path, rid: str, selected: lis
             "clob_raw_bytes_sha256": first_snap.get("clob_raw_bytes_sha256"),
             "orderbook_raw_bytes_sha256": first_snap.get("orderbook_raw_bytes_sha256"),
             "normalized_snapshot_content_hash": first_snap.get("content_hash"),
+            "gamma_parsed_raw_payload_sha256": gamma_v.get("parsed_raw_payload_sha256"),
+            "clob_parsed_raw_payload_sha256": clob_v.get("parsed_raw_payload_sha256"),
+            "orderbook_parsed_raw_payload_sha256": book_v.get("parsed_raw_payload_sha256"),
             "uses_formal_ledger": False,
             "uses_wallet_or_real_order": False,
+            "uses_parsed_payload_from_raw": True,
         }
     except Exception as exc:
         return {
@@ -3692,6 +3728,7 @@ def build_signal_to_fill_from_saved_evidence(root: Path, rid: str, selected: lis
             "error": str(exc),
             "uses_formal_ledger": False,
             "uses_wallet_or_real_order": False,
+            "uses_parsed_payload_from_raw": False,
         }
 
 
@@ -3962,6 +3999,9 @@ def live_integration(
         "raw_evidence_hash_result": evidence_check.get("raw_evidence_hash_result"),
         "snapshot_replay_result": evidence_check.get("snapshot_replay_result"),
         "same_run_evidence_chain": evidence_check.get("same_run_evidence_chain"),
+        "raw_payload_binding_result": evidence_check.get("raw_payload_binding_result"),
+        "raw_payload_binding_checked_count": evidence_check.get("raw_payload_binding_checked_count"),
+        "raw_payload_binding_failed_count": evidence_check.get("raw_payload_binding_failed_count"),
         "evidence_blocked_reasons": evidence_check.get("blocked_reasons"),
         "adapter_version": ADAPTER_VERSION,
         "actual_endpoints": adapter.visited_endpoints,

@@ -5,15 +5,15 @@
     "or_below"
   ],
   "build_hash": {
-    "adapter_code_sha256": "7dcca765ae34c6a2abdab795592cf61e10847b344df835f1e4b7e5ecd5ece0b2",
-    "api_contract_sha256": "7920a38262c25773831e12c644db5a3d7254d5d9717c53118a47b847eed8cb9c",
+    "adapter_code_sha256": "5a5fb490a12bfcf4cded52b5c7097fd74a18e65e8fba49e4b4eef7bc71aa15cb",
+    "api_contract_sha256": "cd20d5bade97bee2d5bd311663a8fd520a17b293041cd49843aec64251cba869",
     "config_sha256": "e972ba8b831ec42d576980dc5b6c42f6e54e51338c6bf40722b71c1aa2266895",
-    "core_code_sha256": "9c4861a2b9c512f7e361831ebefdba07289451509a211aa412c748657936e753",
-    "fee_contract_sha256": "030fbd00f7779d57d0d44e92eac62e652668c114931ea1dadf671dc22e90533a",
-    "preregistration_sha256": "6e60ca954cf77fda141556cba209cbc42ebed3dfe1735b087836b5bb78d7e85c",
-    "reporting_code_sha256": "3dd1eae14f525b9a70463cc3605f55dc26079ffd91a7bfd781e24ecf41507bce",
+    "core_code_sha256": "1228d28fab1d97c3e900b175e6bb184df92afb888fc2a5d2281f9ece2cf4ce90",
+    "fee_contract_sha256": "3e9ab946a44edbb3d2d7173130a00abca2eff0bfadb6b20e42ed68dec59bb764",
+    "preregistration_sha256": "481289250a6991c25123d4b8d57750ac0e211234eebc84c9db2640e0d46c4d23",
+    "reporting_code_sha256": "1cc744994b1cde9f6d9dd3cce01ddcdf618892b786914e2f8ebf0ba48d8a81de",
     "schema_sha256": "cb65f81da51e4d7e685e4b41338a19ddb7bd54cd829a871a85e0b8128dbe19dc",
-    "settlement_finality_contract_sha256": "58f001398b66fc969834cb15a0c3b673d47bfa9fa74eaac98cda85e913649137"
+    "settlement_finality_contract_sha256": "f7ce4dbc05059a480fb6efe78e49a513ddb38dc5fb1f6696cb446ae437ef102a"
   },
   "build_hash_recorded_after_release_reports": true,
   "entry_fills": 3,

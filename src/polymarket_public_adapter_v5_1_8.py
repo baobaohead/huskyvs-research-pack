@@ -124,11 +124,22 @@ def content_hash(value: Any) -> str:
     return sha256(stable_json(value).encode("utf-8")).hexdigest()
 
 
+class RawHttpPayloadMismatch(RuntimeError):
+    """Raised when HttpResult.raw_bytes cannot be bound to HttpResult.payload."""
+
+    def __init__(self, detail: str = ""):
+        msg = "raw_http_payload_mismatch" if not detail else f"raw_http_payload_mismatch: {detail}"
+        super().__init__(msg)
+
+
 def http_result_hashes(result: "HttpResult") -> dict[str, Any]:
     raw_bytes = bytes(getattr(result, "raw_bytes", b"") or b"")
     if not raw_bytes and getattr(result, "raw_text", ""):
         raw_bytes = str(result.raw_text).encode("utf-8")
-    raw_text = getattr(result, "raw_text", "") or raw_bytes.decode("utf-8", "replace")
+    raw_text_attr = getattr(result, "raw_text", None)
+    raw_text = str(raw_text_attr) if raw_text_attr is not None else ""
+    if not raw_text and raw_bytes:
+        raw_text = raw_bytes.decode("utf-8")
     payload = getattr(result, "payload", None)
     return {
         "payload_sha256": content_hash(payload),
@@ -137,6 +148,39 @@ def http_result_hashes(result: "HttpResult") -> dict[str, Any]:
         "raw_bytes_length": len(raw_bytes),
         "raw_bytes": raw_bytes,
         "raw_text": raw_text,
+    }
+
+
+def assert_http_result_raw_payload_binding(result: "HttpResult") -> dict[str, Any]:
+    """Require raw_bytes ↔ UTF-8 ↔ JSON ↔ payload semantic identity before persistence."""
+    raw_bytes = bytes(getattr(result, "raw_bytes", b"") or b"")
+    raw_text = str(getattr(result, "raw_text", "") or "")
+    payload = getattr(result, "payload", None)
+    if not raw_bytes:
+        raise RawHttpPayloadMismatch("empty_raw_bytes")
+    if raw_text.encode("utf-8") != raw_bytes:
+        raise RawHttpPayloadMismatch("raw_text_bytes_identity_failed")
+    try:
+        decoded = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise RawHttpPayloadMismatch(f"raw_bytes_utf8_decode_failed:{exc}") from exc
+    if decoded != raw_text:
+        raise RawHttpPayloadMismatch("decoded_raw_text_mismatch")
+    try:
+        parsed = json.loads(decoded)
+    except json.JSONDecodeError as exc:
+        raise RawHttpPayloadMismatch(f"raw_bytes_json_decode_failed:{exc}") from exc
+    parsed_hash = content_hash(parsed)
+    payload_hash = content_hash(payload)
+    if parsed_hash != payload_hash:
+        raise RawHttpPayloadMismatch("parsed_raw_payload_sha256_mismatch")
+    return {
+        "parsed_payload_from_raw": parsed,
+        "parsed_raw_payload_sha256": parsed_hash,
+        "payload_sha256": payload_hash,
+        "raw_text_sha256": sha256(decoded.encode("utf-8")).hexdigest(),
+        "raw_bytes_sha256": sha256(raw_bytes).hexdigest(),
+        "raw_bytes_length": len(raw_bytes),
     }
 
 
@@ -162,6 +206,8 @@ def http_result_metadata(result: "HttpResult", raw_bytes_relpath: str) -> dict[s
 
 def persist_http_result(root: Path, meta_path: Path, bin_path: Path, result: "HttpResult") -> dict[str, Any]:
     """Persist HttpResult with sidecar .bin for exact raw bytes (scheme A)."""
+    # Refuse to write evidence when raw bytes cannot authoritatively bind to payload.
+    assert_http_result_raw_payload_binding(result)
     root_res = Path(root).resolve()
     meta_path = Path(meta_path)
     bin_path = Path(bin_path)
@@ -180,6 +226,15 @@ def persist_http_result(root: Path, meta_path: Path, bin_path: Path, result: "Ht
         raise RuntimeError("raw bytes hash mismatch after sidecar write")
     if len(written) != meta["raw_bytes_length"]:
         raise RuntimeError("raw bytes length mismatch after sidecar write")
+    # Re-bind written bytes to metadata payload before accepting the evidence file.
+    try:
+        parsed = json.loads(written.decode("utf-8"))
+    except Exception as exc:
+        bin_path.unlink(missing_ok=True)
+        raise RawHttpPayloadMismatch(f"post_write_json_failed:{exc}") from exc
+    if content_hash(parsed) != meta["payload_sha256"] or content_hash(meta.get("payload")) != content_hash(parsed):
+        bin_path.unlink(missing_ok=True)
+        raise RawHttpPayloadMismatch("post_write_binding_failed")
     write_json(meta_path, meta)
     return meta
 
@@ -199,20 +254,78 @@ def load_http_evidence(root: Path, meta_path: Path) -> dict[str, Any]:
 
 
 def verify_http_evidence_file(root: Path, meta_path: Path) -> dict[str, Any]:
+    empty = {
+        "ok": False,
+        "errors": [],
+        "meta": {},
+        "raw_bytes": b"",
+        "parsed_payload_from_raw": None,
+        "parsed_raw_payload_sha256": None,
+        "metadata_payload_sha256": None,
+        "raw_bytes_sha256": None,
+        "raw_text_sha256": None,
+    }
     try:
         meta = load_http_evidence(root, meta_path)
     except FileNotFoundError as exc:
-        return {"ok": False, "errors": [f"missing_raw_bytes_file:{exc}"], "meta": {}, "raw_bytes": b""}
+        empty["errors"] = [f"missing_raw_bytes_file:{exc}"]
+        return empty
     except Exception as exc:
-        return {"ok": False, "errors": [f"evidence_load_error:{exc}"], "meta": {}, "raw_bytes": b""}
+        empty["errors"] = [f"evidence_load_error:{exc}"]
+        return empty
+
+    raw_bytes = meta["_loaded_raw_bytes"]
     errors: list[str] = []
-    if meta["_loaded_raw_bytes_sha256"] != meta.get("raw_bytes_sha256"):
+    computed_raw_sha = meta["_loaded_raw_bytes_sha256"]
+    metadata_payload_sha256 = meta.get("payload_sha256")
+    metadata_raw_bytes_sha256 = meta.get("raw_bytes_sha256")
+    metadata_raw_text_sha256 = meta.get("raw_text_sha256")
+
+    if computed_raw_sha != metadata_raw_bytes_sha256:
         errors.append("raw_bytes_sha256_mismatch")
-    if len(meta["_loaded_raw_bytes"]) != int(meta.get("raw_bytes_length") or -1):
+    if len(raw_bytes) != int(meta.get("raw_bytes_length") or -1):
         errors.append("raw_bytes_length_mismatch")
-    if meta["_loaded_payload_sha256"] != meta.get("payload_sha256"):
-        errors.append("payload_sha256_mismatch")
-    return {"ok": not errors, "errors": errors, "meta": {k: v for k, v in meta.items() if not k.startswith("_loaded")}, "raw_bytes": meta["_loaded_raw_bytes"]}
+
+    parsed_payload_from_raw = None
+    parsed_raw_payload_sha256 = None
+    decoded_raw_text = None
+    try:
+        decoded_raw_text = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        errors.append("raw_bytes_utf8_decode_failed")
+
+    if decoded_raw_text is not None:
+        computed_raw_text_sha = sha256(decoded_raw_text.encode("utf-8")).hexdigest()
+        if computed_raw_text_sha != metadata_raw_text_sha256:
+            errors.append("raw_text_sha256_mismatch")
+        try:
+            parsed_payload_from_raw = json.loads(decoded_raw_text)
+            parsed_raw_payload_sha256 = content_hash(parsed_payload_from_raw)
+        except json.JSONDecodeError:
+            errors.append("raw_bytes_json_decode_failed")
+
+    loaded_meta_payload_sha = meta["_loaded_payload_sha256"]
+    if metadata_payload_sha256 is not None and loaded_meta_payload_sha != metadata_payload_sha256:
+        errors.append("metadata_payload_sha256_mismatch")
+
+    if parsed_raw_payload_sha256 is not None:
+        if parsed_raw_payload_sha256 != metadata_payload_sha256:
+            errors.append("parsed_raw_payload_sha256_mismatch")
+        if loaded_meta_payload_sha != parsed_raw_payload_sha256:
+            errors.append("metadata_payload_differs_from_raw")
+
+    clean_meta = {k: v for k, v in meta.items() if not k.startswith("_loaded")}
+    return {
+        "ok": not errors,
+        "errors": errors,
+        "meta": clean_meta,
+        "raw_bytes": raw_bytes,
+        "parsed_payload_from_raw": parsed_payload_from_raw,
+        "parsed_raw_payload_sha256": parsed_raw_payload_sha256,
+        "metadata_payload_sha256": metadata_payload_sha256,
+        "raw_bytes_sha256": computed_raw_sha,
+        "raw_text_sha256": sha256(decoded_raw_text.encode("utf-8")).hexdigest() if decoded_raw_text is not None else None,
+    }
 
 
 class AdapterError(RuntimeError):

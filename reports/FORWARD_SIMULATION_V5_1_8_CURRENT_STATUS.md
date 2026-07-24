@@ -1,6 +1,6 @@
 # Weather Forward Simulation v5.1.8-RC7
 
-Generated at: 2026-07-24T05:48:44.725540+00:00
+Generated at: 2026-07-24T06:13:47.424746+00:00
 
 Status: PASS_FOR_FORMAL_START
 
@@ -15,6 +15,9 @@ This release extends replay from raw orderbook-to-fill evidence into end-to-end 
 - error_count: 0
 - raw_orderbook_evidence_count: 3
 - raw_evidence_hash_result: pass
+- raw_payload_binding_result: pass
+- raw_payload_binding_checked_count: 15
+- raw_payload_binding_failed_count: 0
 - snapshot_replay_result: pass
 - same_run_evidence_chain: True
 - blocked_reasons: []
@@ -23,7 +26,7 @@ This release extends replay from raw orderbook-to-fill evidence into end-to-end 
 ## Formal Status
 ```json
 {
-  "generated_at_utc": "2026-07-24T05:48:44.721210+00:00",
+  "generated_at_utc": "2026-07-24T06:13:47.417845+00:00",
   "formal_started_at_utc": null,
   "signals": 0,
   "snapshots": 0,
@@ -53,6 +56,9 @@ This release extends replay from raw orderbook-to-fill evidence into end-to-end 
   "raw_evidence_hash_result": "pass",
   "snapshot_replay_result": "pass",
   "same_run_evidence_chain": true,
+  "raw_payload_binding_result": "pass",
+  "raw_payload_binding_checked_count": 15,
+  "raw_payload_binding_failed_count": 0,
   "quick_audit_ok": true,
   "full_replay_ok": true,
   "negative_detected": 30,

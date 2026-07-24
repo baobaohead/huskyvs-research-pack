@@ -16,10 +16,11 @@ RC7 把订单簿到成交的证据链扩展为端到端账本重建：信号登�
 - error_count: `0`
 - raw_orderbook_evidence_count: `3`
 - raw_evidence_hash_result: `pass`
+- raw_payload_binding_result: `pass`
 - snapshot_replay_result: `pass`
 - blocked_reasons: `[]`
 
-保存响应重放 PASS 不等于当前实时 live-readonly PASS。live-readonly 必须把原始 HTTP bytes 以 sidecar `.bin` 持久化，并用同一 run 的已保存证据生成 `real_signal_to_fill_validation`；`error_count>0`、缺原始证据、hash/replay 失败时发布状态为 `BLOCKED_PENDING_LIVE_EVIDENCE`。
+保存响应重放 PASS 不等于当前实时 live-readonly PASS。live-readonly 必须把原始 HTTP bytes 以 sidecar `.bin` 持久化，并用 `json.loads(raw_bytes)` 作为权威 payload 生成 `real_signal_to_fill_validation`；`error_count>0`、缺原始证据、raw→payload 绑定失败、hash/replay 失败时发布状态为 `BLOCKED_PENDING_LIVE_EVIDENCE`。
 
 ## 安装
 

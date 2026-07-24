@@ -1,0 +1,100 @@
+{
+  "clob": {
+    "endpoint": "https://clob.polymarket.com/clob-markets/0xdemo",
+    "payload": {
+      "condition_id": "0xdemo",
+      "fd": {
+        "e": "1",
+        "r": "0.05",
+        "to": true
+      },
+      "t": [
+        {
+          "o": "Yes",
+          "t": "yes-token"
+        },
+        {
+          "o": "No",
+          "t": "no-token"
+        }
+      ]
+    },
+    "payload_sha256": "f108000e2f558c29bb126c9f1e4389f486da617fdb1d6d17baf9ef852f8424a3",
+    "raw_text": "{\"condition_id\": \"0xdemo\", \"t\": [{\"t\": \"yes-token\", \"o\": \"Yes\"}, {\"t\": \"no-token\", \"o\": \"No\"}], \"fd\": {\"r\": \"0.05\", \"e\": \"1\", \"to\": true}}",
+    "raw_text_sha256": "4476723f57a79d81d48f896b622fed2508e4646e4725e074a0a4447c29fc8b62",
+    "received_at_utc": "2026-07-24T06:13:45.721724+00:00",
+    "status_code": 200
+  },
+  "clob_public_market": {
+    "endpoint": "https://clob.polymarket.com/markets/0xdemo",
+    "payload": {},
+    "payload_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "raw_text": "{}",
+    "raw_text_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "received_at_utc": "2026-07-24T06:13:45.721775+00:00",
+    "status_code": 200
+  },
+  "condition_id": "0xdemo",
+  "gamma": {
+    "endpoint": "https://gamma-api.polymarket.com/markets/slug/highest-temperature-in-demo-city-on-january-2-2099-30c",
+    "payload": {
+      "acceptingOrders": true,
+      "active": false,
+      "clobTokenIds": "[\"yes-token\", \"no-token\"]",
+      "closed": true,
+      "conditionId": "0xdemo",
+      "endDate": "2099-01-02T23:59:00Z",
+      "feeSchedule": {
+        "exponent": "1",
+        "rate": "0.05"
+      },
+      "feesEnabled": true,
+      "groupItemTitle": "30C",
+      "outcomePrices": "[\"1\", \"0\"]",
+      "outcomes": "[\"Yes\", \"No\"]",
+      "question": "Highest temperature in Demo City on January 2?",
+      "resolved": true,
+      "slug": "highest-temperature-in-demo-city-on-january-2-2099-30c",
+      "title": "Highest temperature in Demo City on January 2?",
+      "umaResolutionStatus": "final",
+      "winningOutcome": "Yes"
+    },
+    "payload_sha256": "376b2120d1b72474958a64a7a1ba6fc8cc21a5bf844ddf07f6aa8d6becd6523c",
+    "raw_text": "{\"question\": \"Highest temperature in Demo City on January 2?\", \"title\": \"Highest temperature in Demo City on January 2?\", \"slug\": \"highest-temperature-in-demo-city-on-january-2-2099-30c\", \"conditionId\": \"0xdemo\", \"outcomes\": \"[\\\"Yes\\\", \\\"No\\\"]\", \"clobTokenIds\": \"[\\\"yes-token\\\", \\\"no-token\\\"]\", \"outcomePrices\": \"[\\\"1\\\", \\\"0\\\"]\", \"active\": false, \"closed\": true, \"resolved\": true, \"feesEnabled\": true, \"feeSchedule\": {\"rate\": \"0.05\", \"exponent\": \"1\"}, \"endDate\": \"2099-01-02T23:59:00Z\", \"groupItemTitle\": \"30C\", \"acceptingOrders\": true, \"umaResolutionStatus\": \"final\", \"winningOutcome\": \"Yes\"}",
+    "raw_text_sha256": "4a9ad3d7aeb7605a51e1845a65b7cd1414b5bd217bbc4988b7612fb49572bc02",
+    "received_at_utc": "2026-07-24T06:13:45.721695+00:00",
+    "status_code": 200
+  },
+  "market_slug": "highest-temperature-in-demo-city-on-january-2-2099-30c",
+  "mode": "demo",
+  "observed_at_utc": "2099-01-03T00:00:00+00:00",
+  "run_id": "demo_run_settlement",
+  "settlement_evidence": {
+    "active": false,
+    "closed": true,
+    "conflict_details": "",
+    "error": "",
+    "evidence_tier": "B_final_winning_outcome",
+    "evidence_valid": true,
+    "finality_status": "resolved_final",
+    "market_status": "resolved",
+    "raw_response_hash": "376b2120d1b72474958a64a7a1ba6fc8cc21a5bf844ddf07f6aa8d6becd6523c",
+    "resolution_status": "final",
+    "resolved": true,
+    "settlement_status": "final",
+    "token_settlement_values": {
+      "no-token": "0",
+      "yes-token": "1"
+    },
+    "uma_status": "final",
+    "winning_asset_id": "yes-token",
+    "winning_outcome": "Yes"
+  },
+  "signal_id": "demo-signal-1",
+  "token_id": "yes-token",
+  "token_settlement_values": {
+    "no-token": "0",
+    "yes-token": "1"
+  },
+  "version": "forward_simulation_v5.1.8-rc7"
+}

@@ -1207,7 +1207,7 @@ def test_release_blocked_when_raw_bytes_tampered(tmp_path):
         root=tmp_path,
     )
     assert release["release_status"] == "BLOCKED_PENDING_LIVE_EVIDENCE"
-    assert any("hash" in r for r in release["blocked_reasons"])
+    assert any(("hash" in r) or ("binding" in r) or ("mismatch" in r) for r in release["blocked_reasons"])
 
 
 def test_release_blocked_when_normalized_snapshot_tampered(tmp_path):
@@ -1272,3 +1272,233 @@ def test_release_pass_with_complete_same_run_evidence_chain(tmp_path):
     assert release["raw_evidence_hash_result"] == "pass"
     assert release["snapshot_replay_result"] == "pass"
     assert release["same_run_evidence_chain"] is True
+
+
+def _make_http_result(payload, raw=None):
+    from src.polymarket_public_adapter_v5_1_8 import HttpResult, iso
+    from decimal import Decimal as D
+    if raw is None:
+        raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    if isinstance(raw, str):
+        raw_b = raw.encode("utf-8")
+        raw_t = raw
+    else:
+        raw_b = raw
+        raw_t = raw.decode("utf-8")
+    return HttpResult(
+        method="GET",
+        url="https://example.test/book",
+        status_code=200,
+        latency_ms=D("1"),
+        started_at_utc=iso(),
+        received_at_utc=iso(),
+        payload=payload,
+        raw_text=raw_t,
+        raw_bytes=raw_b,
+        content_type="application/json",
+    )
+
+
+def test_raw_payload_binding_pass_when_consistent(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import persist_http_result, verify_http_evidence_file, content_hash
+
+    payload = {"asks": [{"price": "0.2", "size": "5"}], "bids": []}
+    meta = persist_http_result(tmp_path, tmp_path / "ok.json", tmp_path / "ok.bin", _make_http_result(payload))
+    verified = verify_http_evidence_file(tmp_path, tmp_path / "ok.json")
+    assert verified["ok"]
+    assert verified["parsed_payload_from_raw"] == payload
+    assert verified["parsed_raw_payload_sha256"] == content_hash(payload)
+    assert verified["parsed_raw_payload_sha256"] == meta["payload_sha256"]
+
+
+def test_raw_payload_binding_blocked_when_metadata_payload_tampered_without_hash(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import persist_http_result, verify_http_evidence_file, write_json
+
+    payload = {"ok": True, "n": 1}
+    persist_http_result(tmp_path, tmp_path / "e.json", tmp_path / "e.bin", _make_http_result(payload))
+    meta = json.loads((tmp_path / "e.json").read_text(encoding="utf-8"))
+    meta["payload"] = {"ok": False, "n": 999}
+    write_json(tmp_path / "e.json", meta)
+    verified = verify_http_evidence_file(tmp_path, tmp_path / "e.json")
+    assert not verified["ok"]
+    assert "metadata_payload_differs_from_raw" in verified["errors"] or "metadata_payload_sha256_mismatch" in verified["errors"]
+
+
+def test_raw_payload_binding_blocked_when_metadata_payload_and_hash_rewritten(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import persist_http_result, verify_http_evidence_file, content_hash, write_json
+
+    payload = {"ok": True, "n": 1}
+    persist_http_result(tmp_path, tmp_path / "e.json", tmp_path / "e.bin", _make_http_result(payload))
+    meta = json.loads((tmp_path / "e.json").read_text(encoding="utf-8"))
+    forged = {"ok": False, "forged": True}
+    meta["payload"] = forged
+    meta["payload_sha256"] = content_hash(forged)
+    write_json(tmp_path / "e.json", meta)
+    verified = verify_http_evidence_file(tmp_path, tmp_path / "e.json")
+    assert not verified["ok"]
+    assert "metadata_payload_differs_from_raw" in verified["errors"] or "parsed_raw_payload_sha256_mismatch" in verified["errors"]
+
+
+def test_raw_payload_binding_blocked_when_bin_rewritten_with_matching_hashes(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import persist_http_result, verify_http_evidence_file, content_hash, write_json
+    from hashlib import sha256
+
+    payload = {"ok": True, "n": 1}
+    persist_http_result(tmp_path, tmp_path / "e.json", tmp_path / "e.bin", _make_http_result(payload))
+    forged_payload = {"ok": False, "bin_forged": True}
+    forged_raw = json.dumps(forged_payload, separators=(",", ":")).encode("utf-8")
+    (tmp_path / "e.bin").write_bytes(forged_raw)
+    meta = json.loads((tmp_path / "e.json").read_text(encoding="utf-8"))
+    meta["raw_bytes_sha256"] = sha256(forged_raw).hexdigest()
+    meta["raw_bytes_length"] = len(forged_raw)
+    meta["raw_text_sha256"] = sha256(forged_raw).hexdigest()
+    # leave metadata payload pointing at original
+    write_json(tmp_path / "e.json", meta)
+    verified = verify_http_evidence_file(tmp_path, tmp_path / "e.json")
+    assert not verified["ok"]
+    assert "metadata_payload_differs_from_raw" in verified["errors"] or "parsed_raw_payload_sha256_mismatch" in verified["errors"]
+
+
+def test_raw_payload_binding_blocked_on_invalid_utf8(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import persist_http_result, verify_http_evidence_file, write_json
+    from hashlib import sha256
+
+    payload = {"ok": True}
+    persist_http_result(tmp_path, tmp_path / "e.json", tmp_path / "e.bin", _make_http_result(payload))
+    bad = b"\xff\xfe not utf8"
+    (tmp_path / "e.bin").write_bytes(bad)
+    meta = json.loads((tmp_path / "e.json").read_text(encoding="utf-8"))
+    meta["raw_bytes_sha256"] = sha256(bad).hexdigest()
+    meta["raw_bytes_length"] = len(bad)
+    write_json(tmp_path / "e.json", meta)
+    verified = verify_http_evidence_file(tmp_path, tmp_path / "e.json")
+    assert not verified["ok"]
+    assert "raw_bytes_utf8_decode_failed" in verified["errors"]
+
+
+def test_raw_payload_binding_blocked_on_invalid_json(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import persist_http_result, verify_http_evidence_file, write_json
+    from hashlib import sha256
+
+    payload = {"ok": True}
+    persist_http_result(tmp_path, tmp_path / "e.json", tmp_path / "e.bin", _make_http_result(payload))
+    bad = b"not-json{"
+    (tmp_path / "e.bin").write_bytes(bad)
+    meta = json.loads((tmp_path / "e.json").read_text(encoding="utf-8"))
+    meta["raw_bytes_sha256"] = sha256(bad).hexdigest()
+    meta["raw_bytes_length"] = len(bad)
+    meta["raw_text_sha256"] = sha256(bad).hexdigest()
+    write_json(tmp_path / "e.json", meta)
+    verified = verify_http_evidence_file(tmp_path, tmp_path / "e.json")
+    assert not verified["ok"]
+    assert "raw_bytes_json_decode_failed" in verified["errors"]
+
+
+def test_raw_payload_binding_blocked_when_raw_text_hash_tampered(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import persist_http_result, verify_http_evidence_file, write_json
+
+    payload = {"ok": True}
+    persist_http_result(tmp_path, tmp_path / "e.json", tmp_path / "e.bin", _make_http_result(payload))
+    meta = json.loads((tmp_path / "e.json").read_text(encoding="utf-8"))
+    meta["raw_text_sha256"] = "0" * 64
+    write_json(tmp_path / "e.json", meta)
+    verified = verify_http_evidence_file(tmp_path, tmp_path / "e.json")
+    assert not verified["ok"]
+    assert "raw_text_sha256_mismatch" in verified["errors"]
+
+
+def test_persist_http_result_rejects_raw_payload_mismatch(tmp_path):
+    from src.polymarket_public_adapter_v5_1_8 import persist_http_result, RawHttpPayloadMismatch
+
+    payload = {"ok": True}
+    raw = json.dumps({"ok": False, "different": True}, separators=(",", ":")).encode("utf-8")
+    result = _make_http_result(payload, raw=raw)
+    # force raw_text to match raw bytes so only payload binding fails
+    result.raw_text = raw.decode("utf-8")
+    result.raw_bytes = raw
+    with pytest.raises(RawHttpPayloadMismatch):
+        persist_http_result(tmp_path, tmp_path / "bad.json", tmp_path / "bad.bin", result)
+    assert not (tmp_path / "bad.json").exists()
+    assert not (tmp_path / "bad.bin").exists()
+
+
+def test_snapshot_and_signal_replay_use_parsed_payload_from_raw(tmp_path, monkeypatch):
+    from src.polymarket_public_adapter_v5_1_8 import verify_http_evidence_file
+
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    assert signal["uses_parsed_payload_from_raw"] is True
+    assert signal["status"] == "pass"
+    assert manifest.get("raw_payload_binding_result") == "pass"
+    assert manifest.get("raw_payload_binding_failed_count") == 0
+    assert not (tmp_path / "data/forward_v5_1_8/formal").exists()
+
+    captured = {"normalize": [], "validate": []}
+    real_norm = sim.normalize_orderbook
+    real_validate = sim.validate_token_mapping
+    real_verify = sim.verify_http_evidence_file
+
+    def poison_meta_verify(root, path):
+        verified = real_verify(root, path)
+        if verified.get("ok"):
+            verified = dict(verified)
+            verified["meta"] = dict(verified.get("meta") or {})
+            verified["meta"]["payload"] = {"MUST_NOT_BE_USED_AS_AUTHORITY": True}
+        return verified
+
+    def spy_norm(book, *args, **kwargs):
+        captured["normalize"].append(book)
+        assert book != {"MUST_NOT_BE_USED_AS_AUTHORITY": True}
+        return real_norm(book, *args, **kwargs)
+
+    def spy_validate(signal_row, gamma, clob, normalized):
+        captured["validate"].append((gamma, clob))
+        assert gamma != {"MUST_NOT_BE_USED_AS_AUTHORITY": True}
+        assert clob != {"MUST_NOT_BE_USED_AS_AUTHORITY": True}
+        return real_validate(signal_row, gamma, clob, normalized)
+
+    monkeypatch.setattr(sim, "verify_http_evidence_file", poison_meta_verify)
+    monkeypatch.setattr(sim, "normalize_orderbook", spy_norm)
+    monkeypatch.setattr(sim, "validate_token_mapping", spy_validate)
+
+    selected = json.loads((tmp_path / "data/forward_v5_1_8/live_integration" / manifest["run_id"] / "selected_markets.json").read_text(encoding="utf-8"))
+    snapshots = [json.loads(line) for line in (tmp_path / "data/forward_v5_1_8/live_integration" / manifest["run_id"] / "orderbook_snapshots.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    rebuilt = sim.build_signal_to_fill_from_saved_evidence(tmp_path, manifest["run_id"], selected, snapshots)
+    assert rebuilt["status"] == "pass"
+    assert rebuilt["uses_parsed_payload_from_raw"] is True
+    assert captured["normalize"]
+    assert captured["validate"]
+    book_v = verify_http_evidence_file(tmp_path, tmp_path / signal["orderbook_evidence_path"])
+    gamma_v = verify_http_evidence_file(tmp_path, tmp_path / signal["gamma_evidence_path"])
+    assert captured["normalize"][-1] == book_v["parsed_payload_from_raw"]
+    assert captured["validate"][-1][0] == gamma_v["parsed_payload_from_raw"]
+
+    check = sim.verify_live_readonly_evidence(tmp_path, manifest, rebuilt)
+    assert check["ok"]
+    assert check["raw_payload_binding_result"] == "pass"
+
+
+def test_release_blocked_when_metadata_payload_rewritten_with_hash(tmp_path):
+    from src.forward_reporting_v5_1_8 import compute_release_status
+    from src.polymarket_public_adapter_v5_1_8 import content_hash, write_json
+
+    manifest, signal, _ = _run_fixture_live(tmp_path)
+    out_dir = tmp_path / "data/forward_v5_1_8/live_integration" / manifest["run_id"]
+    meta_path = next((out_dir / "raw_orderbooks").glob("*_orderbook.json"))
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    forged = {"asks": [{"price": "0.99", "size": "1"}], "bids": [], "tampered": True}
+    meta["payload"] = forged
+    meta["payload_sha256"] = content_hash(forged)
+    write_json(meta_path, meta)
+    release = compute_release_status(
+        manifest,
+        signal,
+        {"status": "pass"},
+        {"ok": True},
+        {"ok": True},
+        {"ok": True, "formal_started_at_utc": None},
+        30,
+        root=tmp_path,
+    )
+    assert release["release_status"] == "BLOCKED_PENDING_LIVE_EVIDENCE"
+    assert release["raw_payload_binding_result"] == "fail"
+    assert any("binding" in r or "payload" in r for r in release["blocked_reasons"])

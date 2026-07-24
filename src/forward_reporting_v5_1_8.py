@@ -694,7 +694,18 @@ def compute_release_status(
             deduped.append(reason)
             seen.add(reason)
 
-    live_pass = bool(evidence_check.get("ok")) and live_signal.get("status") == "pass" and live_signal.get("validation_source") == "live_readonly_saved_evidence" and error_count == 0 and selected_markets > 0 and selected_tokens > 0 and snapshots > 0
+    live_pass = (
+        bool(evidence_check.get("ok"))
+        and live_signal.get("status") == "pass"
+        and live_signal.get("validation_source") == "live_readonly_saved_evidence"
+        and evidence_check.get("raw_payload_binding_result") == "pass"
+        and error_count == 0
+        and selected_markets > 0
+        and selected_tokens > 0
+        and snapshots > 0
+    )
+    if evidence_check.get("raw_payload_binding_result") != "pass" and "raw_payload_binding_result=fail" not in deduped and not any(r.startswith("raw_payload_binding") for r in deduped):
+        deduped.append(f"raw_payload_binding_result={evidence_check.get('raw_payload_binding_result')}")
     if live_pass and audits_ok and formal_empty and saved_ok and not deduped:
         release_status = "PASS_FOR_FORMAL_START"
         formal_start = "ALLOWED_BUT_NOT_STARTED"
@@ -717,6 +728,9 @@ def compute_release_status(
         "raw_evidence_hash_result": evidence_check.get("raw_evidence_hash_result"),
         "snapshot_replay_result": evidence_check.get("snapshot_replay_result"),
         "same_run_evidence_chain": evidence_check.get("same_run_evidence_chain"),
+        "raw_payload_binding_result": evidence_check.get("raw_payload_binding_result"),
+        "raw_payload_binding_checked_count": evidence_check.get("raw_payload_binding_checked_count"),
+        "raw_payload_binding_failed_count": evidence_check.get("raw_payload_binding_failed_count"),
         "quick_audit_ok": bool(quick.get("ok")),
         "full_replay_ok": bool(full.get("ok")),
         "negative_detected": negative_detected,
@@ -745,10 +759,11 @@ RC7 把订单簿到成交的证据链扩展为端到端账本重建：信号登�
 - error_count: `{release.get("error_count")}`
 - raw_orderbook_evidence_count: `{release.get("raw_orderbook_evidence_count")}`
 - raw_evidence_hash_result: `{release.get("raw_evidence_hash_result")}`
+- raw_payload_binding_result: `{release.get("raw_payload_binding_result")}`
 - snapshot_replay_result: `{release.get("snapshot_replay_result")}`
 - blocked_reasons: `{release.get("blocked_reasons")}`
 
-保存响应重放 PASS 不等于当前实时 live-readonly PASS。live-readonly 必须把原始 HTTP bytes 以 sidecar `.bin` 持久化，并用同一 run 的已保存证据生成 `real_signal_to_fill_validation`；`error_count>0`、缺原始证据、hash/replay 失败时发布状态为 `BLOCKED_PENDING_LIVE_EVIDENCE`。
+保存响应重放 PASS 不等于当前实时 live-readonly PASS。live-readonly 必须把原始 HTTP bytes 以 sidecar `.bin` 持久化，并用 `json.loads(raw_bytes)` 作为权威 payload 生成 `real_signal_to_fill_validation`；`error_count>0`、缺原始证据、raw→payload 绑定失败、hash/replay 失败时发布状态为 `BLOCKED_PENDING_LIVE_EVIDENCE`。
 
 ## 安装
 
@@ -857,12 +872,15 @@ This release extends replay from raw orderbook-to-fill evidence into end-to-end 
 - error_count: {release.get("error_count")}
 - raw_orderbook_evidence_count: {release.get("raw_orderbook_evidence_count")}
 - raw_evidence_hash_result: {release.get("raw_evidence_hash_result")}
+- raw_payload_binding_result: {release.get("raw_payload_binding_result")}
+- raw_payload_binding_checked_count: {release.get("raw_payload_binding_checked_count")}
+- raw_payload_binding_failed_count: {release.get("raw_payload_binding_failed_count")}
 - snapshot_replay_result: {release.get("snapshot_replay_result")}
 - same_run_evidence_chain: {release.get("same_run_evidence_chain")}
 - blocked_reasons: {release.get("blocked_reasons")}
 - formal start: {release["formal_start"]}
 """
-    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_FIX_REPORT.md").write_text(common + "\n## Fixes\n- Exact HTTP response bytes are stored in `http_evidence.raw_http_bytes`.\n- Live-readonly persists Gamma/CLOB/orderbook evidence as JSON metadata plus sidecar `.bin` raw bytes; snapshots are accepted only after durable writes succeed.\n- `real_signal_to_fill_validation` is derived from same-run saved evidence (`validation_source=live_readonly_saved_evidence`), not a second unsaved network fetch.\n- Release gate requires `error_count==0`, raw evidence presence/hash integrity, snapshot replay from saved bytes, and same-run linkage; otherwise `BLOCKED_PENDING_LIVE_EVIDENCE`.\n- Signal canonical hashes are rebuilt from registration evidence.\n- Fees are recalculated from Gamma/CLOB evidence, not fill cache fields.\n- Entry state is rebuilt from signal plus entry fills before any extra buy.\n- Strategy lots, exit allocations, settlement allocations, event results, strategy totals, and ledger totals are replayed from fills and settlement evidence.\n- Release status separates saved-response replay from current live-readonly selection.\n", encoding="utf-8")
+    (reports / "FORWARD_SIMULATION_V5_1_8_RC7_FIX_REPORT.md").write_text(common + "\n## Fixes\n- Exact HTTP response bytes are stored in `http_evidence.raw_http_bytes`.\n- Live-readonly persists Gamma/CLOB/orderbook evidence as JSON metadata plus sidecar `.bin` raw bytes; snapshots are accepted only after durable writes succeed.\n- `verify_http_evidence_file` binds sidecar raw bytes → strict UTF-8 → `json.loads` → payload hash; metadata payload is a redundant copy only.\n- Snapshot replay and `real_signal_to_fill` use `parsed_payload_from_raw`, never metadata payload as authority.\n- `real_signal_to_fill_validation` is derived from same-run saved evidence (`validation_source=live_readonly_saved_evidence`), not a second unsaved network fetch.\n- Release gate requires `error_count==0`, raw evidence presence/hash integrity, raw→payload binding, snapshot replay from saved bytes, and same-run linkage; otherwise `BLOCKED_PENDING_LIVE_EVIDENCE`.\n- Signal canonical hashes are rebuilt from registration evidence.\n- Fees are recalculated from Gamma/CLOB evidence, not fill cache fields.\n- Entry state is rebuilt from signal plus entry fills before any extra buy.\n- Strategy lots, exit allocations, settlement allocations, event results, strategy totals, and ledger totals are replayed from fills and settlement evidence.\n- Release status separates saved-response replay from current live-readonly selection.\n", encoding="utf-8")
     (reports / "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_AUDIT.md").write_text(common + f"\n## Audit\n- quick audit: {validations['quick_audit']['ok']}\n- full-replay audit: {validations['full_replay']['ok']}\n- negative tests detected: {validations['negative_detected']}/30\n- live-readonly pass gate: {release['live_pass']}\n", encoding="utf-8")
     checklist_live = "x" if release["live_pass"] else " "
     (reports / "FORWARD_SIMULATION_V5_1_8_RC7_RELEASE_CHECKLIST.md").write_text(common + f"\n- [x] Formal ledger empty\n- [x] No wallet/signing/order code\n- [x] ZIP self-contained target prepared\n- [x] 30 direct end-to-end corruptions detected\n- [x] incomplete_take_profit uses latest trigger state\n- [x] Saved-response replay reported separately from live-readonly\n- [{checklist_live}] Live-readonly selected markets and signal-to-fill pass\n", encoding="utf-8")

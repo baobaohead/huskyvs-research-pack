@@ -1,0 +1,19 @@
+{
+  "clob_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00002_20531586829453250137861025863290033762971932642718477504791605877665947766208_clob.json",
+  "clob_raw_bytes_sha256": "521fa7a5fea86835c2e1d7087ed5f0fdcca5f4ab7dce8b00e8742e6ef38e6655",
+  "condition_id": "0x43d55eb529e197665d09c701e5944ae24e7f97cb7443975303cb4269c17b8802",
+  "content_hash": "f7954aefc21072c21c9dcd2814b46d5d082ce32c91493b4d2e2da7e2e51611fa",
+  "gamma_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00002_20531586829453250137861025863290033762971932642718477504791605877665947766208_gamma.json",
+  "gamma_raw_bytes_sha256": "c5462bf4da818fb3eda32f369bbf114bbed938b2c5b4a89a96dc0ed1358903ad",
+  "market_slug": "highest-temperature-in-beijing-on-july-24-2026-24corbelow",
+  "orderbook_evidence_path": "data/forward_v5_1_8/live_integration/live_v5_1_8_rc7_raw_payload_binding/raw_orderbooks/00002_20531586829453250137861025863290033762971932642718477504791605877665947766208_orderbook.json",
+  "orderbook_raw_bytes_sha256": "3ffdbbb655be8ad760dae6a01d45907dcc8f3da6db8be63625879afe94b8bd91",
+  "payload_sha256": {
+    "clob": "6c240172f885b5fb2d7a07d3c755803d75ec812a5713f0f6de0d1901c749c5c3",
+    "gamma": "03cd83c8a2cb31cb09ccf928a8f9164f6ad8c4f8f005f50c97f88b06d3c364af",
+    "orderbook": "0968f55fb0568d49e9d572b22b0fed2a906208a1c9b0f1149a72d7ae88e28a84"
+  },
+  "run_id": "live_v5_1_8_rc7_raw_payload_binding",
+  "snapshot_id": "live_ff9c1672a36279278e836cd1",
+  "token_id": "20531586829453250137861025863290033762971932642718477504791605877665947766208"
+}
