@@ -10,6 +10,10 @@
   "weather_bundle_sha256": "REPLACE_WITH_content_hash_OF_WEATHER_BUNDLE",
   "candidates": [
     {
+      "forecast_run_id": "d1_1500_zspd_20260724_example",
+      "station": "ZSPD",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "highest_temperature",
       "temperature_bucket": "32C",
       "forecast_probability": 0.28,
       "market_slug": "highest-temperature-in-shanghai-on-july-24-2026-32c",
@@ -23,10 +27,14 @@
       "reason": "positive edge vs 15:00 ask",
       "data_status": "COMPLETE",
       "orderbook_snapshot_id": "ob_zspd_20260723T070000Z_32c",
-      "orderbook_snapshot_sha256": "REPLACE_WITH_ORDERBOOK_SNAPSHOT_SHA256",
+      "orderbook_snapshot_sha256": "a7b60a2b2e37c2e0b9b0ab1eb215c10b14c16bcf720437cf576695d50251158d",
       "orderbook_captured_at_utc": "2026-07-23T07:00:00+00:00"
     },
     {
+      "forecast_run_id": "d1_1500_zspd_20260724_example",
+      "station": "ZSPD",
+      "weather_date_local": "2026-07-24",
+      "weather_metric": "highest_temperature",
       "temperature_bucket": "33C",
       "forecast_probability": 0.25,
       "market_slug": "highest-temperature-in-shanghai-on-july-24-2026-33c",
@@ -40,7 +48,7 @@
       "reason": "adjacent bucket with positive edge",
       "data_status": "COMPLETE",
       "orderbook_snapshot_id": "ob_zspd_20260723T070000Z_33c",
-      "orderbook_snapshot_sha256": "REPLACE_WITH_ORDERBOOK_SNAPSHOT_SHA256",
+      "orderbook_snapshot_sha256": "a7b60a2b2e37c2e0b9b0ab1eb215c10b14c16bcf720437cf576695d50251158d",
       "orderbook_captured_at_utc": "2026-07-23T07:00:00+00:00"
     }
   ]

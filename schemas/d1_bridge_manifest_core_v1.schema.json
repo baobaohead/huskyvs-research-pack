@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "d1_bridge_manifest_core_v1.schema.json",
+  "title": "D1BridgeManifestCoreV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bridge_version",
+    "forecast_run_id",
+    "model_version",
+    "rules_version",
+    "station",
+    "city",
+    "weather_date_local",
+    "weather_metric",
+    "as_of_time_utc",
+    "as_of_time_cst",
+    "data_status",
+    "weather_bundle_content_sha256",
+    "value_bundle_content_sha256",
+    "source_snapshot_manifest_sha256",
+    "conversion_parameters",
+    "accepted_candidates",
+    "rejected_candidates",
+    "formal_ledger_used",
+    "wallet_or_real_order_used"
+  ],
+  "properties": {
+    "bridge_version": { "type": "string", "const": "d1_signal_bridge_v1" },
+    "forecast_run_id": { "type": "string", "minLength": 1 },
+    "model_version": { "type": "string" },
+    "rules_version": { "type": "string" },
+    "station": { "type": "string", "enum": ["ZSPD", "ZBAA"] },
+    "city": { "type": "string" },
+    "weather_date_local": { "type": "string" },
+    "weather_metric": { "type": "string", "const": "highest_temperature" },
+    "as_of_time_utc": { "type": "string" },
+    "as_of_time_cst": { "type": "string" },
+    "data_status": {
+      "type": "string",
+      "enum": ["COMPLETE", "PARTIAL", "CONFLICTING", "STALE", "LEAKAGE_INVALID"]
+    },
+    "weather_bundle_content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "value_bundle_content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "source_snapshot_manifest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "conversion_parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry_valid_minutes", "formal_mode", "orderbook_hash_verification"],
+      "properties": {
+        "entry_valid_minutes": { "type": "integer", "minimum": 1 },
+        "formal_mode": { "type": "boolean" },
+        "orderbook_hash_verification": { "type": "string", "const": "reference_format_only" }
+      }
+    },
+    "accepted_candidates": { "type": "array" },
+    "rejected_candidates": { "type": "array" },
+    "formal_ledger_used": { "type": "boolean", "const": false },
+    "wallet_or_real_order_used": { "type": "boolean", "const": false }
+  }
+}

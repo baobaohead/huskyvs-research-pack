@@ -11,7 +11,7 @@
   "generated_at_utc": "2026-07-23T07:02:00+00:00",
   "data_status": "COMPLETE",
   "confidence": 0.72,
-  "source_snapshot_sha256": "REPLACE_WITH_REAL_SOURCE_SNAPSHOT_SHA256",
+  "source_snapshot_sha256": "32f2806370b8c60a500288ec958ee484ae4d323c13e09ea709bf452eb823414d",
   "source_snapshot_manifest": {
     "sources": [
       {
