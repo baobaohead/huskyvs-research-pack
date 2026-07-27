@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "d1_bridge_manifest_v1.schema.json",
+  "title": "D1BridgeManifestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bridge_version",
+    "forecast_run_id",
+    "model_version",
+    "rules_version",
+    "station",
+    "city",
+    "weather_date_local",
+    "weather_metric",
+    "as_of_time_utc",
+    "as_of_time_cst",
+    "data_status",
+    "converted_signal_count",
+    "rejected_signal_count",
+    "rejection_reasons",
+    "formal_ledger_used",
+    "wallet_or_real_order_used",
+    "orderbook_hash_verification",
+    "execution_eligible",
+    "input_content_hashes",
+    "files"
+  ],
+  "properties": {
+    "bridge_version": { "type": "string", "const": "d1_signal_bridge_v1" },
+    "forecast_run_id": { "type": "string" },
+    "model_version": { "type": "string", "const": "D1_1500" },
+    "rules_version": { "type": "string", "const": "D1_manual_v1.0" },
+    "station": { "type": "string", "enum": ["ZSPD", "ZBAA"] },
+    "city": { "type": "string" },
+    "weather_date_local": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "weather_metric": { "type": "string", "const": "highest_temperature" },
+    "as_of_time_utc": { "type": "string", "format": "date-time" },
+    "as_of_time_cst": { "type": "string", "format": "date-time" },
+    "data_status": {
+      "type": "string",
+      "enum": ["COMPLETE", "PARTIAL", "CONFLICTING", "STALE", "LEAKAGE_INVALID"]
+    },
+    "converted_signal_count": { "type": "integer", "minimum": 0 },
+    "rejected_signal_count": { "type": "integer", "minimum": 0 },
+    "rejection_reasons": { "type": "array", "items": { "type": "string" } },
+    "formal_ledger_used": { "type": "boolean", "const": false },
+    "wallet_or_real_order_used": { "type": "boolean", "const": false },
+    "orderbook_hash_verification": { "type": "string", "const": "reference_format_only" },
+    "execution_eligible": { "type": "boolean", "const": true },
+    "input_content_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["weather_probability_bundle", "value_signal_bundle", "source_snapshot_manifest"],
+      "properties": {
+        "weather_probability_bundle": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "value_signal_bundle": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "source_snapshot_manifest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "weather_probability_bundle.json",
+        "value_signal_bundle.json",
+        "bridge_manifest_core.json",
+        "husky_entry_signals.csv",
+        "validation_report.json"
+      ],
+      "properties": {
+        "weather_probability_bundle.json": { "$ref": "#/$defs/weatherFile" },
+        "value_signal_bundle.json": { "$ref": "#/$defs/valueFile" },
+        "bridge_manifest_core.json": { "$ref": "#/$defs/coreFile" },
+        "husky_entry_signals.csv": { "$ref": "#/$defs/csvFile" },
+        "validation_report.json": { "$ref": "#/$defs/reportFile" }
+      }
+    }
+  },
+  "$defs": {
+    "fileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "weatherFile": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "weather_probability_bundle.json" } } }] },
+    "valueFile": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "value_signal_bundle.json" } } }] },
+    "coreFile": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "bridge_manifest_core.json" } } }] },
+    "csvFile": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "husky_entry_signals.csv" } } }] },
+    "reportFile": { "allOf": [{ "$ref": "#/$defs/fileEntry" }, { "properties": { "path": { "const": "validation_report.json" } } }] }
+  }
+}
