@@ -1,0 +1,3 @@
+# Isolated runtime dependency for src/d1_signal_bridge_v1.py only.
+# It deliberately does not alter the RC7 runtime dependency set.
+jsonschema>=4.23,<5

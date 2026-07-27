@@ -136,6 +136,20 @@ def _value(weather: dict, candidates: list[dict] | None = None, **overrides) -> 
     return payload
 
 
+def _write_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _refresh_wrapper_hashes(out: Path) -> None:
+    """Simulate an attacker who recomputes every wrapper hash they can reach."""
+    manifest_path = out / "bridge_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for name, meta in manifest["files"].items():
+        meta["sha256"] = sha256_file(out / name)
+    _write_json(manifest_path, manifest)
+    (out / "bridge_manifest.sha256").write_text(sha256_file(manifest_path) + "\n", encoding="utf-8")
+
+
 def test_normalize_bucket_variants():
     assert normalize_temp_bucket_label("32C") == "exact:32C"
     assert normalize_temp_bucket_label("32C or below") == "or_below:32C"
@@ -432,3 +446,135 @@ def test_no_trading_primitives_in_module():
     text = (PROJECT_ROOT / "src/d1_signal_bridge_v1.py").read_text(encoding="utf-8").lower()
     for forbidden in ["web3", "private_key", "eth_account", "place_order", "start_formal("]:
         assert forbidden not in text
+
+
+@pytest.mark.parametrize("field", ["forecast_run_id", "station", "weather_date_local", "weather_metric", "data_status"])
+def test_candidate_identity_is_required(field):
+    weather = _weather()
+    candidate = _candidate("32C", 0.35, 0.25, forecast_run_id=weather["forecast_run_id"])
+    del candidate[field]
+    with pytest.raises(BridgeError) as exc_info:
+        validate_value_signal_bundle(weather, _value(weather, [candidate]))
+    assert exc_info.value.code == "CANDIDATE_IDENTITY_MISSING"
+
+
+@pytest.mark.parametrize("bad", ["A" * 64, "a" * 63 + "A", " " + "a" * 64, "a" * 64 + " ", "0x" + "a" * 62, "a" * 63, "g" * 64])
+def test_sha_is_strict_lowercase(bad):
+    weather = _weather(source_snapshot_sha256=bad)
+    with pytest.raises(BridgeError) as exc_info:
+        validate_weather_probability_bundle(weather)
+    assert exc_info.value.code == "SOURCE_MANIFEST_HASH_MISMATCH" or exc_info.value.code == "INVALID_SHA256"
+
+
+@pytest.mark.parametrize("bad_path,code", [
+    ("/tmp/weather_probability_bundle.json", "MANIFEST_PATH_ABSOLUTE"),
+    ("../weather_probability_bundle.json", "MANIFEST_PATH_TRAVERSAL"),
+    ("nested/weather_probability_bundle.json", "MANIFEST_PATH_TRAVERSAL"),
+    ("C:\\temp\\weather_probability_bundle.json", "MANIFEST_PATH_ABSOLUTE"),
+    ("", "MANIFEST_PATH_NOT_EXACT"),
+])
+def test_manifest_paths_must_be_exact(tmp_path, bad_path, code):
+    weather = _weather(forecast_run_id=f"strict_path_{code}_{len(bad_path)}")
+    result = convert_bundles(weather, _value(weather), tmp_path)
+    out = Path(result["output_dir"])
+    manifest_path = out / "bridge_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["files"]["weather_probability_bundle.json"]["path"] = bad_path
+    _write_json(manifest_path, manifest)
+    (out / "bridge_manifest.sha256").write_text(sha256_file(manifest_path) + "\n", encoding="utf-8")
+    verified = verify_bridge_output(out)
+    assert verified["ok"] is False
+    assert code in verified["errors"]
+
+
+@pytest.mark.parametrize("field,bad_value", [("station", "ZBAA"), ("model_version", "D1_1400")])
+def test_coordinated_wrapper_tampering_is_semantically_rejected(tmp_path, field, bad_value):
+    weather = _weather(forecast_run_id="coordinated_manifest")
+    result = convert_bundles(weather, _value(weather), tmp_path)
+    out = Path(result["output_dir"])
+    manifest_path = out / "bridge_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest[field] = bad_value
+    _write_json(manifest_path, manifest)
+    (out / "bridge_manifest.sha256").write_text(sha256_file(manifest_path) + "\n", encoding="utf-8")
+    verified = verify_bridge_output(out)
+    assert verified["ok"] is False
+    assert "manifest_identity_mismatch" in verified["errors"]
+
+
+def test_coordinated_core_value_csv_report_and_source_tampering_is_rejected(tmp_path):
+    def fresh(name: str) -> Path:
+        weather = _weather(forecast_run_id=name)
+        return Path(convert_bundles(weather, _value(weather), tmp_path)["output_dir"])
+
+    core_out = fresh("coordinated_core")
+    core_path = core_out / "bridge_manifest_core.json"
+    core = json.loads(core_path.read_text(encoding="utf-8"))
+    core["accepted_candidates"][0]["edge"] = "0.999"
+    _write_json(core_path, core)
+    new_core_sha = sha256_file(core_path)
+    csv_path = core_out / "husky_entry_signals.csv"
+    rows = list(csv.DictReader(csv_path.open(encoding="utf-8")))
+    for row in rows:
+        row["notes"] = row["notes"].replace(parse_notes(row["notes"])["bridge_manifest_sha256"], new_core_sha)
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+    _refresh_wrapper_hashes(core_out)
+    assert "core_rebuild_mismatch" in verify_bridge_output(core_out)["errors"]
+
+    value_out = fresh("coordinated_value")
+    value_path = value_out / "value_signal_bundle.json"
+    value = json.loads(value_path.read_text(encoding="utf-8"))
+    value["candidates"][0]["edge"] = 0.999
+    _write_json(value_path, value)
+    _refresh_wrapper_hashes(value_out)
+    # Invalid candidates are deterministically rejected by the value layer;
+    # replay then detects the changed accepted/rejected core and CSV state.
+    assert "core_rebuild_mismatch" in verify_bridge_output(value_out)["errors"]
+
+    csv_out = fresh("coordinated_csv")
+    csv_path = csv_out / "husky_entry_signals.csv"
+    rows = list(csv.DictReader(csv_path.open(encoding="utf-8")))
+    rows[0]["max_entry_price"] = "0.01"
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+    _refresh_wrapper_hashes(csv_out)
+    assert "csv_rebuild_mismatch" in verify_bridge_output(csv_out)["errors"]
+
+    report_out = fresh("coordinated_report")
+    report_path = report_out / "validation_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["converted_signal_count"] = 999
+    _write_json(report_path, report)
+    _refresh_wrapper_hashes(report_out)
+    assert "report_rebuild_mismatch" in verify_bridge_output(report_out)["errors"]
+
+    source_out = fresh("coordinated_source")
+    weather_path = source_out / "weather_probability_bundle.json"
+    weather_payload = json.loads(weather_path.read_text(encoding="utf-8"))
+    weather_payload["source_snapshot_manifest"]["sources"][0]["acquired_at_utc"] = "2026-07-23T07:00:01+00:00"
+    weather_payload["source_snapshot_sha256"] = content_hash(weather_payload["source_snapshot_manifest"])
+    _write_json(weather_path, weather_payload)
+    _refresh_wrapper_hashes(source_out)
+    verified = verify_bridge_output(source_out)
+    assert verified["ok"] is False
+    assert any("value_revalidation_failed:LEAKAGE_INVALID" == error for error in verified["errors"])
+
+    weather_out = fresh("coordinated_weather")
+    weather_path = weather_out / "weather_probability_bundle.json"
+    weather_payload = json.loads(weather_path.read_text(encoding="utf-8"))
+    weather_payload["integer_temperature_probabilities"][0]["forecast_probability"] = 0.21
+    weather_payload["integer_temperature_probabilities"][1]["forecast_probability"] = 0.34
+    _write_json(weather_path, weather_payload)
+    value_path = weather_out / "value_signal_bundle.json"
+    value_payload = json.loads(value_path.read_text(encoding="utf-8"))
+    value_payload["weather_bundle_sha256"] = content_hash(weather_payload)
+    _write_json(value_path, value_payload)
+    _refresh_wrapper_hashes(weather_out)
+    verified = verify_bridge_output(weather_out)
+    assert verified["ok"] is False
+    assert "core_rebuild_mismatch" in verified["errors"]

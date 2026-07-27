@@ -46,7 +46,11 @@ Station/city aliases:
 4. Write final `bridge_manifest.json` listing relative paths + hashes for all artifacts except itself.
 5. Write detached `bridge_manifest.sha256`.
 
-`verify-output` checks detached SHA, core SHA, CSV notes reference, all listed file hashes, input content hashes, counts, and safety flags. Nothing is skipped.
+`verify-output` checks detached SHA, core SHA, CSV notes reference, all listed file hashes, input content hashes, counts, and safety flags. It also semantically replays weather validation, value validation, core-manifest construction, CSV generation, validation-report construction, source timestamp/leakage checks, and final-manifest identity binding. Recomputing wrapper hashes cannot make a changed semantic payload valid.
+
+Runtime validation uses `jsonschema.Draft202012Validator` with `FormatChecker` for weather, value, core, and final manifests. Install `requirements-d1-signal-bridge-v1.txt` when the environment does not already supply `jsonschema`.
+
+All SHA-256 values are exactly 64 lowercase hexadecimal characters: no upper-case characters, whitespace, or prefixes are normalized or accepted. Final-manifest artifact paths must exactly equal their five fixed filenames; absolute paths, traversal, and subdirectories are rejected.
 
 Evidence paths inside manifests/reports are **output-relative** (portable). CLI stdout may show absolute paths.
 
@@ -77,6 +81,8 @@ Order book hashes are validated as 64-char hex. Unless `orderbook_snapshot_evide
 Top-level value fields must match weather:
 
 `forecast_run_id`, `model_version`, `rules_version`, `station`, `city`, `weather_date_local`, `weather_metric`, `weather_bundle_sha256`
+
+Every value candidate must also carry `forecast_run_id`, `station`, `weather_date_local`, `weather_metric`, and `data_status`. Missing candidate identity returns `CANDIDATE_IDENTITY_MISSING`; any mismatch is rejected or recorded with its precise identity error.
 
 Status rules:
 

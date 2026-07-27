@@ -29,6 +29,12 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 try:
+    from jsonschema import Draft202012Validator, FormatChecker
+except ModuleNotFoundError:  # pragma: no cover - exercised in deployment configuration
+    Draft202012Validator = None  # type: ignore[assignment,misc]
+    FormatChecker = None  # type: ignore[assignment,misc]
+
+try:
     from src.polymarket_public_adapter_v5_1_8 import parse_temperature_bucket
 except ModuleNotFoundError:
     from polymarket_public_adapter_v5_1_8 import parse_temperature_bucket
@@ -61,6 +67,7 @@ EDGE_EPS = Decimal("0.0000001")
 ALLOWED_DATA_STATUS = {"COMPLETE", "PARTIAL", "CONFLICTING", "STALE", "LEAKAGE_INVALID"}
 NON_MARKETABLE_BUCKETS = {"其他", "其它", "other", "OTHER", "tail", "TAIL", "remainder", "REMAINDER"}
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:[\\/]")
 SOURCE_TIME_KEY_TOKENS = ("acquired_at", "released_at", "published_at", "captured_at", "source_time")
 REQUIRED_OUTPUT_FILES = (
     "weather_probability_bundle.json",
@@ -127,10 +134,54 @@ def content_hash(value: Any) -> str:
 
 
 def assert_sha256_hex(value: Any, *, field: str) -> str:
-    text = str(value or "").strip().lower()
+    # Never normalize an audit hash before validating it.  In particular, a
+    # value that differs only by case or surrounding whitespace is invalid.
+    text = value if isinstance(value, str) else ""
     if not SHA256_RE.fullmatch(text):
         raise BridgeError("INVALID_SHA256", f"{field} must be 64-char lowercase hex SHA256", {"field": field, "value": value})
     return text
+
+
+SCHEMA_FILES = {
+    "weather": "d1_weather_probability_v1.schema.json",
+    "value": "d1_value_signal_v1.schema.json",
+    "core_manifest": "d1_bridge_manifest_core_v1.schema.json",
+    "final_manifest": "d1_bridge_manifest_v1.schema.json",
+}
+SCHEMA_ERROR_CODES = {
+    "weather": "WEATHER_JSON_SCHEMA_INVALID",
+    "value": "VALUE_JSON_SCHEMA_INVALID",
+    "core_manifest": "CORE_MANIFEST_JSON_SCHEMA_INVALID",
+    "final_manifest": "FINAL_MANIFEST_JSON_SCHEMA_INVALID",
+}
+
+
+def validate_against_schema(payload: Any, schema_name: str) -> dict[str, Any]:
+    """Validate a bridge payload with Draft 2020-12 and RFC format checks."""
+    if Draft202012Validator is None or FormatChecker is None:
+        raise BridgeError(
+            "JSON_SCHEMA_DEPENDENCY_MISSING",
+            "jsonschema is required; install requirements-d1-signal-bridge-v1.txt",
+        )
+    if schema_name not in SCHEMA_FILES:
+        raise BridgeError("UNKNOWN_SCHEMA", f"unsupported schema: {schema_name}")
+    schema_path = Path(__file__).resolve().parents[1] / "schemas" / SCHEMA_FILES[schema_name]
+    try:
+        schema = load_json(schema_path)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise BridgeError("SCHEMA_LOAD_FAILED", f"cannot load {schema_path.name}: {exc}") from exc
+    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    violations = sorted(validator.iter_errors(payload), key=lambda err: list(err.absolute_path))
+    if violations:
+        error = violations[0]
+        json_path = "/" + "/".join(str(part) for part in error.absolute_path)
+        schema_path_text = "/" + "/".join(str(part) for part in error.absolute_schema_path)
+        raise BridgeError(
+            SCHEMA_ERROR_CODES[schema_name],
+            error.message,
+            {"json_path": json_path, "schema_path": schema_path_text, "message": error.message},
+        )
+    return {"ok": True, "schema": SCHEMA_FILES[schema_name], "validator": "Draft202012Validator", "format_checker": True}
 
 
 def write_json(path: Path, payload: Any) -> None:
@@ -461,6 +512,8 @@ def validate_weather_probability_bundle(bundle: dict[str, Any], *, formal_mode: 
     if data_status == "LEAKAGE_INVALID":
         formal_blocked = True
 
+    validate_against_schema(bundle, "weather")
+
     return {
         "ok": True,
         "data_status": data_status,
@@ -501,6 +554,23 @@ def validate_value_signal_bundle(
     formal_mode: bool = True,
     weather_validation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # Preserve the bridge-specific identity error rather than reducing a
+    # missing candidate identity to a generic JSON Schema violation.
+    raw_candidates = value.get("candidates") if isinstance(value, dict) else None
+    if isinstance(raw_candidates, list):
+        for index, candidate in enumerate(raw_candidates):
+            if isinstance(candidate, dict):
+                missing_identity = [
+                    field
+                    for field in ("forecast_run_id", "station", "weather_date_local", "weather_metric", "data_status")
+                    if field not in candidate
+                ]
+                if missing_identity:
+                    raise BridgeError(
+                        "CANDIDATE_IDENTITY_MISSING",
+                        "candidate identity fields are required",
+                        {"index": index, "missing": missing_identity},
+                    )
     weather_validation = weather_validation or validate_weather_probability_bundle(weather, formal_mode=formal_mode)
     if weather_validation["data_status"] == "LEAKAGE_INVALID" or weather_validation.get("formal_blocked"):
         code = "LEAKAGE_INVALID" if weather_validation["data_status"] == "LEAKAGE_INVALID" else "FORMAL_TIME_WINDOW_BLOCKED"
@@ -545,6 +615,8 @@ def validate_value_signal_bundle(
         field="value.data_status",
     )
 
+    validate_against_schema(value, "value")
+
     weather_prob_map = {
         row["temperature_bucket"]: Decimal(row["forecast_probability"])
         for row in weather_validation["normalized_probabilities"]
@@ -561,13 +633,21 @@ def validate_value_signal_bundle(
         try:
             if not isinstance(raw, dict):
                 raise BridgeError("CANDIDATE_INVALID", "candidate must be object")
-            if "forecast_run_id" in raw and str(raw["forecast_run_id"]) != str(weather["forecast_run_id"]):
+            identity_fields = ("forecast_run_id", "station", "weather_date_local", "weather_metric", "data_status")
+            missing_identity = [field for field in identity_fields if field not in raw]
+            if missing_identity:
+                raise BridgeError(
+                    "CANDIDATE_IDENTITY_MISSING",
+                    "candidate identity fields are required",
+                    {"missing": missing_identity},
+                )
+            if str(raw["forecast_run_id"]) != str(weather["forecast_run_id"]):
                 raise BridgeError("FORECAST_RUN_ID_MISMATCH", "candidate.forecast_run_id mismatch")
-            if "station" in raw and str(raw["station"]).upper() != str(weather["station"]).upper():
+            if str(raw["station"]).upper() != str(weather["station"]).upper():
                 raise BridgeError("STATION_MISMATCH", "candidate.station mismatch")
-            if "weather_date_local" in raw and str(raw["weather_date_local"]) != str(weather["weather_date_local"]):
+            if str(raw["weather_date_local"]) != str(weather["weather_date_local"]):
                 raise BridgeError("WEATHER_DATE_MISMATCH", "candidate.weather_date_local mismatch")
-            if "weather_metric" in raw and normalize_weather_metric(raw["weather_metric"], formal_mode=formal_mode) != weather_validation["weather_metric"]:
+            if normalize_weather_metric(raw["weather_metric"], formal_mode=formal_mode) != weather_validation["weather_metric"]:
                 raise BridgeError("WEATHER_METRIC_MISMATCH", "candidate.weather_metric mismatch")
 
             bucket = normalize_temp_bucket_label(raw.get("temperature_bucket"))
@@ -610,7 +690,7 @@ def validate_value_signal_bundle(
                     raise BridgeError("ORDERBOOK_HASH_MISMATCH", "orderbook_snapshot_sha256 does not match evidence file")
             cand_status = _validate_status_no_upgrade(
                 value_status,
-                str(raw.get("data_status") or value_status),
+                str(raw["data_status"]),
                 field="candidate.data_status",
             )
             accepted.append(
@@ -747,109 +827,221 @@ def _required_files_present(output_dir: Path) -> list[str]:
     return missing
 
 
+def _schema_result(payload: Any, schema_name: str, errors: list[str]) -> dict[str, Any]:
+    try:
+        return validate_against_schema(payload, schema_name)
+    except BridgeError as exc:
+        errors.append(exc.code)
+        return {"ok": False, "code": exc.code, "details": exc.details}
+
+
+def _manifest_artifact_path(output_dir: Path, name: str, meta: Any) -> Path:
+    if not isinstance(meta, dict):
+        raise BridgeError("MANIFEST_PATH_NOT_EXACT", f"manifest entry missing for {name}")
+    raw_path = meta.get("path")
+    if not isinstance(raw_path, str) or raw_path != name:
+        if isinstance(raw_path, str) and (Path(raw_path).is_absolute() or WINDOWS_ABSOLUTE_PATH_RE.match(raw_path) or raw_path.startswith("\\\\")):
+            raise BridgeError("MANIFEST_PATH_ABSOLUTE", f"manifest path must not be absolute: {raw_path!r}")
+        if isinstance(raw_path, str) and (".." in Path(raw_path).parts or "/" in raw_path or "\\" in raw_path):
+            raise BridgeError("MANIFEST_PATH_TRAVERSAL", f"manifest path must not traverse directories: {raw_path!r}")
+        raise BridgeError("MANIFEST_PATH_NOT_EXACT", f"manifest path must be exactly {name!r}: {raw_path!r}")
+    path = (output_dir / raw_path).resolve()
+    if path.parent != output_dir.resolve():
+        raise BridgeError("MANIFEST_PATH_TRAVERSAL", f"manifest path escapes output directory: {raw_path!r}")
+    return path
+
+
+def _build_validation_report(
+    weather: dict[str, Any], weather_validation: dict[str, Any], value_validation: dict[str, Any], rows: list[dict[str, str]]
+) -> dict[str, Any]:
+    return {
+        "bridge_version": BRIDGE_VERSION,
+        "forecast_run_id": str(weather["forecast_run_id"]),
+        "weather_validation": {
+            "data_status": weather_validation["data_status"],
+            "warnings": weather_validation["warnings"],
+            "probability_sum": weather_validation["probability_sum"],
+            "bundle_sha256": weather_validation["bundle_sha256"],
+            "source_snapshot_manifest_sha256": weather_validation["source_snapshot_manifest_sha256"],
+        },
+        "value_validation": {
+            "accepted_count": value_validation["accepted_count"],
+            "rejected_count": value_validation["rejected_count"],
+            "rejected": value_validation["rejected"],
+            "value_sha256": value_validation["value_sha256"],
+        },
+        "converted_signal_count": len(rows),
+        "rejected_signal_count": value_validation["rejected_count"],
+        "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL,
+        "formal_ledger_used": False,
+        "wallet_or_real_order_used": False,
+        "files": {name: name for name in REQUIRED_OUTPUT_FILES},
+    }
+
+
 def verify_bridge_output(output_dir: Path) -> dict[str, Any]:
+    """Verify wrapper hashes *and* replay every D1 conversion semantic."""
     output_dir = Path(output_dir)
     errors: list[str] = []
+    result: dict[str, Any] = {
+        "weather_revalidation_result": {"ok": False},
+        "value_revalidation_result": {"ok": False},
+        "core_rebuild_result": {"ok": False},
+        "csv_rebuild_result": {"ok": False},
+        "report_rebuild_result": {"ok": False},
+        "manifest_identity_result": {"ok": False},
+        "semantic_replay_result": {"ok": False},
+    }
     missing = _required_files_present(output_dir)
     if missing:
-        return {"ok": False, "errors": [f"missing:{m}" for m in missing], "manifest": None}
+        result.update({"ok": False, "errors": [f"missing:{name}" for name in missing], "manifest": None})
+        return result
+    try:
+        manifest_path = output_dir / "bridge_manifest.json"
+        core_path = output_dir / "bridge_manifest_core.json"
+        detached_path = output_dir / "bridge_manifest.sha256"
+        manifest = load_json(manifest_path)
+        core = load_json(core_path)
+        weather = load_json(output_dir / "weather_probability_bundle.json")
+        value = load_json(output_dir / "value_signal_bundle.json")
+        report = load_json(output_dir / "validation_report.json")
+    except (OSError, json.JSONDecodeError) as exc:
+        result.update({"ok": False, "errors": [f"output_parse_error:{exc}"], "manifest": None})
+        return result
 
-    manifest_path = output_dir / "bridge_manifest.json"
-    core_path = output_dir / "bridge_manifest_core.json"
-    detached_path = output_dir / "bridge_manifest.sha256"
-    csv_path = output_dir / "husky_entry_signals.csv"
-    weather_path = output_dir / "weather_probability_bundle.json"
-    value_path = output_dir / "value_signal_bundle.json"
-    report_path = output_dir / "validation_report.json"
-
-    manifest = load_json(manifest_path)
-    core = load_json(core_path)
-    detached = detached_path.read_text(encoding="utf-8").strip().split()[0].lower()
+    result["weather_schema_runtime_result"] = _schema_result(weather, "weather", errors)
+    result["value_schema_runtime_result"] = _schema_result(value, "value", errors)
+    result["core_schema_runtime_result"] = _schema_result(core, "core_manifest", errors)
+    result["final_schema_runtime_result"] = _schema_result(manifest, "final_manifest", errors)
     actual_manifest_sha = sha256_file(manifest_path)
     actual_core_sha = sha256_file(core_path)
+    detached_raw = detached_path.read_text(encoding="utf-8")
+    detached = detached_raw[:-1] if detached_raw.endswith("\n") else detached_raw
+    try:
+        assert_sha256_hex(detached, field="bridge_manifest.sha256")
+        if detached != actual_manifest_sha:
+            errors.append("detached_manifest_sha_mismatch")
+    except BridgeError as exc:
+        errors.append(exc.code)
 
-    if not SHA256_RE.fullmatch(detached):
-        errors.append("detached_sha_invalid_format")
-    elif detached != actual_manifest_sha:
-        errors.append("detached_manifest_sha_mismatch")
+    files = manifest.get("files") if isinstance(manifest, dict) else None
+    if not isinstance(files, dict):
+        errors.append("manifest_files_invalid")
+        files = {}
+    resolved_paths: dict[str, Path] = {}
+    for name in ("weather_probability_bundle.json", "value_signal_bundle.json", "bridge_manifest_core.json", "husky_entry_signals.csv", "validation_report.json"):
+        try:
+            artifact = _manifest_artifact_path(output_dir, name, files.get(name))
+            resolved_paths[name] = artifact
+            if not artifact.is_file():
+                errors.append(f"missing:{name}")
+                continue
+            expected_sha = assert_sha256_hex(files[name].get("sha256"), field=f"manifest.files.{name}.sha256")
+            if sha256_file(artifact) != expected_sha:
+                errors.append(f"hash_mismatch:{name}")
+        except BridgeError as exc:
+            errors.append(exc.code)
 
-    if "sha256" in (manifest.get("files") or {}).get("bridge_manifest.json", {}):
-        errors.append("final_manifest_must_not_self_hash")
+    core_meta = files.get("bridge_manifest_core.json") if isinstance(files, dict) else None
+    if isinstance(core_meta, dict):
+        try:
+            if assert_sha256_hex(core_meta.get("sha256"), field="manifest.core.sha256") != actual_core_sha:
+                errors.append("core_manifest_hash_mismatch")
+        except BridgeError as exc:
+            errors.append(exc.code)
 
-    files = manifest.get("files") or {}
-    for name in REQUIRED_OUTPUT_FILES:
-        if name == "bridge_manifest.sha256":
-            continue
-        if name == "bridge_manifest.json":
-            # final manifest is checked via detached file, not self-entry
-            continue
-        meta = files.get(name)
-        if not isinstance(meta, dict):
-            errors.append(f"manifest_missing_file_entry:{name}")
-            continue
-        rel = str(meta.get("path") or "")
-        if rel != name and not rel.endswith(name):
-            # allow only output-relative paths
-            if rel.startswith("/") or ":\\" in rel or rel.startswith("\\\\"):
-                errors.append(f"absolute_path_forbidden:{name}")
-        path = output_dir / name
-        if not path.exists():
-            errors.append(f"missing:{name}")
-            continue
-        actual = sha256_file(path)
-        expected = str(meta.get("sha256") or "").lower()
-        if actual != expected:
-            errors.append(f"hash_mismatch:{name}")
+    try:
+        formal_mode = bool(core["conversion_parameters"]["formal_mode"])
+        entry_valid_minutes = int(core["conversion_parameters"]["entry_valid_minutes"])
+        weather_validation = validate_weather_probability_bundle(weather, formal_mode=formal_mode)
+        result["weather_revalidation_result"] = {"ok": True}
+    except (BridgeError, KeyError, TypeError, ValueError) as exc:
+        errors.append(f"weather_revalidation_failed:{getattr(exc, 'code', type(exc).__name__)}")
+        weather_validation = None
+    try:
+        if weather_validation is None:
+            raise BridgeError("WEATHER_REVALIDATION_UNAVAILABLE", "weather replay failed")
+        value_validation = validate_value_signal_bundle(
+            weather, value, formal_mode=formal_mode, weather_validation=weather_validation
+        )
+        result["value_revalidation_result"] = {"ok": True}
+    except (BridgeError, UnboundLocalError) as exc:
+        errors.append(f"value_revalidation_failed:{getattr(exc, 'code', type(exc).__name__)}")
+        value_validation = None
 
-    core_meta = files.get("bridge_manifest_core.json") or {}
-    if str(core_meta.get("sha256") or "").lower() != actual_core_sha:
-        errors.append("core_manifest_hash_mismatch")
-
-    # CSV notes must reference core file SHA
-    with csv_path.open(encoding="utf-8", newline="") as f:
-        rows = list(csv.DictReader(f))
-    if int(manifest.get("converted_signal_count", -1)) != len(rows):
-        errors.append("converted_signal_count_mismatch")
-    for row in rows:
-        notes = parse_notes(row.get("notes") or "")
-        ref = str(notes.get("bridge_manifest_sha256") or "").lower()
-        if ref != actual_core_sha:
-            errors.append("csv_core_manifest_reference_mismatch")
-            break
-
-    weather = load_json(weather_path)
-    value = load_json(value_path)
-    input_hashes = manifest.get("input_content_hashes") or {}
-    if input_hashes.get("weather_probability_bundle") != content_hash(weather):
-        errors.append("weather_content_hash_mismatch")
-    if input_hashes.get("value_signal_bundle") != content_hash(value):
-        errors.append("value_content_hash_mismatch")
-    if core.get("weather_bundle_content_sha256") != content_hash(weather):
-        errors.append("core_weather_hash_mismatch")
-    if core.get("value_bundle_content_sha256") != content_hash(value):
-        errors.append("core_value_hash_mismatch")
-
-    if int(manifest.get("rejected_signal_count", -1)) != len(core.get("rejected_candidates") or []):
-        errors.append("rejected_signal_count_mismatch")
-    if int(manifest.get("converted_signal_count", -1)) != len(core.get("accepted_candidates") or []):
-        errors.append("accepted_count_mismatch")
+    if weather_validation is not None and value_validation is not None:
+        expected_core = _build_core_manifest(
+            weather, weather_validation, value_validation, entry_valid_minutes=entry_valid_minutes, formal_mode=formal_mode
+        )
+        if core != expected_core:
+            errors.append("core_rebuild_mismatch")
+        else:
+            result["core_rebuild_result"] = {"ok": True}
+        expected_rows = value_candidates_to_husky_csv_rows(
+            weather,
+            value_validation,
+            entry_valid_minutes=entry_valid_minutes,
+            weather_sha256=weather_validation["bundle_sha256"],
+            value_sha256=value_validation["value_sha256"],
+            bridge_manifest_sha256=actual_core_sha,
+        )
+        try:
+            with resolved_paths.get("husky_entry_signals.csv", output_dir / "husky_entry_signals.csv").open(encoding="utf-8", newline="") as handle:
+                actual_rows = list(csv.DictReader(handle))
+            if actual_rows != expected_rows:
+                errors.append("csv_rebuild_mismatch")
+            else:
+                result["csv_rebuild_result"] = {"ok": True}
+            for row in actual_rows:
+                notes = parse_notes(row.get("notes") or "")
+                if notes.get("bridge_manifest_sha256") != actual_core_sha:
+                    errors.append("csv_core_manifest_reference_mismatch")
+                    break
+        except OSError as exc:
+            errors.append(f"csv_read_failed:{exc}")
+            actual_rows = []
+        expected_report = _build_validation_report(weather, weather_validation, value_validation, expected_rows)
+        if report != expected_report:
+            errors.append("report_rebuild_mismatch")
+        else:
+            result["report_rebuild_result"] = {"ok": True}
+        identity_keys = (
+            "bridge_version", "forecast_run_id", "model_version", "rules_version", "station", "city", "weather_date_local",
+            "weather_metric", "as_of_time_utc", "as_of_time_cst", "data_status", "formal_ledger_used", "wallet_or_real_order_used",
+        )
+        expected_identity = _build_core_manifest(
+            weather, weather_validation, value_validation, entry_valid_minutes=entry_valid_minutes, formal_mode=formal_mode
+        )
+        manifest_identity_ok = all(manifest.get(key) == expected_identity.get(key) for key in identity_keys)
+        manifest_identity_ok = manifest_identity_ok and manifest.get("converted_signal_count") == len(expected_rows)
+        manifest_identity_ok = manifest_identity_ok and manifest.get("rejected_signal_count") == value_validation["rejected_count"]
+        manifest_identity_ok = manifest_identity_ok and manifest.get("rejection_reasons") == [
+            f"{item['code']}:{item['message']}" for item in value_validation["rejected"]
+        ]
+        expected_hashes = {
+            "weather_probability_bundle": weather_validation["bundle_sha256"],
+            "value_signal_bundle": value_validation["value_sha256"],
+            "source_snapshot_manifest": weather_validation["source_snapshot_manifest_sha256"],
+        }
+        manifest_identity_ok = manifest_identity_ok and manifest.get("input_content_hashes") == expected_hashes
+        if not manifest_identity_ok:
+            errors.append("manifest_identity_mismatch")
+        else:
+            result["manifest_identity_result"] = {"ok": True}
 
     if manifest.get("formal_ledger_used") is not False or core.get("formal_ledger_used") is not False:
         errors.append("formal_ledger_used_not_false")
     if manifest.get("wallet_or_real_order_used") is not False or core.get("wallet_or_real_order_used") is not False:
         errors.append("wallet_or_real_order_used_not_false")
-
-    report = load_json(report_path)
-    if report.get("orderbook_hash_verification") != ORDERBOOK_HASH_VALIDATION_LEVEL:
-        errors.append("orderbook_hash_verification_missing_or_invalid")
-
-    return {
+    result["semantic_replay_result"] = {"ok": not any("revalidation_failed" in error or "rebuild_mismatch" in error or error == "manifest_identity_mismatch" for error in errors)}
+    result.update({
         "ok": not errors,
         "errors": errors,
         "manifest": manifest,
         "core_sha256": actual_core_sha,
         "manifest_sha256": actual_manifest_sha,
-    }
+    })
+    return result
 
 
 def _build_core_manifest(
@@ -915,6 +1107,7 @@ def _write_run_artifacts(
         entry_valid_minutes=entry_valid_minutes,
         formal_mode=formal_mode,
     )
+    validate_against_schema(core, "core_manifest")
     write_json(core_path, core)
     core_sha = sha256_file(core_path)
 
@@ -928,29 +1121,7 @@ def _write_run_artifacts(
     )
     write_husky_csv(csv_path, rows)
 
-    report = {
-        "bridge_version": BRIDGE_VERSION,
-        "forecast_run_id": str(weather["forecast_run_id"]),
-        "weather_validation": {
-            "data_status": weather_validation["data_status"],
-            "warnings": weather_validation["warnings"],
-            "probability_sum": weather_validation["probability_sum"],
-            "bundle_sha256": weather_validation["bundle_sha256"],
-            "source_snapshot_manifest_sha256": weather_validation["source_snapshot_manifest_sha256"],
-        },
-        "value_validation": {
-            "accepted_count": value_validation["accepted_count"],
-            "rejected_count": value_validation["rejected_count"],
-            "rejected": value_validation["rejected"],
-            "value_sha256": value_validation["value_sha256"],
-        },
-        "converted_signal_count": len(rows),
-        "rejected_signal_count": value_validation["rejected_count"],
-        "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL,
-        "formal_ledger_used": False,
-        "wallet_or_real_order_used": False,
-        "files": {name: name for name in REQUIRED_OUTPUT_FILES},
-    }
+    report = _build_validation_report(weather, weather_validation, value_validation, rows)
     write_json(report_path, report)
 
     rejection_reasons = [f"{r['code']}:{r['message']}" for r in value_validation["rejected"]]
@@ -985,6 +1156,7 @@ def _write_run_artifacts(
             "validation_report.json": {"path": "validation_report.json", "sha256": sha256_file(report_path)},
         },
     }
+    validate_against_schema(manifest, "final_manifest")
     write_json(manifest_path, manifest)
     detached_path.write_text(sha256_file(manifest_path) + "\n", encoding="utf-8")
 
