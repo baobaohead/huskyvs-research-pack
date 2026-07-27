@@ -20,6 +20,7 @@
     "value_bundle_content_sha256",
     "source_snapshot_manifest_sha256",
     "conversion_parameters",
+    "execution_eligible",
     "accepted_candidates",
     "rejected_candidates",
     "formal_ledger_used",
@@ -49,10 +50,11 @@
       "required": ["entry_valid_minutes", "formal_mode", "orderbook_hash_verification"],
       "properties": {
         "entry_valid_minutes": { "type": "integer", "minimum": 1 },
-        "formal_mode": { "type": "boolean" },
+        "formal_mode": { "type": "boolean", "const": true },
         "orderbook_hash_verification": { "type": "string", "const": "reference_format_only" }
       }
     },
+    "execution_eligible": { "type": "boolean", "const": true },
     "accepted_candidates": { "type": "array", "items": { "$ref": "#/$defs/acceptedCandidate" } },
     "rejected_candidates": { "type": "array", "items": { "$ref": "#/$defs/rejectedCandidate" } },
     "formal_ledger_used": { "type": "boolean", "const": false },
@@ -80,13 +82,13 @@
         "market_ask_price": { "type": "string", "pattern": "^(0|1|0\\.\\d+)$" },
         "edge": { "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d+)?$" },
         "recommended_max_price": { "type": "string", "pattern": "^(0|1|0\\.\\d+)$" },
-        "intended_usd": { "type": "string", "pattern": "^[1-9]\\d*(\\.\\d+)?$" },
+        "intended_usd": { "type": "string", "pattern": "^(?:0\\.(?:0*[1-9]\\d*)|[1-9]\\d*(?:\\.\\d+)?)$" },
         "reason": { "type": "string" },
         "data_status": { "type": "string", "enum": ["COMPLETE", "PARTIAL", "CONFLICTING", "STALE", "LEAKAGE_INVALID"] },
         "orderbook_snapshot_id": { "type": "string", "minLength": 1 },
         "orderbook_snapshot_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "orderbook_captured_at_utc": { "type": "string", "format": "date-time" },
-        "orderbook_hash_verification": { "type": "string", "enum": ["reference_format_only", "evidence_file_verified"] }
+        "orderbook_hash_verification": { "type": "string", "const": "reference_format_only" }
       }
     },
     "rejectedCandidate": {

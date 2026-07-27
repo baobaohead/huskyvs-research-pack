@@ -22,6 +22,7 @@
     "formal_ledger_used",
     "wallet_or_real_order_used",
     "orderbook_hash_verification",
+    "execution_eligible",
     "input_content_hashes",
     "files"
   ],
@@ -46,6 +47,7 @@
     "formal_ledger_used": { "type": "boolean", "const": false },
     "wallet_or_real_order_used": { "type": "boolean", "const": false },
     "orderbook_hash_verification": { "type": "string", "const": "reference_format_only" },
+    "execution_eligible": { "type": "boolean", "const": true },
     "input_content_hashes": {
       "type": "object",
       "additionalProperties": false,

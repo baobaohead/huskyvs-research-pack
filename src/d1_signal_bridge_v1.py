@@ -285,12 +285,15 @@ def expected_next_day(as_of_cst: datetime) -> date:
 
 def normalize_weather_metric(raw: Any, *, formal_mode: bool) -> str:
     text = str(raw or "").strip()
+    if formal_mode and text != CANONICAL_WEATHER_METRIC:
+        raise BridgeError(
+            "WEATHER_METRIC_INVALID",
+            f"formal D1 bundle weather_metric must be {CANONICAL_WEATHER_METRIC}",
+        )
     key = text.lower() if text.isascii() else text
     canonical = METRIC_ALIASES.get(key) or METRIC_ALIASES.get(text)
     if canonical is None:
         raise BridgeError("WEATHER_METRIC_INVALID", f"unsupported weather_metric: {raw}")
-    if formal_mode and canonical != CANONICAL_WEATHER_METRIC:
-        raise BridgeError("WEATHER_METRIC_INVALID", f"formal mode requires {CANONICAL_WEATHER_METRIC}")
     return canonical
 
 
@@ -680,14 +683,6 @@ def validate_value_signal_bundle(
             if not str(raw.get("orderbook_snapshot_id") or "").strip():
                 raise BridgeError("ORDERBOOK_SNAPSHOT_MISSING", "orderbook_snapshot_id required")
             ob_hash = assert_sha256_hex(raw.get("orderbook_snapshot_sha256"), field="orderbook_snapshot_sha256")
-            evidence_path = str(raw.get("orderbook_snapshot_evidence_path") or "").strip()
-            if evidence_path:
-                ev = Path(evidence_path)
-                if not ev.is_file():
-                    raise BridgeError("ORDERBOOK_EVIDENCE_MISSING", f"orderbook evidence file not found: {evidence_path}")
-                actual = sha256_file(ev)
-                if actual != ob_hash:
-                    raise BridgeError("ORDERBOOK_HASH_MISMATCH", "orderbook_snapshot_sha256 does not match evidence file")
             cand_status = _validate_status_no_upgrade(
                 value_status,
                 str(raw["data_status"]),
@@ -717,9 +712,7 @@ def validate_value_signal_bundle(
                     "orderbook_snapshot_id": str(raw["orderbook_snapshot_id"]),
                     "orderbook_snapshot_sha256": ob_hash,
                     "orderbook_captured_at_utc": captured.isoformat().replace("+00:00", "+00:00"),
-                    "orderbook_hash_verification": (
-                        "evidence_file_verified" if evidence_path else ORDERBOOK_HASH_VALIDATION_LEVEL
-                    ),
+                    "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL,
                 }
             )
         except BridgeError as exc:
@@ -772,6 +765,8 @@ def value_candidates_to_husky_csv_rows(
                 "model_version": cand["model_version"],
                 "rules_version": cand["rules_version"],
                 "data_status": cand["data_status"],
+                "formal_mode": "true",
+                "execution_eligible": "true",
                 "weather_bundle_sha256": weather_sha256,
                 "value_bundle_sha256": value_sha256,
                 "bridge_manifest_sha256": bridge_manifest_sha256,
@@ -873,6 +868,7 @@ def _build_validation_report(
         "converted_signal_count": len(rows),
         "rejected_signal_count": value_validation["rejected_count"],
         "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL,
+        "execution_eligible": True,
         "formal_ledger_used": False,
         "wallet_or_real_order_used": False,
         "files": {name: name for name in REQUIRED_OUTPUT_FILES},
@@ -951,8 +947,20 @@ def verify_bridge_output(output_dir: Path) -> dict[str, Any]:
             errors.append(exc.code)
 
     try:
-        formal_mode = bool(core["conversion_parameters"]["formal_mode"])
+        formal_mode = core["conversion_parameters"]["formal_mode"] is True
         entry_valid_minutes = int(core["conversion_parameters"]["entry_valid_minutes"])
+        if not formal_mode:
+            errors.append("INFORMAL_EXECUTION_BUNDLE_FORBIDDEN")
+        if core.get("execution_eligible") is not True:
+            errors.append("EXECUTION_ELIGIBILITY_MISMATCH")
+        if manifest.get("execution_eligible") is not True:
+            errors.append("EXECUTION_ELIGIBILITY_MISMATCH")
+        if report.get("execution_eligible") is not True:
+            errors.append("EXECUTION_ELIGIBILITY_MISMATCH")
+        if core.get("conversion_parameters", {}).get("orderbook_hash_verification") != ORDERBOOK_HASH_VALIDATION_LEVEL:
+            errors.append("ORDERBOOK_HASH_VERIFICATION_MISMATCH")
+        if manifest.get("orderbook_hash_verification") != ORDERBOOK_HASH_VALIDATION_LEVEL:
+            errors.append("ORDERBOOK_HASH_VERIFICATION_MISMATCH")
         weather_validation = validate_weather_probability_bundle(weather, formal_mode=formal_mode)
         result["weather_revalidation_result"] = {"ok": True}
     except (BridgeError, KeyError, TypeError, ValueError) as exc:
@@ -997,6 +1005,9 @@ def verify_bridge_output(output_dir: Path) -> dict[str, Any]:
                 if notes.get("bridge_manifest_sha256") != actual_core_sha:
                     errors.append("csv_core_manifest_reference_mismatch")
                     break
+                if notes.get("formal_mode") != "true" or notes.get("execution_eligible") != "true":
+                    errors.append("CSV_EXECUTION_ELIGIBILITY_MISMATCH")
+                    break
         except OSError as exc:
             errors.append(f"csv_read_failed:{exc}")
             actual_rows = []
@@ -1008,6 +1019,7 @@ def verify_bridge_output(output_dir: Path) -> dict[str, Any]:
         identity_keys = (
             "bridge_version", "forecast_run_id", "model_version", "rules_version", "station", "city", "weather_date_local",
             "weather_metric", "as_of_time_utc", "as_of_time_cst", "data_status", "formal_ledger_used", "wallet_or_real_order_used",
+            "execution_eligible",
         )
         expected_identity = _build_core_manifest(
             weather, weather_validation, value_validation, entry_valid_minutes=entry_valid_minutes, formal_mode=formal_mode
@@ -1033,7 +1045,18 @@ def verify_bridge_output(output_dir: Path) -> dict[str, Any]:
         errors.append("formal_ledger_used_not_false")
     if manifest.get("wallet_or_real_order_used") is not False or core.get("wallet_or_real_order_used") is not False:
         errors.append("wallet_or_real_order_used_not_false")
-    result["semantic_replay_result"] = {"ok": not any("revalidation_failed" in error or "rebuild_mismatch" in error or error == "manifest_identity_mismatch" for error in errors)}
+    result["semantic_replay_result"] = {"ok": not any(
+        "revalidation_failed" in error
+        or "rebuild_mismatch" in error
+        or error in {
+            "manifest_identity_mismatch",
+            "INFORMAL_EXECUTION_BUNDLE_FORBIDDEN",
+            "EXECUTION_ELIGIBILITY_MISMATCH",
+            "CSV_EXECUTION_ELIGIBILITY_MISMATCH",
+            "ORDERBOOK_HASH_VERIFICATION_MISMATCH",
+        }
+        for error in errors
+    )}
     result.update({
         "ok": not errors,
         "errors": errors,
@@ -1072,6 +1095,7 @@ def _build_core_manifest(
             "formal_mode": bool(formal_mode),
             "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL,
         },
+        "execution_eligible": True,
         "accepted_candidates": value_validation["accepted"],
         "rejected_candidates": value_validation["rejected"],
         "formal_ledger_used": False,
@@ -1143,6 +1167,7 @@ def _write_run_artifacts(
         "formal_ledger_used": False,
         "wallet_or_real_order_used": False,
         "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL,
+        "execution_eligible": True,
         "input_content_hashes": {
             "weather_probability_bundle": weather_validation["bundle_sha256"],
             "value_signal_bundle": value_validation["value_sha256"],
@@ -1186,6 +1211,11 @@ def convert_bundles(
     forecast_run_id = str(weather.get("forecast_run_id") or "")
     if not forecast_run_id:
         raise BridgeError("MISSING_FORECAST_RUN_ID", "weather.forecast_run_id required")
+    if formal_mode is not True:
+        raise BridgeError(
+            "INFORMAL_EXECUTION_EXPORT_FORBIDDEN",
+            "informal bundles may be validated for research but cannot export Husky execution CSV",
+        )
 
     output_root = Path(output_root)
     output_root.mkdir(parents=True, exist_ok=True)

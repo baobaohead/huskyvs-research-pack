@@ -578,3 +578,168 @@ def test_coordinated_core_value_csv_report_and_source_tampering_is_rejected(tmp_
     verified = verify_bridge_output(weather_out)
     assert verified["ok"] is False
     assert "core_rebuild_mismatch" in verified["errors"]
+
+
+@pytest.mark.parametrize("amount", [0.01, 0.1, 0.5, 1, 10, 10.25])
+def test_strictly_positive_intended_usd_including_sub_dollar_is_exportable(tmp_path, amount):
+    weather = _weather(forecast_run_id=f"sub_dollar_{str(amount).replace('.', '_')}")
+    candidate = _candidate("32C", 0.35, 0.25, forecast_run_id=weather["forecast_run_id"], intended_usd=amount)
+    value = _value(weather, [candidate])
+    assert validate_value_signal_bundle(weather, value)["accepted_count"] == 1
+    result = convert_bundles(weather, value, tmp_path)
+    out = Path(result["output_dir"])
+    core = json.loads((out / "bridge_manifest_core.json").read_text(encoding="utf-8"))
+    assert core["accepted_candidates"][0]["intended_usd"] == str(amount)
+    assert verify_bridge_output(out)["ok"] is True
+
+
+@pytest.mark.parametrize("amount", [0, 0.0, -1, "", "1e-1", " 0.5", "0.5 ", "not-a-number"])
+def test_zero_negative_and_noncanonical_intended_usd_are_rejected(amount):
+    weather = _weather()
+    candidate = _candidate("32C", 0.35, 0.25, forecast_run_id=weather["forecast_run_id"], intended_usd=amount)
+    with pytest.raises(BridgeError):
+        validate_value_signal_bundle(weather, _value(weather, [candidate]))
+
+
+def test_zero_core_intended_usd_tamper_fails_semantic_replay(tmp_path):
+    weather = _weather(forecast_run_id="zero_core_amount")
+    out = Path(convert_bundles(weather, _value(weather), tmp_path)["output_dir"])
+    core_path = out / "bridge_manifest_core.json"
+    core = json.loads(core_path.read_text(encoding="utf-8"))
+    core["accepted_candidates"][0]["intended_usd"] = "0"
+    _write_json(core_path, core)
+    core_sha = sha256_file(core_path)
+    csv_path = out / "husky_entry_signals.csv"
+    rows = list(csv.DictReader(csv_path.open(encoding="utf-8")))
+    for row in rows:
+        row["notes"] = row["notes"].replace(parse_notes(row["notes"])["bridge_manifest_sha256"], core_sha)
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+    _refresh_wrapper_hashes(out)
+    verified = verify_bridge_output(out)
+    assert verified["ok"] is False
+    assert "CORE_MANIFEST_JSON_SCHEMA_INVALID" in verified["errors"]
+
+
+def test_informal_validation_is_research_only_and_cannot_export(tmp_path):
+    weather = _weather(forecast_run_id="informal_export_forbidden")
+    value = _value(weather)
+    assert validate_weather_probability_bundle(weather, formal_mode=False)["ok"] is True
+    assert validate_value_signal_bundle(weather, value, formal_mode=False)["ok"] is True
+    with pytest.raises(BridgeError) as exc_info:
+        convert_bundles(weather, value, tmp_path, formal_mode=False)
+    assert exc_info.value.code == "INFORMAL_EXECUTION_EXPORT_FORBIDDEN"
+    assert not (tmp_path / "informal_export_forbidden").exists()
+    assert not list(tmp_path.glob(".tmp_informal_export_forbidden_*"))
+    from src.d1_signal_bridge_v1 import main
+
+    weather_path = tmp_path / "weather.json"
+    value_path = tmp_path / "value.json"
+    weather_path.write_text(json.dumps(weather), encoding="utf-8")
+    value_path.write_text(json.dumps(value), encoding="utf-8")
+    cli_root = tmp_path / "cli"
+    assert main([
+        "convert", "--weather", str(weather_path), "--value", str(value_path),
+        "--output-root", str(cli_root), "--allow-informal",
+    ]) == 2
+    assert not (cli_root / "informal_export_forbidden").exists()
+
+
+def test_external_orderbook_evidence_path_is_schema_rejected_without_reading(tmp_path):
+    weather = _weather()
+    candidate = _candidate(
+        "32C",
+        0.35,
+        0.25,
+        forecast_run_id=weather["forecast_run_id"],
+        orderbook_snapshot_evidence_path="/definitely/not/read/orderbook.json",
+    )
+    with pytest.raises(BridgeError) as exc_info:
+        validate_value_signal_bundle(weather, _value(weather, [candidate]))
+    assert exc_info.value.code == "VALUE_JSON_SCHEMA_INVALID"
+    candidate["orderbook_snapshot_evidence_path"] = "../outside/orderbook.json"
+    with pytest.raises(BridgeError) as exc_info:
+        validate_value_signal_bundle(weather, _value(weather, [candidate]))
+    assert exc_info.value.code == "VALUE_JSON_SCHEMA_INVALID"
+
+
+@pytest.mark.parametrize("alias", ["high", "highest", "最高温", "最高气温"])
+def test_formal_weather_metric_aliases_are_rejected(alias):
+    with pytest.raises(BridgeError) as exc_info:
+        validate_weather_probability_bundle(_weather(weather_metric=alias))
+    assert exc_info.value.code == "WEATHER_METRIC_INVALID"
+
+
+def test_execution_eligibility_and_orderbook_level_tampering_is_rejected(tmp_path):
+    def fresh(name: str) -> Path:
+        weather = _weather(forecast_run_id=name)
+        return Path(convert_bundles(weather, _value(weather), tmp_path)["output_dir"])
+
+    formal_out = fresh("formal_mode_tamper")
+    core_path = formal_out / "bridge_manifest_core.json"
+    core = json.loads(core_path.read_text(encoding="utf-8"))
+    core["conversion_parameters"]["formal_mode"] = False
+    _write_json(core_path, core)
+    _refresh_wrapper_hashes(formal_out)
+    assert "INFORMAL_EXECUTION_BUNDLE_FORBIDDEN" in verify_bridge_output(formal_out)["errors"]
+
+    core_eligibility_out = fresh("core_eligibility_tamper")
+    core_path = core_eligibility_out / "bridge_manifest_core.json"
+    core = json.loads(core_path.read_text(encoding="utf-8"))
+    core["execution_eligible"] = False
+    _write_json(core_path, core)
+    _refresh_wrapper_hashes(core_eligibility_out)
+    assert "EXECUTION_ELIGIBILITY_MISMATCH" in verify_bridge_output(core_eligibility_out)["errors"]
+
+    manifest_eligibility_out = fresh("manifest_eligibility_tamper")
+    manifest_path = manifest_eligibility_out / "bridge_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["execution_eligible"] = False
+    _write_json(manifest_path, manifest)
+    (manifest_eligibility_out / "bridge_manifest.sha256").write_text(sha256_file(manifest_path) + "\n", encoding="utf-8")
+    assert "EXECUTION_ELIGIBILITY_MISMATCH" in verify_bridge_output(manifest_eligibility_out)["errors"]
+
+    report_eligibility_out = fresh("report_eligibility_tamper")
+    report_path = report_eligibility_out / "validation_report.json"
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["execution_eligible"] = False
+    _write_json(report_path, report)
+    _refresh_wrapper_hashes(report_eligibility_out)
+    assert "EXECUTION_ELIGIBILITY_MISMATCH" in verify_bridge_output(report_eligibility_out)["errors"]
+
+    csv_out = fresh("csv_eligibility_tamper")
+    csv_path = csv_out / "husky_entry_signals.csv"
+    rows = list(csv.DictReader(csv_path.open(encoding="utf-8")))
+    rows[0]["notes"] = rows[0]["notes"].replace(";execution_eligible=true", "")
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)
+    _refresh_wrapper_hashes(csv_out)
+    assert "CSV_EXECUTION_ELIGIBILITY_MISMATCH" in verify_bridge_output(csv_out)["errors"]
+
+    orderbook_out = fresh("orderbook_level_tamper")
+    core_path = orderbook_out / "bridge_manifest_core.json"
+    core = json.loads(core_path.read_text(encoding="utf-8"))
+    core["conversion_parameters"]["orderbook_hash_verification"] = "evidence_file_verified"
+    _write_json(core_path, core)
+    _refresh_wrapper_hashes(orderbook_out)
+    assert "ORDERBOOK_HASH_VERIFICATION_MISMATCH" in verify_bridge_output(orderbook_out)["errors"]
+
+
+def test_sub_dollar_intended_usd_registers_in_demo(tmp_path):
+    weather = _weather(forecast_run_id="sub_dollar_demo")
+    candidate = _candidate("32C", 0.35, 0.25, forecast_run_id=weather["forecast_run_id"], intended_usd=0.5)
+    result = convert_bundles(weather, _value(weather, [candidate]), tmp_path / "bridge")
+    demo_root = tmp_path / "demo"
+    init_ledger(demo_root, DEMO, CONFIG)
+    accepted = register_signals(
+        demo_root,
+        DEMO,
+        CONFIG,
+        Path(result["husky_csv"]),
+        now=datetime.fromisoformat("2026-07-23T07:00:20+00:00"),
+    )
+    assert len(accepted) == 1

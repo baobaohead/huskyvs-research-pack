@@ -18,7 +18,7 @@ If this document, old READMEs, templates, or chat notes conflict with the manual
 
 Value layer must not rewrite weather probabilities. Identity fields must bind across layers.
 
-Canonical formal metric: **`highest_temperature`** (aliases `high` / `highest` / `最高温` accepted then normalized).
+The public D1 bundle metric is exactly **`highest_temperature`**. Formal bundles reject `high`, `highest`, `最高温`, and `最高气温`; any upstream alias normalization must finish before the D1 bundle is produced.
 
 Station/city aliases:
 
@@ -70,9 +70,7 @@ Evidence paths inside manifests/reports are **output-relative** (portable). CLI 
 `source_snapshot_sha256` must equal canonical SHA256(`source_snapshot_manifest`) and be 64-char lowercase hex.  
 All source timestamps (`acquired_at*`, `released_at*`, `published_at*`, `captured_at*`, `source_time*`) must parse with timezone; invalid ⇒ `SOURCE_TIMESTAMP_INVALID` (never silently ignored). Late ⇒ `LEAKAGE_INVALID`.
 
-Order book hashes are validated as 64-char hex. Unless `orderbook_snapshot_evidence_path` points to a local evidence file that is re-hashed, verification level is:
-
-`orderbook_hash_verification=reference_format_only`
+This v1 contract uses `orderbook_hash_verification=reference_format_only` only. It validates the order-book snapshot SHA-256 format, non-empty snapshot ID, and capture-time cutoff; it does **not** read, verify, or claim to verify an external local order-book file. A future self-contained evidence design must use a v2 contract that copies evidence into the bundle and manifests it.
 
 ---
 
@@ -89,6 +87,14 @@ Status rules:
 - Value top-level must not upgrade weather status to COMPLETE
 - COMPLETE weather may be downgraded by value
 - `LEAKAGE_INVALID` always rejected for conversion
+
+## Execution eligibility
+
+`validate-weather --allow-informal` and `validate-value --allow-informal` remain research-only validation operations. `convert --allow-informal` and `convert_bundles(..., formal_mode=False)` are rejected with `INFORMAL_EXECUTION_EXPORT_FORBIDDEN` before any run directory, artifact, or CSV is created.
+
+Every exported formal run records `execution_eligible=true`; core conversion parameters record `formal_mode=true`. The final manifest, validation report, and every CSV notes field also carry the same execution-eligibility assertion. `verify-output` rejects any disagreement.
+
+`intended_usd` is strictly greater than zero. Core manifests preserve its canonical decimal string, including valid sub-dollar values such as `0.01`, `0.1`, and `0.5`.
 
 ---
 

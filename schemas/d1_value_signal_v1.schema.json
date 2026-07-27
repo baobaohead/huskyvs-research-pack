@@ -77,8 +77,7 @@
           },
           "orderbook_snapshot_id": { "type": "string", "minLength": 1 },
           "orderbook_snapshot_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "orderbook_captured_at_utc": { "type": "string", "format": "date-time" },
-          "orderbook_snapshot_evidence_path": { "type": "string" }
+          "orderbook_captured_at_utc": { "type": "string", "format": "date-time" }
         }
       }
     }
