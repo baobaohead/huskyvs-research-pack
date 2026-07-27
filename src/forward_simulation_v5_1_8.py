@@ -1047,6 +1047,12 @@ def register_signals(root: Path, mode: str, config_path: Path, signals_file: Pat
                 prepared: list[tuple[dict[str, Any], dict[str, Any], str]] = []
                 for row in rows:
                     payload = validate_signal(row, mode, conn, config, now)
+                    expected_deadline = d1_verification["csv_entry_deadlines"].get(payload["signal_id"])
+                    if not expected_deadline or payload["entry_deadline_utc"] != expected_deadline:
+                        raise ValueError(
+                            f"D1_ENTRY_DEADLINE_MISMATCH: {{'signal_id': {payload['signal_id']!r}, "
+                            f"'expected': {expected_deadline!r}, 'actual': {payload['entry_deadline_utc']!r}}}"
+                        )
                     sig_hash = signal_evidence_from_row(root, config_path, row, payload, mode, now)["canonical_sha"]
                     existing = conn.execute("SELECT * FROM signals WHERE mode=? AND signal_id=? ORDER BY row_id", (mode, payload["signal_id"])).fetchall()
                     if existing:

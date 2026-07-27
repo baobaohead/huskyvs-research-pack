@@ -10,10 +10,11 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-import os
 import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 try:
     from src.d1_signal_bridge_v1 import (
@@ -91,25 +92,77 @@ def _require_hash(value: Any, field: str) -> str:
 
 
 def _assert_no_symlink(path: Path, code: str) -> None:
-    if path.is_symlink() or path.absolute() != path.resolve():
+    if path.is_symlink():
         raise D1RegistrationGateError(code, "symbolic-link path is not permitted")
 
 
+def _assert_no_explicit_traversal(path: Path) -> None:
+    if ".." in path.parts:
+        raise D1RegistrationGateError("D1_PATH_TRAVERSAL_FORBIDDEN", str(path))
+
+
+def _strict_positive_int(value: Any, field: str, *, code: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise D1RegistrationGateError(code, {field: value})
+    return value
+
+
+def _strict_utc(value: Any, field: str) -> datetime:
+    if not isinstance(value, str):
+        raise D1RegistrationGateError("D1_ENTRY_DEADLINE_MISMATCH", {field: value})
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise D1RegistrationGateError("D1_ENTRY_DEADLINE_MISMATCH", {field: value}) from exc
+    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+        raise D1RegistrationGateError("D1_ENTRY_DEADLINE_MISMATCH", {field: value})
+    return parsed.astimezone(timezone.utc)
+
+
+def _portable_run_locator(forecast_run_id: Any) -> str:
+    if not isinstance(forecast_run_id, str) or not forecast_run_id:
+        raise D1RegistrationGateError("D1_RUN_DIRECTORY_LOCATOR_INVALID", forecast_run_id)
+    encoded = quote(forecast_run_id, safe="-._")
+    locator = f"d1_signal_bridge/{encoded}"
+    if (
+        locator.startswith("/")
+        or ".." in Path(locator).parts
+        or "\\" in locator
+        or re.match(r"^[A-Za-z]:", locator)
+        or "/Users/baobaotou" in locator
+    ):
+        raise D1RegistrationGateError("D1_RUN_DIRECTORY_LOCATOR_INVALID", locator)
+    return locator
+
+
+def _assert_csv_deadlines(rows: list[dict[str, str]], entry_valid_minutes: int) -> None:
+    for row in rows:
+        created = _strict_utc(row.get("created_at_utc"), "created_at_utc")
+        deadline = _strict_utc(row.get("entry_deadline_utc"), "entry_deadline_utc")
+        expected_deadline = created + timedelta(minutes=entry_valid_minutes)
+        if deadline != expected_deadline:
+            raise D1RegistrationGateError(
+                "D1_ENTRY_DEADLINE_MISMATCH",
+                {"signal_id": row.get("signal_id", ""), "expected": expected_deadline.isoformat(), "actual": deadline.isoformat()},
+            )
+
+
 def _gate_run_directory(csv_path: Path) -> Path:
+    _assert_no_explicit_traversal(csv_path)
     if csv_path.name != CANONICAL_CSV_NAME:
         raise D1RegistrationGateError("D1_CSV_NOT_CANONICAL", csv_path.name)
     if not csv_path.is_file():
         raise D1RegistrationGateError("D1_BRIDGE_OUTPUT_MISSING", CANONICAL_CSV_NAME)
-    _assert_no_symlink(csv_path, "D1_CSV_NOT_CANONICAL")
+    _assert_no_symlink(csv_path, "D1_SYMLINK_PATH_FORBIDDEN")
     run_dir = csv_path.parent
-    _assert_no_symlink(run_dir, "D1_CSV_NOT_CANONICAL")
+    _assert_no_symlink(run_dir, "D1_SYMLINK_PATH_FORBIDDEN")
     for name in REQUIRED_OUTPUT_FILES:
         child = run_dir / name
         if not child.is_file():
             raise D1RegistrationGateError("D1_BRIDGE_OUTPUT_MISSING", name)
-        _assert_no_symlink(child, "D1_BRIDGE_OUTPUT_MISSING")
+        _assert_no_symlink(child, "D1_SYMLINK_PATH_FORBIDDEN")
         if child.resolve().parent != run_dir.resolve():
-            raise D1RegistrationGateError("D1_BRIDGE_OUTPUT_MISSING", name)
+            raise D1RegistrationGateError("D1_PATH_TRAVERSAL_FORBIDDEN", name)
     return run_dir
 
 
@@ -141,7 +194,7 @@ def _assert_safety_flags(core: dict[str, Any], manifest: dict[str, Any], report:
         raise D1RegistrationGateError("D1_ORDERBOOK_VERIFICATION_LEVEL_INVALID")
 
 
-def _assert_row_bindings(rows: list[dict[str, str]], core: dict[str, Any], manifest: dict[str, Any], core_sha: str) -> None:
+def _assert_row_bindings(rows: list[dict[str, str]], core: dict[str, Any], manifest: dict[str, Any], core_sha: str, entry_valid_minutes: int) -> dict[str, str]:
     candidates = core.get("accepted_candidates")
     if not isinstance(candidates, list) or len(rows) != len(candidates):
         raise D1RegistrationGateError("D1_CSV_CONTENT_MISMATCH")
@@ -152,6 +205,7 @@ def _assert_row_bindings(rows: list[dict[str, str]], core: dict[str, Any], manif
     value_sha = _require_hash((manifest.get("input_content_hashes") or {}).get("value_signal_bundle"), "manifest.value")
     _require_hash(core_sha, "bridge_manifest_core")
     seen_runs: set[str] = set()
+    deadlines: dict[str, str] = {}
     for index, (row, candidate) in enumerate(zip(rows, candidates), start=1):
         if not isinstance(candidate, dict):
             raise D1RegistrationGateError("D1_CANDIDATE_BINDING_MISMATCH", index)
@@ -179,8 +233,13 @@ def _assert_row_bindings(rows: list[dict[str, str]], core: dict[str, Any], manif
         }
         if any(notes.get(key) != value for key, value in required_pairs.items()):
             raise D1RegistrationGateError("D1_CANDIDATE_BINDING_MISMATCH", index)
+        created = _strict_utc(row.get("created_at_utc"), "created_at_utc")
+        deadline = _strict_utc(row.get("entry_deadline_utc"), "entry_deadline_utc")
+        _assert_csv_deadlines([row], entry_valid_minutes)
+        deadlines[str(row.get("signal_id", ""))] = deadline.isoformat()
     if seen_runs != {run_id}:
         raise D1RegistrationGateError("D1_RUN_ID_MISMATCH")
+    return deadlines
 
 
 def verify_d1_registration_bundle(
@@ -195,7 +254,7 @@ def verify_d1_registration_bundle(
     Returns ``None`` for a wholly non-D1 file.  Any D1 row makes the entire
     input subject to this gate in both DEMO and FORMAL modes.
     """
-    del mode, config  # Both modes deliberately share one verification path.
+    del mode  # Both modes deliberately share one verification path.
     candidate_path = Path(csv_path)
     sources = {str(row.get("source", "")) for row in parsed_rows}
     d1_present = SOURCE_TAG in sources
@@ -210,6 +269,20 @@ def verify_d1_registration_bundle(
     run_dir = _gate_run_directory(candidate_path)
     verified = verify_bridge_output(run_dir)
     if not _all_bridge_results_ok(verified):
+        # The bridge verifier remains authoritative.  Classify a malformed
+        # deadline precisely after it has run, so callers receive the stable
+        # registration-contract error rather than a generic replay failure.
+        try:
+            failed_core = _load_json(run_dir / "bridge_manifest_core.json")
+            failed_window = _strict_positive_int(
+                (failed_core.get("conversion_parameters") or {}).get("entry_valid_minutes"),
+                "bridge_entry_valid_minutes",
+                code="D1_ENTRY_WINDOW_MISMATCH",
+            )
+            _assert_csv_deadlines(parsed_rows, failed_window)
+        except D1RegistrationGateError as exc:
+            if exc.code == "D1_ENTRY_DEADLINE_MISMATCH":
+                raise
         raise D1RegistrationGateError("D1_BRIDGE_VERIFY_FAILED", verified.get("errors", []))
     manifest = verified.get("manifest")
     if not isinstance(manifest, dict):
@@ -220,17 +293,29 @@ def verify_d1_registration_bundle(
     core_sha = _sha256_file(run_dir / "bridge_manifest_core.json")
     if core_sha != verified.get("core_sha256"):
         raise D1RegistrationGateError("D1_HASH_MISMATCH", "bridge_manifest_core")
+    bridge_window = _strict_positive_int(
+        (core.get("conversion_parameters") or {}).get("entry_valid_minutes"),
+        "bridge_entry_valid_minutes",
+        code="D1_ENTRY_WINDOW_MISMATCH",
+    )
+    husky_window = _strict_positive_int(
+        (config.get("entry") or {}).get("entry_valid_minutes"),
+        "husky_entry_valid_minutes",
+        code="D1_ENTRY_WINDOW_MISMATCH",
+    )
+    if bridge_window != husky_window:
+        raise D1RegistrationGateError(
+            "D1_ENTRY_WINDOW_MISMATCH",
+            {"bridge_entry_valid_minutes": bridge_window, "husky_entry_valid_minutes": husky_window, "forecast_run_id": manifest.get("forecast_run_id")},
+        )
     # Re-read through the canonical path so the submitted rows cannot be a
     # caller-supplied, detached in-memory subset.
     with (run_dir / CANONICAL_CSV_NAME).open(encoding="utf-8", newline="") as handle:
         canonical_rows = list(csv.DictReader(handle))
     if parsed_rows != canonical_rows:
         raise D1RegistrationGateError("D1_CSV_CONTENT_MISMATCH")
-    _assert_row_bindings(canonical_rows, core, manifest, core_sha)
-    try:
-        portable = os.path.relpath(run_dir, Path(root).resolve())
-    except ValueError:
-        portable = run_dir.name
+    deadlines = _assert_row_bindings(canonical_rows, core, manifest, core_sha, bridge_window)
+    portable = _portable_run_locator(manifest.get("forecast_run_id"))
     return {
         "d1_bridge_verified": True,
         "verification_time_utc": "",  # Filled by the registration transaction.
@@ -239,6 +324,8 @@ def verify_d1_registration_bundle(
         "model_version": core.get("model_version", ""),
         "rules_version": core.get("rules_version", ""),
         "run_directory_relative": portable,
+        "entry_valid_minutes": bridge_window,
+        "csv_entry_deadlines": deadlines,
         "bridge_manifest_sha256": verified.get("manifest_sha256", ""),
         "bridge_manifest_core_sha256": core_sha,
         "weather_bundle_sha256": (manifest.get("input_content_hashes") or {}).get("weather_probability_bundle", ""),
