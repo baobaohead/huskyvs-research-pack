@@ -28,6 +28,11 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from src.d1_registration_gate_v1 import verify_d1_registration_bundle
+except ModuleNotFoundError:
+    from d1_registration_gate_v1 import verify_d1_registration_bundle
+
+try:
     from src.polymarket_public_adapter_v5_1_8 import (
         ADAPTER_NAME,
         ADAPTER_VERSION,
@@ -263,7 +268,10 @@ def normalize_city(city: str) -> str:
 
 def normalize_metric(metric: str) -> str:
     raw = " ".join(str(metric or "").strip().lower().split())
-    return {"highest": "high", "max": "high", "highest temperature": "high", "lowest": "low", "min": "low", "lowest temperature": "low"}.get(raw, raw)
+    return {
+        "highest": "high", "max": "high", "highest temperature": "high", "highest_temperature": "high",
+        "lowest": "low", "min": "low", "lowest temperature": "low", "lowest_temperature": "low",
+    }.get(raw, raw)
 
 
 def make_event_key(city: str, weather_date_local: str, weather_metric: str) -> str:
@@ -948,16 +956,120 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
+def persist_d1_registration_evidence(conn: sqlite3.Connection, mode: str, verification: dict[str, Any], now: datetime) -> str:
+    evidence_id = id_for(
+        "d1_reg_ev",
+        {"mode": mode, "core": verification["bridge_manifest_core_sha256"], "signals": verification["verified_signal_ids_json"]},
+    )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO d1_registration_evidence(
+          evidence_id,verification_time_utc,forecast_run_id,bridge_version,model_version,rules_version,run_directory_relative,
+          bridge_manifest_sha256,bridge_manifest_core_sha256,weather_bundle_sha256,value_bundle_sha256,semantic_replay_result,
+          execution_eligible,formal_mode,source,verified_signal_count,verified_signal_ids_json,formal_ledger_used,
+          wallet_or_real_order_used,mode
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            evidence_id,
+            now.isoformat(),
+            verification["forecast_run_id"],
+            verification["bridge_version"],
+            verification["model_version"],
+            verification["rules_version"],
+            verification["run_directory_relative"],
+            verification["bridge_manifest_sha256"],
+            verification["bridge_manifest_core_sha256"],
+            verification["weather_bundle_sha256"],
+            verification["value_bundle_sha256"],
+            verification["semantic_replay_result"],
+            int(bool(verification["execution_eligible"])),
+            int(bool(verification["formal_mode"])),
+            verification["source"],
+            int(verification["verified_signal_count"]),
+            verification["verified_signal_ids_json"],
+            int(bool(verification["formal_ledger_used"])),
+            int(bool(verification["wallet_or_real_order_used"])),
+            mode,
+        ),
+    )
+    return evidence_id
+
+
+def persist_registered_signal(
+    conn: sqlite3.Connection,
+    root: Path,
+    config_path: Path,
+    mode: str,
+    row: dict[str, Any],
+    payload: dict[str, Any],
+    now: datetime,
+) -> dict[str, Any]:
+    sid = payload["signal_id"]
+    ev = signal_evidence_from_row(root, config_path, row, payload, mode, now)
+    sig_hash = ev["canonical_sha"]
+    audit_id = append_audit(conn, mode, "", "signal_registered", {"signal_id": sid, "signal_hash": sig_hash, "event_key": payload["event_key"]}, "info", now)
+    conn.execute(
+        """
+        INSERT INTO signal_registration_evidence(evidence_id,signal_id,original_signal_payload_bytes,original_signal_payload_sha256,canonical_signal_json,canonical_signal_sha256,normalized_signal_fields_json,registered_at_utc,registration_run_id,registration_lock_id,registration_code_hash,registration_config_hash,mode)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (ev["evidence_id"], sid, ev["raw_bytes"], ev["raw_sha"], ev["canonical_json"], ev["canonical_sha"], ev["normalized_json"], now.isoformat(), ev["registration_run_id"], ev["registration_lock_id"], ev["registration_code_hash"], ev["registration_config_hash"], mode),
+    )
+    conn.execute(
+        """
+        INSERT INTO signals(signal_id,signal_hash,registration_evidence_id,original_signal_payload_sha256,canonical_signal_sha256,registration_run_id,registration_lock_id,registration_code_hash,registration_config_hash,registration_audit_id,created_at_utc,registered_at_utc,city,city_normalized,weather_date_local,weather_metric,temperature_bucket,event_key,market_slug,condition_id,token_id,outcome,side,forecast_temperature,forecast_probability,market_probability_at_signal,intended_usd,max_entry_price,entry_deadline_utc,source,notes,mode)
+        VALUES(:signal_id,:signal_hash,:registration_evidence_id,:original_signal_payload_sha256,:canonical_signal_sha256,:registration_run_id,:registration_lock_id,:registration_code_hash,:registration_config_hash,:registration_audit_id,:created_at_utc,:registered_at_utc,:city,:city_normalized,:weather_date_local,:weather_metric,:temperature_bucket,:event_key,:market_slug,:condition_id,:token_id,:outcome,:side,:forecast_temperature,:forecast_probability,:market_probability_at_signal,:intended_usd,:max_entry_price,:entry_deadline_utc,:source,:notes,:mode)
+        """,
+        {**payload, "signal_hash": sig_hash, "registration_evidence_id": ev["evidence_id"], "original_signal_payload_sha256": ev["raw_sha"], "canonical_signal_sha256": ev["canonical_sha"], "registration_run_id": ev["registration_run_id"], "registration_lock_id": ev["registration_lock_id"], "registration_code_hash": ev["registration_code_hash"], "registration_config_hash": ev["registration_config_hash"], "registration_audit_id": audit_id},
+    )
+    conn.execute(
+        "INSERT INTO entry_order_state(signal_id,token_id,updated_at_utc,intended_usd,filled_entry_usd,remaining_entry_usd,filled_entry_shares,entry_status,max_entry_price,entry_deadline_utc,last_entry_attempt_at,last_attempt_reason,mode) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (sid, payload["token_id"], now.isoformat(), payload["intended_usd"], "0", payload["intended_usd"], "0", "pending", payload["max_entry_price"], payload["entry_deadline_utc"], "", "registered", mode),
+    )
+    return payload
+
+
 def register_signals(root: Path, mode: str, config_path: Path, signals_file: Path, now: datetime | None = None) -> list[dict[str, Any]]:
     config = load_config(config_path)
-    db = init_ledger(root, mode, config_path)
     now = (now or utcnow()).astimezone(timezone.utc)
     rows = read_csv_rows(signals_file)
+    d1_verification = verify_d1_registration_bundle(signals_file, rows, mode, root, config)
+    db = init_ledger(root, mode, config_path)
     conn = connect(db)
     accepted: list[dict[str, Any]] = []
     try:
         assert_formal_hashes(root, mode, config_path, conn)
         with conn:
+            # A D1 bridge submission is a signed-off *set*, not independent
+            # user rows.  Validate every row before creating any ledger record.
+            if d1_verification is not None:
+                prepared: list[tuple[dict[str, Any], dict[str, Any], str]] = []
+                for row in rows:
+                    payload = validate_signal(row, mode, conn, config, now)
+                    expected_deadline = d1_verification["csv_entry_deadlines"].get(payload["signal_id"])
+                    if not expected_deadline or payload["entry_deadline_utc"] != expected_deadline:
+                        raise ValueError(
+                            f"D1_ENTRY_DEADLINE_MISMATCH: {{'signal_id': {payload['signal_id']!r}, "
+                            f"'expected': {expected_deadline!r}, 'actual': {payload['entry_deadline_utc']!r}}}"
+                        )
+                    sig_hash = signal_evidence_from_row(root, config_path, row, payload, mode, now)["canonical_sha"]
+                    existing = conn.execute("SELECT * FROM signals WHERE mode=? AND signal_id=? ORDER BY row_id", (mode, payload["signal_id"])).fetchall()
+                    if existing:
+                        if any(item["signal_hash"] != sig_hash for item in existing):
+                            raise ValueError(f"D1 duplicate signal conflict: {payload['signal_id']}")
+                        prepared.append((row, payload, "existing"))
+                    else:
+                        prepared.append((row, payload, "new"))
+                persist_d1_registration_evidence(conn, mode, d1_verification, now)
+                append_audit(conn, mode, "", "d1_registration_verified", {**d1_verification, "verification_time_utc": now.isoformat()}, "info", now)
+                for row, payload, state in prepared:
+                    if state == "existing":
+                        existing_row = conn.execute("SELECT * FROM signals WHERE mode=? AND signal_id=? ORDER BY row_id DESC LIMIT 1", (mode, payload["signal_id"])).fetchone()
+                        accepted.append(dict(existing_row))
+                    else:
+                        accepted.append(persist_registered_signal(conn, root, config_path, mode, row, payload, now))
+                return accepted
             for row in rows:
                 sid = row.get("signal_id", "")
                 try:
@@ -971,51 +1083,7 @@ def register_signals(root: Path, mode: str, config_path: Path, signals_file: Pat
                             continue
                         accepted.append(dict(existing[-1]))
                         continue
-                    audit_id = append_audit(conn, mode, "", "signal_registered", {"signal_id": sid, "signal_hash": sig_hash, "event_key": payload["event_key"]}, "info", now)
-                    conn.execute(
-                        """
-                        INSERT INTO signal_registration_evidence(evidence_id,signal_id,original_signal_payload_bytes,original_signal_payload_sha256,canonical_signal_json,canonical_signal_sha256,normalized_signal_fields_json,registered_at_utc,registration_run_id,registration_lock_id,registration_code_hash,registration_config_hash,mode)
-                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
-                        """,
-                        (
-                            ev["evidence_id"],
-                            sid,
-                            ev["raw_bytes"],
-                            ev["raw_sha"],
-                            ev["canonical_json"],
-                            ev["canonical_sha"],
-                            ev["normalized_json"],
-                            now.isoformat(),
-                            ev["registration_run_id"],
-                            ev["registration_lock_id"],
-                            ev["registration_code_hash"],
-                            ev["registration_config_hash"],
-                            mode,
-                        ),
-                    )
-                    conn.execute(
-                        """
-                        INSERT INTO signals(signal_id,signal_hash,registration_evidence_id,original_signal_payload_sha256,canonical_signal_sha256,registration_run_id,registration_lock_id,registration_code_hash,registration_config_hash,registration_audit_id,created_at_utc,registered_at_utc,city,city_normalized,weather_date_local,weather_metric,temperature_bucket,event_key,market_slug,condition_id,token_id,outcome,side,forecast_temperature,forecast_probability,market_probability_at_signal,intended_usd,max_entry_price,entry_deadline_utc,source,notes,mode)
-                        VALUES(:signal_id,:signal_hash,:registration_evidence_id,:original_signal_payload_sha256,:canonical_signal_sha256,:registration_run_id,:registration_lock_id,:registration_code_hash,:registration_config_hash,:registration_audit_id,:created_at_utc,:registered_at_utc,:city,:city_normalized,:weather_date_local,:weather_metric,:temperature_bucket,:event_key,:market_slug,:condition_id,:token_id,:outcome,:side,:forecast_temperature,:forecast_probability,:market_probability_at_signal,:intended_usd,:max_entry_price,:entry_deadline_utc,:source,:notes,:mode)
-                        """,
-                        {
-                            **payload,
-                            "signal_hash": sig_hash,
-                            "registration_evidence_id": ev["evidence_id"],
-                            "original_signal_payload_sha256": ev["raw_sha"],
-                            "canonical_signal_sha256": ev["canonical_sha"],
-                            "registration_run_id": ev["registration_run_id"],
-                            "registration_lock_id": ev["registration_lock_id"],
-                            "registration_code_hash": ev["registration_code_hash"],
-                            "registration_config_hash": ev["registration_config_hash"],
-                            "registration_audit_id": audit_id,
-                        },
-                    )
-                    conn.execute(
-                        "INSERT INTO entry_order_state(signal_id,token_id,updated_at_utc,intended_usd,filled_entry_usd,remaining_entry_usd,filled_entry_shares,entry_status,max_entry_price,entry_deadline_utc,last_entry_attempt_at,last_attempt_reason,mode) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                        (sid, payload["token_id"], now.isoformat(), payload["intended_usd"], "0", payload["intended_usd"], "0", "pending", payload["max_entry_price"], payload["entry_deadline_utc"], "", "registered", mode),
-                    )
-                    accepted.append(payload)
+                    accepted.append(persist_registered_signal(conn, root, config_path, mode, row, payload, now))
                 except Exception as exc:
                     append_audit(conn, mode, "", "signal_rejected", {"signal_id": sid, "reason": str(exc)}, "warning", now)
         return accepted

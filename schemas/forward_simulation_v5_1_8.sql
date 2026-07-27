@@ -74,6 +74,30 @@ CREATE TABLE IF NOT EXISTS signal_registration_evidence (
   UNIQUE(signal_id, mode)
 );
 
+CREATE TABLE IF NOT EXISTS d1_registration_evidence (
+  evidence_id TEXT PRIMARY KEY,
+  verification_time_utc TEXT NOT NULL,
+  forecast_run_id TEXT NOT NULL,
+  bridge_version TEXT NOT NULL,
+  model_version TEXT NOT NULL,
+  rules_version TEXT NOT NULL,
+  run_directory_relative TEXT NOT NULL,
+  bridge_manifest_sha256 TEXT NOT NULL,
+  bridge_manifest_core_sha256 TEXT NOT NULL,
+  weather_bundle_sha256 TEXT NOT NULL,
+  value_bundle_sha256 TEXT NOT NULL,
+  semantic_replay_result TEXT NOT NULL,
+  execution_eligible INTEGER NOT NULL,
+  formal_mode INTEGER NOT NULL,
+  source TEXT NOT NULL,
+  verified_signal_count INTEGER NOT NULL,
+  verified_signal_ids_json TEXT NOT NULL,
+  formal_ledger_used INTEGER NOT NULL,
+  wallet_or_real_order_used INTEGER NOT NULL,
+  mode TEXT NOT NULL,
+  UNIQUE(mode, bridge_manifest_core_sha256)
+);
+
 CREATE TABLE IF NOT EXISTS signals (
   row_id INTEGER PRIMARY KEY AUTOINCREMENT,
   signal_id TEXT NOT NULL,
