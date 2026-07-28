@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import sqlite3
 from copy import deepcopy
 from decimal import Decimal
 from pathlib import Path
@@ -12,8 +13,12 @@ from src.husky_zbaa_fast_lab_v1 import (
     FORMAL_ZERO_STATUS,
     ValidationError,
     analyze_history,
+    build_run_identity,
+    build_signal_id,
     buckets_adjacent,
     build_portfolios,
+    bucket_wins,
+    decimal,
     evaluate_market,
     iter_csv_chunks,
     load_saved_evidence,
@@ -22,7 +27,11 @@ from src.husky_zbaa_fast_lab_v1 import (
     probability_for_bucket,
     render_daily_report,
     run_shadow,
+    settle_shadow,
+    summarize_shadow,
+    update_shadow,
     validate_probability_input,
+    write_demo_ledger,
 )
 
 
@@ -343,3 +352,378 @@ def test_35_daily_report_is_plain_language(markets: list[dict], validated: dict)
     report = render_daily_report(validated, evaluations, portfolios, [], {"evidence_label": "FIXTURE"})
     for phrase in ("一、天气判断", "二、市场判断", "三、模拟动作", "四、退出实验", "继续观察", "五、风险提醒"):
         assert phrase in report
+
+
+def _json_file(path: Path, payload: dict) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
+def _dated_probability(tmp_path: Path, weather_date: str, forecast_run_id: str, *, lower_tail: bool = False) -> Path:
+    payload = json.loads(INPUT_PATH.read_text(encoding="utf-8"))
+    day = int(weather_date[-2:])
+    payload["forecast_run_id"] = forecast_run_id
+    payload["weather_date_local"] = weather_date
+    payload["as_of_time_cst"] = f"2026-07-{day - 1:02d}T15:00:00+08:00"
+    payload["as_of_time_utc"] = f"2026-07-{day - 1:02d}T07:00:00Z"
+    payload["generated_at_utc"] = f"2026-07-{day - 1:02d}T07:00:00Z"
+    if lower_tail:
+        by_temp = {row["temperature_c"]: row for row in payload["integer_temperature_probabilities"]}
+        by_temp[25]["probability"] = 0.25
+        by_temp[28]["probability"] = 0.15
+    return _json_file(tmp_path / f"probability-{weather_date}.json", payload)
+
+
+def _dated_evidence(
+    tmp_path: Path,
+    weather_date: str,
+    *,
+    suffix: str,
+    book_mode: str = "entry",
+) -> Path:
+    payload = json.loads(EVIDENCE_PATH.read_text(encoding="utf-8"))
+    day = int(weather_date[-2:])
+    payload["evidence_label"] = f"TEST_FIXTURE_{book_mode.upper()}_{weather_date}"
+    payload["captured_at_utc"] = f"2026-07-{day - 1:02d}T08:00:00Z"
+    for record in payload["markets"]:
+        gamma = record["gamma"]
+        gamma["question"] = gamma["question"].replace("July 22", f"July {day}")
+        gamma["title"] = gamma["title"].replace("July 22", f"July {day}")
+        gamma["slug"] = gamma["slug"].replace("july-22-2026", f"july-{day}-2026")
+        gamma["endDate"] = f"{weather_date}T12:00:00Z"
+        old_condition = gamma["conditionId"]
+        gamma["conditionId"] = old_condition + suffix
+        tokens = json.loads(gamma["clobTokenIds"])
+        tokens = [token + suffix for token in tokens]
+        gamma["clobTokenIds"] = json.dumps(tokens)
+        record["clob"]["condition_id"] = gamma["conditionId"]
+        record["orderbook"]["market"] = gamma["conditionId"]
+        record["orderbook"]["asset_id"] = tokens[0]
+        record["captured_at_utc"] = payload["captured_at_utc"]
+        if book_mode == "no_trigger":
+            record["orderbook"]["bids"] = [{"price": "0.10", "size": "10000"}]
+            record["orderbook"]["asks"] = [{"price": "0.50", "size": "10000"}]
+        elif book_mode == "fake_best_bid":
+            record["orderbook"]["bids"] = [
+                {"price": "0.40", "size": "5"},
+                {"price": "0.20", "size": "10000"},
+            ]
+            record["orderbook"]["asks"] = [{"price": "0.50", "size": "10000"}]
+        elif book_mode == "trigger":
+            record["orderbook"]["bids"] = [{"price": "0.40", "size": "10000"}]
+            record["orderbook"]["asks"] = [{"price": "0.50", "size": "10000"}]
+    return _json_file(tmp_path / f"evidence-{weather_date}-{book_mode}.json", payload)
+
+
+def _new_run(
+    tmp_path: Path,
+    name: str,
+    weather_date: str,
+    forecast_run_id: str,
+    *,
+    lower_tail: bool = False,
+) -> tuple[Path, Path, Path, dict]:
+    probability = _dated_probability(tmp_path, weather_date, forecast_run_id, lower_tail=lower_tail)
+    evidence = _dated_evidence(tmp_path, weather_date, suffix=f"-{name}")
+    run_dir = tmp_path / name
+    report = run_shadow(probability, Decimal("20"), run_dir, evidence)
+    return run_dir, probability, evidence, report
+
+
+def _ledger_rows(run_dir: Path, table: str) -> list[sqlite3.Row]:
+    with sqlite3.connect(run_dir / "demo_ledger.sqlite3") as connection:
+        connection.row_factory = sqlite3.Row
+        return connection.execute(f"SELECT * FROM {table} ORDER BY signal_id,exit_rule").fetchall()
+
+
+def test_36_run_id_binds_required_identity(validated: dict) -> None:
+    identity = build_run_identity(validated)
+    assert identity["forecast_run_id"] == validated["forecast_run_id"]
+    assert identity["station"] == "ZBAA"
+    assert identity["weather_date_local"] == "2026-07-22"
+    assert identity["as_of_time_utc"] == "2026-07-21T07:00:00Z"
+    assert len(identity["probability_input_sha256"]) == 64
+    changed = deepcopy(validated)
+    changed["forecast_run_id"] = "different"
+    assert build_run_identity(changed)["run_id"] != identity["run_id"]
+
+
+def test_37_different_dates_have_different_signal_ids(tmp_path: Path) -> None:
+    _, _, _, first = _new_run(tmp_path, "run22", "2026-07-22", "forecast-22")
+    _, _, _, second = _new_run(tmp_path, "run23", "2026-07-23", "forecast-23")
+    first_id = build_signal_id(first["run_identity"]["run_id"], "EDGE_05", "MAIN_ONLY", "exact:28C")
+    second_id = build_signal_id(second["run_identity"]["run_id"], "EDGE_05", "MAIN_ONLY", "exact:28C")
+    assert first_id != second_id
+
+
+def test_38_identical_rerun_is_idempotent_noop(tmp_path: Path) -> None:
+    run_dir, probability, evidence, first = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    ledger_mtime = (run_dir / "demo_ledger.sqlite3").stat().st_mtime_ns
+    second = run_shadow(probability, Decimal("20"), run_dir, evidence)
+    assert first["run_identity"]["run_id"] == second["run_identity"]["run_id"]
+    assert second["run_status"] == "IDEMPOTENT_NOOP"
+    assert (run_dir / "demo_ledger.sqlite3").stat().st_mtime_ns == ledger_mtime
+
+
+def test_39_same_identity_different_content_rejected(tmp_path: Path) -> None:
+    run_dir, probability, evidence, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    payload = json.loads(probability.read_text(encoding="utf-8"))
+    payload["integer_temperature_probabilities"][0]["probability"] = 0.06
+    payload["integer_temperature_probabilities"][1]["probability"] = 0.09
+    conflicting = _json_file(tmp_path / "conflicting.json", payload)
+    with pytest.raises(ValidationError, match="same run identity"):
+        run_shadow(conflicting, Decimal("20"), run_dir, evidence)
+
+
+def test_40_output_dir_other_run_rejected(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    probability = _dated_probability(tmp_path, "2026-07-23", "other-forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-23", suffix="-other")
+    with pytest.raises(ValidationError, match="another run_id"):
+        run_shadow(probability, Decimal("20"), run_dir, evidence)
+
+
+def test_changed_intended_usd_is_conflicting_run_content(tmp_path: Path) -> None:
+    run_dir, probability, evidence, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    with pytest.raises(ValidationError, match="different run content"):
+        run_shadow(probability, Decimal("21"), run_dir, evidence)
+
+
+def test_41_ledger_cannot_be_silently_overwritten(tmp_path: Path) -> None:
+    run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    with pytest.raises(ValidationError, match="overwrite"):
+        write_demo_ledger(run_dir / "demo_ledger.sqlite3", report["run_identity"], [], [])
+
+
+def test_42_update_uses_bid_depth_not_asks(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    result = update_shadow(run_dir, evidence)
+    triggered = next(item for item in result["results"] if item["status"] == "TRIGGERED")
+    assert triggered["executable_sell_vwap"] == Decimal("0.40")
+    assert triggered["best_ask"] == Decimal("0.50")
+
+
+def test_43_best_bid_only_fake_trigger_rejected(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="fake_best_bid")
+    result = update_shadow(run_dir, evidence)
+    doubles = [item for item in result["results"] if item["exit_rule"] != "HOLD"]
+    assert any(item["best_bid_only_would_trigger"] for item in doubles)
+    assert all(item["status"] == "OPEN_NO_TRIGGER" for item in doubles)
+    assert all(item["filled_sell_shares"] == 0 for item in doubles)
+
+
+def test_44_depth_vwap_at_2x_triggers(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    result = update_shadow(run_dir, evidence)
+    doubles = [item for item in result["results"] if item["exit_rule"] != "HOLD"]
+    assert doubles and all(item["status"] == "TRIGGERED" for item in doubles)
+    assert all(item["executable_sell_vwap"] >= item["trigger_threshold"] for item in doubles)
+
+
+def test_45_double_sell_50_sells_exact_target(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    update_shadow(run_dir, evidence)
+    row = next(row for row in _ledger_rows(run_dir, "demo_exit_experiments") if row["exit_rule"] == "DOUBLE_SELL_50")
+    assert decimal(row["filled_sell_shares"]) == decimal(row["entry_shares"]) * Decimal("0.50")
+    assert decimal(row["remaining_shares"]) == decimal(row["entry_shares"]) * Decimal("0.50")
+
+
+def test_46_double_sell_75_sells_exact_target(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    update_shadow(run_dir, evidence)
+    row = next(row for row in _ledger_rows(run_dir, "demo_exit_experiments") if row["exit_rule"] == "DOUBLE_SELL_75")
+    assert decimal(row["filled_sell_shares"]) == decimal(row["entry_shares"]) * Decimal("0.75")
+    assert decimal(row["remaining_shares"]) == decimal(row["entry_shares"]) * Decimal("0.25")
+
+
+def test_47_hold_stays_open_on_update(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    result = update_shadow(run_dir, evidence)
+    holds = [item for item in result["results"] if item["exit_rule"] == "HOLD"]
+    assert holds and all(item["status"] == "OPEN" and item["filled_sell_shares"] == 0 for item in holds)
+
+
+def test_48_repeated_exit_is_rejected_and_not_resold(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    update_shadow(run_dir, evidence)
+    before = {
+        (row["signal_id"], row["exit_rule"]): row["simulated_proceeds"]
+        for row in _ledger_rows(run_dir, "demo_exit_experiments")
+    }
+    repeated = update_shadow(run_dir, evidence)
+    assert all(
+        item["status"] == "REPEATED_EXIT_REJECTED"
+        for item in repeated["results"]
+        if item["exit_rule"] != "HOLD"
+    )
+    after = {
+        (row["signal_id"], row["exit_rule"]): row["simulated_proceeds"]
+        for row in _ledger_rows(run_dir, "demo_exit_experiments")
+    }
+    assert after == before
+
+
+def test_49_updates_append_snapshots(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger")
+    first = update_shadow(run_dir, evidence)
+    second = update_shadow(run_dir, evidence)
+    assert first["update_id"] != second["update_id"]
+    assert len(list((run_dir / "update_snapshots").glob("*.json"))) == 2
+    assert len(_ledger_rows(run_dir, "demo_update_snapshots")) == 42
+
+
+def test_50_exact_settlement(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    result = settle_shadow(run_dir, 28)
+    exact = [item for item in result["positions"] if item["temperature_bucket"] == "exact:28C"]
+    assert exact and all(item["bucket_won"] for item in exact)
+    assert all(item["settlement_proceeds"] > 0 for item in exact)
+
+
+def test_51_lower_tail_settlement(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast", lower_tail=True)
+    result = settle_shadow(run_dir, 24)
+    lower = [item for item in result["positions"] if item["temperature_bucket"] == "or_below:25C"]
+    assert lower and all(item["bucket_won"] for item in lower)
+    assert bucket_wins("or_below", Decimal("25"), 24)
+
+
+def test_52_upper_tail_settlement(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    result = settle_shadow(run_dir, 30)
+    upper = [item for item in result["positions"] if item["temperature_bucket"] == "or_higher:29C"]
+    assert upper and all(item["bucket_won"] for item in upper)
+    assert bucket_wins("or_higher", Decimal("29"), 30)
+
+
+def test_53_partial_exit_plus_remaining_settlement(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    update_shadow(run_dir, evidence)
+    result = settle_shadow(run_dir, 28)
+    item = next(
+        row for row in result["positions"]
+        if row["temperature_bucket"] == "exact:28C" and row["exit_rule"] == "DOUBLE_SELL_50"
+    )
+    assert item["realized_exit_proceeds"] > 0
+    assert item["settlement_proceeds"] > 0
+    assert item["total_proceeds"] == item["realized_exit_proceeds"] + item["settlement_proceeds"]
+
+
+def test_54_same_settlement_is_idempotent(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    settle_shadow(run_dir, 28)
+    repeated = settle_shadow(run_dir, 28)
+    assert repeated["settlement_status"] == "IDEMPOTENT_NOOP"
+
+
+def test_55_conflicting_settlement_rejected(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    settle_shadow(run_dir, 28)
+    with pytest.raises(ValidationError, match="conflicting settlement"):
+        settle_shadow(run_dir, 29)
+
+
+def test_settled_run_cannot_be_updated(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    settle_shadow(run_dir, 28)
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    with pytest.raises(ValidationError, match="settled run"):
+        update_shadow(run_dir, evidence)
+
+
+def test_56_summary_reads_only_settled_runs(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    settled, _, _, _ = _new_run(root, "run22", "2026-07-22", "forecast-22")
+    _new_run(root, "run23", "2026-07-23", "forecast-23")
+    settle_shadow(settled, 28)
+    result = summarize_shadow(root)
+    assert result["settled_event_count"] == 1
+
+
+def test_57_summary_aggregates_one_event_per_weather_date(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    run22, _, _, _ = _new_run(root, "run22", "2026-07-22", "forecast-22")
+    run23, _, _, _ = _new_run(root, "run23", "2026-07-23", "forecast-23")
+    settle_shadow(run22, 28)
+    settle_shadow(run23, 28)
+    result = summarize_shadow(root)
+    strategy = next(
+        item for item in result["strategies"]
+        if (item["edge_rule"], item["portfolio_rule"], item["exit_rule"]) == ("EDGE_15", "MAIN_ONLY", "HOLD")
+    )
+    assert result["settled_event_count"] == 2
+    assert strategy["settled_event_count"] == 2
+    assert len(strategy["events"]) == 2
+
+
+def test_58_summary_maximum_consecutive_losses(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    run22, _, _, _ = _new_run(root, "run22", "2026-07-22", "forecast-22")
+    run23, _, _, _ = _new_run(root, "run23", "2026-07-23", "forecast-23")
+    settle_shadow(run22, 20)
+    settle_shadow(run23, 20)
+    result = summarize_shadow(root)
+    strategy = next(
+        item for item in result["strategies"]
+        if (item["edge_rule"], item["portfolio_rule"], item["exit_rule"]) == ("EDGE_15", "MAIN_ONLY", "HOLD")
+    )
+    assert strategy["maximum_consecutive_losses"] == 2
+    assert strategy["losing_events"] == 2
+
+
+def test_59_summary_removes_top_one_and_top_five(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    run22, _, _, _ = _new_run(root, "run22", "2026-07-22", "forecast-22")
+    run23, _, _, _ = _new_run(root, "run23", "2026-07-23", "forecast-23")
+    settle_shadow(run22, 28)
+    settle_shadow(run23, 28)
+    result = summarize_shadow(root)
+    strategy = next(
+        item for item in result["strategies"]
+        if (item["edge_rule"], item["portfolio_rule"], item["exit_rule"]) == ("EDGE_15", "MAIN_ONLY", "HOLD")
+    )
+    positive = sorted((event["net_pnl"] for event in strategy["events"] if event["net_pnl"] > 0), reverse=True)
+    assert strategy["pnl_without_top_1"] == strategy["total_pnl"] - sum(positive[:1], Decimal("0"))
+    assert strategy["pnl_without_top_5"] == strategy["total_pnl"] - sum(positive[:5], Decimal("0"))
+    assert strategy["sample_status"] == "INSUFFICIENT_FORWARD_SAMPLE"
+
+
+def test_no_trade_run_can_settle_and_be_summarized(tmp_path: Path) -> None:
+    root = tmp_path / "runs"
+    probability = _dated_probability(root, "2026-07-22", "no-trade")
+    evidence_path = _dated_evidence(root, "2026-07-22", suffix="-no-trade")
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    for record in evidence["markets"]:
+        record["orderbook"]["bids"] = [{"price": "0.80", "size": "10000"}]
+        record["orderbook"]["asks"] = [{"price": "0.90", "size": "10000"}]
+    _json_file(evidence_path, evidence)
+    run_dir = root / "run-no-trade"
+    report = run_shadow(probability, Decimal("20"), run_dir, evidence_path)
+    assert report["demo_ledger"]["demo_signal_count"] == 0
+    settlement = settle_shadow(run_dir, 28)
+    assert settlement["positions"] == []
+    summary = summarize_shadow(root)
+    assert summary["settled_event_count"] == 1
+    assert all(item["traded_event_count"] == 0 for item in summary["strategies"])
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["update-shadow", "--run-dir", "unused", "--saved-public-evidence", "unused", "--mode", "FORMAL"],
+        ["settle-shadow", "--run-dir", "unused", "--observed-max-temp-c", "28", "--mode", "FORMAL"],
+        ["summarize-shadow", "--runs-root", "unused", "--mode", "FORMAL"],
+    ],
+)
+def test_60_formal_rejected_for_new_commands(argv: list[str]) -> None:
+    assert main(argv) == 2
