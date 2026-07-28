@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "d1_value_signal_v2.schema.json",
+  "title": "D1ValueSignalBundleV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "forecast_run_id", "model_version", "rules_version", "station", "city", "weather_date_local", "weather_metric", "as_of_time_utc", "generated_at_utc", "data_status", "weather_bundle_sha256", "market_snapshot_manifest", "market_snapshot_sha256", "orderbook_evidence", "candidates"],
+  "properties": {
+    "schema_version": {"const": "2.0"}, "forecast_run_id": {"type": "string", "minLength": 1},
+    "model_version": {"const": "D1_1500"}, "rules_version": {"const": "D1_manual_v1.0"},
+    "station": {"enum": ["ZSPD", "ZBAA"]}, "city": {"type": "string", "minLength": 1},
+    "weather_date_local": {"type": "string", "format": "date"}, "weather_metric": {"const": "highest_temperature"},
+    "as_of_time_utc": {"type": "string", "format": "date-time"}, "generated_at_utc": {"type": "string", "format": "date-time"},
+    "data_status": {"enum": ["COMPLETE", "PARTIAL", "CONFLICTING", "STALE", "LEAKAGE_INVALID"]},
+    "weather_bundle_sha256": {"$ref": "#/$defs/sha"}, "market_snapshot_sha256": {"$ref": "#/$defs/sha"},
+    "market_snapshot_manifest": {"$ref": "#/$defs/market"},
+    "orderbook_evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/orderbook"}},
+    "candidates": {"type": "array", "items": {"$ref": "#/$defs/candidate"}}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "market": {"type": "object", "additionalProperties": false, "required": ["market_slug", "event_id", "condition_id", "question", "city", "weather_date_local", "weather_metric", "active", "closed", "accepting_orders", "outcomes", "clob_token_ids", "captured_at_utc", "method", "gamma_market_payload", "clob_market_payload", "gamma_payload_sha256", "clob_payload_sha256"], "properties": {"market_slug": {"type":"string","minLength":1}, "event_id": {"type":"string","minLength":1}, "condition_id": {"type":"string","minLength":1}, "question": {"type":"string","minLength":1}, "city": {"type":"string","minLength":1}, "weather_date_local": {"type":"string","format":"date"}, "weather_metric": {"const":"highest_temperature"}, "active":{"type":"boolean"}, "closed":{"type":"boolean"}, "accepting_orders":{"type":"boolean"}, "outcomes":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}}, "clob_token_ids":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}}, "captured_at_utc":{"type":"string","format":"date-time"}, "method":{"const":"GET"}, "gamma_market_payload":{"type":"object"}, "clob_market_payload":{"type":"object"}, "gamma_payload_sha256":{"$ref":"#/$defs/sha"}, "clob_payload_sha256":{"$ref":"#/$defs/sha"}}},
+    "orderbook": {"type":"object","additionalProperties":false,"required":["orderbook_snapshot_id","condition_id","token_id","endpoint","method","status_code","request_started_at_utc","captured_at_utc","raw_payload","raw_payload_sha256","normalized_book","normalized_book_sha256","normalization_algorithm_version","best_bid","best_ask"],"properties":{"orderbook_snapshot_id":{"type":"string","minLength":1},"condition_id":{"type":"string","minLength":1},"token_id":{"type":"string","minLength":1},"endpoint":{"type":"string","format":"uri"},"method":{"const":"GET"},"status_code":{"const":200},"request_started_at_utc":{"type":"string","format":"date-time"},"captured_at_utc":{"type":"string","format":"date-time"},"raw_payload":{"type":"object"},"raw_payload_sha256":{"$ref":"#/$defs/sha"},"normalized_book":{"type":"object"},"normalized_book_sha256":{"$ref":"#/$defs/sha"},"normalization_algorithm_version":{"type":"string","minLength":1},"best_bid":{"type":["number","null"]},"best_ask":{"type":["number","null"]}}},
+    "candidate": {"type":"object","additionalProperties":false,"required":["forecast_run_id","station","weather_date_local","weather_metric","temperature_bucket","forecast_probability","market_slug","condition_id","token_id","outcome","market_ask_price","edge","recommended_max_price","intended_usd","reason","data_status","orderbook_snapshot_id","orderbook_snapshot_sha256","orderbook_captured_at_utc","orderbook_evidence_ref"],"properties":{"forecast_run_id":{"type":"string","minLength":1},"station":{"enum":["ZSPD","ZBAA"]},"weather_date_local":{"type":"string","format":"date"},"weather_metric":{"const":"highest_temperature"},"temperature_bucket":{"type":"string","minLength":1},"forecast_probability":{"type":"number","minimum":0,"maximum":1},"market_slug":{"type":"string","minLength":1},"condition_id":{"type":"string","minLength":1},"token_id":{"type":"string","minLength":1},"outcome":{"type":"string","minLength":1},"market_ask_price":{"type":"number","minimum":0,"maximum":1},"edge":{"type":"number"},"recommended_max_price":{"type":"number","minimum":0,"maximum":1},"intended_usd":{"type":"number","exclusiveMinimum":0},"reason":{"type":"string"},"data_status":{"enum":["COMPLETE","PARTIAL","CONFLICTING","STALE","LEAKAGE_INVALID"]},"orderbook_snapshot_id":{"type":"string","minLength":1},"orderbook_snapshot_sha256":{"$ref":"#/$defs/sha"},"orderbook_captured_at_utc":{"type":"string","format":"date-time"},"orderbook_evidence_ref":{"type":"string","minLength":1}}}
+  }
+}

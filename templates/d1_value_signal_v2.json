@@ -1,0 +1,18 @@
+{
+  "schema_version": "2.0",
+  "forecast_run_id": "d1_1500_zspd_YYYYMMDD",
+  "model_version": "D1_1500",
+  "rules_version": "D1_manual_v1.0",
+  "station": "ZSPD",
+  "city": "Shanghai",
+  "weather_date_local": "YYYY-MM-DD",
+  "weather_metric": "highest_temperature",
+  "as_of_time_utc": "YYYY-MM-DDT07:00:00Z",
+  "generated_at_utc": "YYYY-MM-DDT07:00:00Z",
+  "data_status": "COMPLETE",
+  "weather_bundle_sha256": "REPLACE_WITH_64_LOWERCASE_HEX",
+  "market_snapshot_manifest": {},
+  "market_snapshot_sha256": "REPLACE_WITH_64_LOWERCASE_HEX",
+  "orderbook_evidence": [],
+  "candidates": []
+}
