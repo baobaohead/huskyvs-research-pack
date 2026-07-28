@@ -49,13 +49,6 @@ def validate_v2_schema(value: Any) -> dict[str, Any]:
     return {"ok": True, "validator": "Draft202012Validator", "format_checker": True}
 
 
-def _payload_value(raw: dict[str, Any], *names: str) -> Any:
-    for name in names:
-        if name in raw and raw[name] not in (None, ""):
-            return raw[name]
-    return None
-
-
 def _require_evidence_string(value: Any, *, source: str, field: str) -> str:
     if not isinstance(value, str) or not value or value != value.strip():
         _error(
@@ -82,6 +75,42 @@ def _strict_scalar_alias(
         for name, value in present
     ]
     if any(value != values[0] for value in values[1:]):
+        _error(
+            "EVIDENCE_ALIAS_CONFLICT",
+            f"{source} {alias_group} aliases conflict",
+            source=source,
+            alias_group=alias_group,
+            present_aliases=[name for name, _ in present],
+        )
+    return values[0]
+
+
+def _require_evidence_bool(value: Any, *, source: str, field: str) -> bool:
+    if type(value) is not bool:
+        _error(
+            "EVIDENCE_BOOLEAN_INVALID",
+            f"{source} {field} must be a JSON boolean",
+            source=source,
+            field=field,
+        )
+    return value
+
+
+def _strict_bool_alias(
+    raw: dict[str, Any],
+    names: tuple[str, ...],
+    *,
+    source: str,
+    alias_group: str,
+) -> bool | None:
+    present = [(name, raw[name]) for name in names if name in raw]
+    if not present:
+        return None
+    values = [
+        _require_evidence_bool(value, source=source, field=name)
+        for name, value in present
+    ]
+    if any(value is not values[0] for value in values[1:]):
         _error(
             "EVIDENCE_ALIAS_CONFLICT",
             f"{source} {alias_group} aliases conflict",
@@ -186,6 +215,54 @@ def _assert_eq(actual: Any, expected: Any, code: str, field: str) -> None:
         _error(code, f"{field} does not match replayed evidence", actual=actual, expected=expected)
 
 
+def _validate_pre_schema_security_fields(value: Any) -> None:
+    """Give security-critical type failures stable, contract-specific errors."""
+    if not isinstance(value, dict):
+        return
+    manifest = value.get("market_snapshot_manifest")
+    if isinstance(manifest, dict):
+        for field in (
+            "market_slug",
+            "event_id",
+            "question",
+            "city",
+            "weather_date_local",
+            "weather_metric",
+            "condition_id",
+        ):
+            if field in manifest:
+                _require_evidence_string(
+                    manifest[field],
+                    source="market_manifest",
+                    field=field,
+                )
+        for field in ("active", "closed", "accepting_orders"):
+            if field in manifest:
+                _require_evidence_bool(
+                    manifest[field],
+                    source="market_manifest",
+                    field=field,
+                )
+        for field in ("outcomes", "clob_token_ids"):
+            items = manifest.get(field)
+            if isinstance(items, list):
+                for index, item in enumerate(items):
+                    _require_evidence_string(
+                        item,
+                        source="market_manifest",
+                        field=f"{field}[{index}]",
+                    )
+    candidates = value.get("candidates")
+    if isinstance(candidates, list):
+        for index, candidate in enumerate(candidates):
+            if isinstance(candidate, dict) and "market_slug" in candidate:
+                _require_evidence_string(
+                    candidate["market_slug"],
+                    source=f"candidate:{index}",
+                    field="market_slug",
+                )
+
+
 def _validate_market(
     value: dict[str, Any],
     as_of: datetime,
@@ -205,11 +282,31 @@ def _validate_market(
         _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma payload hash mismatch")
     if content_hash(clob) != assert_sha256_hex(m["clob_payload_sha256"], field="clob_payload_sha256"):
         _error("MARKET_IDENTITY_REPLAY_MISMATCH", "clob payload hash mismatch")
-    manifest_condition = _require_evidence_string(
-        m["condition_id"],
-        source="market_manifest",
-        field="condition_id",
-    )
+    manifest_strings = {
+        field: _require_evidence_string(
+            m[field],
+            source="market_manifest",
+            field=field,
+        )
+        for field in (
+            "market_slug",
+            "event_id",
+            "question",
+            "city",
+            "weather_date_local",
+            "weather_metric",
+            "condition_id",
+        )
+    }
+    manifest_bools = {
+        field: _require_evidence_bool(
+            m[field],
+            source="market_manifest",
+            field=field,
+        )
+        for field in ("active", "closed", "accepting_orders")
+    }
+    manifest_condition = manifest_strings["condition_id"]
     condition = _strict_scalar_alias(
         gamma,
         ("conditionId", "condition_id", "condition"),
@@ -218,11 +315,48 @@ def _validate_market(
     )
     if condition is None:
         _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma condition id unavailable")
-    _assert_eq(m["condition_id"], condition, "MARKET_IDENTITY_REPLAY_MISMATCH", "condition_id")
-    for key, names in (("market_slug", ("slug", "market_slug")), ("event_id", ("eventId", "event_id", "id")), ("question", ("question", "title")), ("city", ("city",)), ("weather_date_local", ("weatherDateLocal", "weather_date_local")), ("weather_metric", ("weatherMetric", "weather_metric")), ("active", ("active",)), ("closed", ("closed",)), ("accepting_orders", ("acceptingOrders", "accepting_orders"))):
-        raw = _payload_value(gamma, *names)
-        if raw is None: _error("MARKET_IDENTITY_REPLAY_MISMATCH", f"gamma {key} unavailable")
-        _assert_eq(m[key], raw if isinstance(raw, bool) else str(raw), "MARKET_IDENTITY_REPLAY_MISMATCH", key)
+    _assert_eq(manifest_condition, condition, "MARKET_IDENTITY_REPLAY_MISMATCH", "condition_id")
+    for key, names in (
+        ("market_slug", ("slug", "market_slug")),
+        ("event_id", ("eventId", "event_id", "id")),
+        ("question", ("question", "title")),
+        ("city", ("city",)),
+        ("weather_date_local", ("weatherDateLocal", "weather_date_local")),
+        ("weather_metric", ("weatherMetric", "weather_metric")),
+    ):
+        raw = _strict_scalar_alias(
+            gamma,
+            names,
+            source="gamma",
+            alias_group=key,
+        )
+        if raw is None:
+            _error("MARKET_IDENTITY_REPLAY_MISMATCH", f"gamma {key} unavailable")
+        _assert_eq(
+            manifest_strings[key],
+            raw,
+            "MARKET_IDENTITY_REPLAY_MISMATCH",
+            key,
+        )
+    for key, names in (
+        ("active", ("active",)),
+        ("closed", ("closed",)),
+        ("accepting_orders", ("acceptingOrders", "accepting_orders")),
+    ):
+        raw_bool = _strict_bool_alias(
+            gamma,
+            names,
+            source="gamma",
+            alias_group=key,
+        )
+        if raw_bool is None:
+            _error("MARKET_IDENTITY_REPLAY_MISMATCH", f"gamma {key} unavailable")
+        _assert_eq(
+            manifest_bools[key],
+            raw_bool,
+            "MARKET_IDENTITY_REPLAY_MISMATCH",
+            key,
+        )
     pairs = _extract_exact_outcome_token_pairs(gamma, source="gamma")
     manifest_outcomes = [
         _require_evidence_string(item, source="market_manifest", field=f"outcomes[{index}]")
@@ -252,15 +386,19 @@ def _validate_market(
     if cpairs != pairs:
         _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "CLOB outcome/token mapping does not replay Gamma mapping")
     if (
-        m["city"] != weather_city
-        or m["weather_date_local"] != weather_date_local
-        or m["weather_metric"] != weather_metric
+        manifest_strings["city"] != weather_city
+        or manifest_strings["weather_date_local"] != weather_date_local
+        or manifest_strings["weather_metric"] != weather_metric
     ):
         _error(
             "MARKET_WEATHER_IDENTITY_MISMATCH",
             "market snapshot weather identity does not match the validated weather bundle",
         )
-    if m["active"] is not True or m["closed"] is not False or m["accepting_orders"] is not True:
+    if (
+        manifest_bools["active"] is not True
+        or manifest_bools["closed"] is not False
+        or manifest_bools["accepting_orders"] is not True
+    ):
         _error("MARKET_NOT_TRADABLE", "market snapshot is not active and accepting orders")
     return {"manifest": m, "captured": captured, "pairs": dict(pairs)}
 
@@ -366,6 +504,7 @@ def _validate_orderbooks(value: dict[str, Any], market: dict[str, Any], as_of: d
 def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, Any], *, formal_mode: bool = True) -> dict[str, Any]:
     if isinstance(value, dict) and value.get("orderbook_evidence") == [] and value.get("candidates"):
         _error("ORDERBOOK_EVIDENCE_REF_MISSING", "candidate references cannot be satisfied by an empty evidence set")
+    _validate_pre_schema_security_fields(value)
     validate_v2_schema(value)
     weather_validation = validate_weather_probability_bundle(weather, formal_mode=formal_mode)
     if value.get("schema_version") != SCHEMA_VERSION: _error("VALUE_BUNDLE_VERSION_UNKNOWN", "V2 schema_version required")
@@ -455,6 +594,11 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
             source=f"candidate:{ref}",
             field="outcome",
         )
+        candidate_market_slug = _require_evidence_string(
+            raw["market_slug"],
+            source=f"candidate:{ref}",
+            field="market_slug",
+        )
         if ref not in books: _error("ORDERBOOK_EVIDENCE_REF_MISSING", "candidate evidence reference missing", reference=ref)
         b = books[ref]["item"]
         if candidate_snapshot_id != ref or candidate_condition != b["condition_id"] or candidate_token != b["token_id"]:
@@ -475,7 +619,7 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
             raw["data_status"],
             field="candidate.data_status",
         )
-        if raw["market_slug"] != market["manifest"]["market_slug"] or candidate_outcome != {v:k for k,v in market["pairs"].items()}.get(candidate_token):
+        if candidate_market_slug != market["manifest"]["market_slug"] or candidate_outcome != {v:k for k,v in market["pairs"].items()}.get(candidate_token):
             _error("MARKET_IDENTITY_REPLAY_MISMATCH", "candidate market identity mismatch")
         bucket = normalize_temp_bucket_label(raw["temperature_bucket"])
         fp, ask = Decimal(str(raw["forecast_probability"])), Decimal(str(raw["market_ask_price"]))

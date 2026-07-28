@@ -27,6 +27,14 @@ not contain leading or trailing whitespace. The validator rejects padded or
 ambiguous raw evidence instead of trimming, normalizing, deleting, or
 rewriting it.
 
+This strict alias-consistency rule also applies to Gamma market slug, event ID,
+question, weather date, weather metric, and accepting-orders fields. Every
+present string alias must be a non-empty, unpadded JSON string, and every
+present alias for the same field must match exactly. Market state fields
+(`active`, `closed`, and accepting-orders aliases) must be actual JSON
+booleans; numeric and string substitutes such as `1`, `0`, or `"true"` are
+rejected.
+
 The bridge dispatches by the bridge manifest version.  Registration performs
 that replay before its SQLite transaction and persists
 `orderbook_hash_verification=self_contained_semantic_replay` in the D1

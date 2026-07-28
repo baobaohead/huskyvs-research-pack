@@ -556,3 +556,186 @@ def test_legal_internal_whitespace_outcome_is_accepted():
     rehash_market(value_bundle)
     accepted = validate_value_signal_bundle_v2(weather_bundle, value_bundle)["accepted"][0]
     assert accepted["outcome"] == outcome
+
+
+@pytest.mark.parametrize(
+    "alias,value",
+    [
+        ("market_slug", "different-slug"),
+        ("event_id", "event-2"),
+        ("id", "event-3"),
+        ("title", "Different question"),
+        ("weather_date_local", "2026-07-25"),
+        ("weather_metric", "different_metric"),
+        ("accepting_orders", False),
+    ],
+)
+def test_gamma_market_scalar_alias_conflicts_survive_coordinated_rehash(alias, value):
+    value_bundle, weather_bundle = bundle()
+    gamma = value_bundle["market_snapshot_manifest"]["gamma_market_payload"]
+    gamma[alias] = value
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_ALIAS_CONFLICT") as raised:
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+    assert raised.value.details["source"] == "gamma"
+    assert alias in raised.value.details["present_aliases"]
+    assert "raw_payload" not in raised.value.details
+
+
+def test_gamma_accepting_orders_reverse_boolean_alias_conflict_is_rejected():
+    value_bundle, weather_bundle = bundle()
+    gamma = value_bundle["market_snapshot_manifest"]["gamma_market_payload"]
+    gamma["acceptingOrders"] = False
+    gamma["accepting_orders"] = True
+    value_bundle["market_snapshot_manifest"]["accepting_orders"] = False
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_ALIAS_CONFLICT"):
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+
+
+@pytest.mark.parametrize(
+    "field,bad_value",
+    [
+        ("acceptingOrders", 1),
+        ("acceptingOrders", "true"),
+        ("acceptingOrders", 0),
+        ("acceptingOrders", "false"),
+        ("acceptingOrders", None),
+        ("active", 1),
+        ("closed", 0),
+    ],
+)
+def test_gamma_market_state_requires_true_booleans_after_rehash(field, bad_value):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["market_snapshot_manifest"]["gamma_market_payload"][field] = bad_value
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_BOOLEAN_INVALID") as raised:
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+    assert raised.value.details == {"source": "gamma", "field": field}
+
+
+@pytest.mark.parametrize(
+    "field,bad_value",
+    [
+        ("active", 1),
+        ("active", "true"),
+        ("closed", 0),
+        ("closed", "false"),
+        ("accepting_orders", 1),
+        ("accepting_orders", "true"),
+        ("accepting_orders", None),
+    ],
+)
+def test_manifest_market_state_requires_true_booleans(field, bad_value):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["market_snapshot_manifest"][field] = bad_value
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_BOOLEAN_INVALID") as raised:
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+    assert raised.value.details == {"source": "market_manifest", "field": field}
+
+
+@pytest.mark.parametrize(
+    "alias,bad_value",
+    [
+        ("slug", " shanghai-high"),
+        ("eventId", 1),
+        ("question", ""),
+        ("city", "Shanghai "),
+        ("weatherDateLocal", "\t2026-07-24"),
+        ("weatherMetric", "highest_temperature "),
+    ],
+)
+def test_gamma_market_string_aliases_are_strict(alias, bad_value):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["market_snapshot_manifest"]["gamma_market_payload"][alias] = bad_value
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_STRING_INVALID") as raised:
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+    assert raised.value.details == {"source": "gamma", "field": alias}
+
+
+@pytest.mark.parametrize(
+    "field,bad_value",
+    [
+        ("market_slug", " shanghai-high"),
+        ("market_slug", "shanghai-high "),
+        ("event_id", " event-1"),
+        ("question", "Shanghai high temperature "),
+        ("city", "\tShanghai"),
+        ("weather_date_local", "2026-07-24 "),
+        ("weather_metric", " highest_temperature"),
+        ("condition_id", "cond-1\n"),
+    ],
+)
+def test_manifest_identity_strings_reject_padding(field, bad_value):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["market_snapshot_manifest"][field] = bad_value
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_STRING_INVALID") as raised:
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+    assert raised.value.details == {"source": "market_manifest", "field": field}
+
+
+@pytest.mark.parametrize(
+    "field,bad_value",
+    [
+        ("outcomes", " Yes"),
+        ("clob_token_ids", "token-1 "),
+    ],
+)
+def test_manifest_outcome_and_token_strings_reject_padding(field, bad_value):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["market_snapshot_manifest"][field][0] = bad_value
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_STRING_INVALID") as raised:
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+    assert raised.value.details["source"] == "market_manifest"
+    assert raised.value.details["field"] == f"{field}[0]"
+
+
+@pytest.mark.parametrize("bad_slug", [" shanghai-high", "shanghai-high "])
+def test_candidate_market_slug_rejects_padding(bad_slug):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["candidates"][0]["market_slug"] = bad_slug
+    with pytest.raises(BridgeError, match="EVIDENCE_STRING_INVALID"):
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+
+
+@pytest.mark.parametrize(
+    "alias,expected",
+    [
+        ("market_slug", "shanghai-high"),
+        ("weather_date_local", "2026-07-24"),
+        ("weather_metric", "highest_temperature"),
+        ("accepting_orders", True),
+    ],
+)
+def test_identical_gamma_market_aliases_are_accepted(alias, expected):
+    value_bundle, weather_bundle = bundle()
+    gamma = value_bundle["market_snapshot_manifest"]["gamma_market_payload"]
+    gamma[alias] = expected
+    before = deepcopy(gamma)
+    rehash_market(value_bundle)
+    assert validate_value_signal_bundle_v2(weather_bundle, value_bundle)["accepted_count"] == 1
+    assert gamma == before
+
+
+def test_question_with_internal_spaces_and_identical_title_alias_is_accepted():
+    value_bundle, weather_bundle = bundle()
+    gamma = value_bundle["market_snapshot_manifest"]["gamma_market_payload"]
+    gamma["title"] = gamma["question"]
+    rehash_market(value_bundle)
+    assert validate_value_signal_bundle_v2(weather_bundle, value_bundle)["accepted_count"] == 1
+
+
+def test_legal_single_alias_gamma_market_is_accepted():
+    value_bundle, weather_bundle = bundle()
+    gamma = value_bundle["market_snapshot_manifest"]["gamma_market_payload"]
+    assert "market_slug" not in gamma
+    assert "event_id" not in gamma and "id" not in gamma
+    assert "title" not in gamma
+    assert "weather_date_local" not in gamma
+    assert "weather_metric" not in gamma
+    assert "accepting_orders" not in gamma
+    assert validate_value_signal_bundle_v2(weather_bundle, value_bundle)["accepted_count"] == 1
