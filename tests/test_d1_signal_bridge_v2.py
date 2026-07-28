@@ -18,6 +18,10 @@ def test_v2_convert_verify_and_dispatch(tmp_path):
     value,weather=bundle(); made=convert_bundle_dispatch(weather,value,tmp_path); out=Path(made["output_dir"]); checked=verify_bridge_output_dispatch(out)
     assert checked["ok"] and checked["manifest"]["orderbook_hash_verification"]==ORDERBOOK_HASH_VALIDATION_LEVEL
     with (out/"husky_entry_signals.csv").open() as f: assert next(csv.DictReader(f))["source"]=="d1_signal_bridge_v2"
+    written_weather = json.loads((out / "weather_probability_bundle.json").read_text())
+    written_value = json.loads((out / "value_signal_bundle.json").read_text())
+    assert written_weather["generated_at_utc"] == "2026-07-23T07:02:00+00:00"
+    assert written_value["generated_at_utc"] == "2026-07-23T07:03:00+00:00"
 
 def test_v2_demo_registration_persists_replay_level(tmp_path):
     value,weather=bundle(); out=Path(convert_bundle_dispatch(weather,value,tmp_path)["output_dir"]); config=PROJECT_ROOT/"config/forward_simulation_v5_1_8.yaml"

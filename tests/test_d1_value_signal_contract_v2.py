@@ -16,7 +16,7 @@ def weather():
 
 def bundle():
     w=weather(); gamma={"slug":"shanghai-high","eventId":"event-1","conditionId":"cond-1","question":"Shanghai high temperature","city":"Shanghai","weatherDateLocal":"2026-07-24","weatherMetric":"highest_temperature","active":True,"closed":False,"acceptingOrders":True,"outcomes":["Yes"],"clobTokenIds":["token-1"],"orderPriceMinTickSize":"0.01","orderMinSize":"1"}; clob={"condition_id":"cond-1","outcomes":["Yes"],"clobTokenIds":["token-1"]}; raw={"market":"cond-1","asset_id":"token-1","bids":[{"price":"0.29","size":"10"}],"asks":[{"price":"0.30","size":"10"}],"tick_size":"0.01","min_order_size":"1"}; normalized=normalize_orderbook(raw,"token-1","cond-1",gamma); nbook=json.loads(stable_json(normalized["normalized_book"])); evidence={"orderbook_snapshot_id":"ob-1","condition_id":"cond-1","token_id":"token-1","endpoint":"https://clob.polymarket.com/book?token_id=token-1","method":"GET","status_code":200,"request_started_at_utc":"2026-07-23T06:59:00+00:00","captured_at_utc":"2026-07-23T07:00:00+00:00","raw_payload":raw,"raw_payload_sha256":adapter_hash(raw),"normalized_book":nbook,"normalized_book_sha256":adapter_hash(normalized["normalized_book"]),"normalization_algorithm_version":normalized["normalization_algorithm_version"],"best_bid":.29,"best_ask":.30}; market={"market_slug":"shanghai-high","event_id":"event-1","condition_id":"cond-1","question":"Shanghai high temperature","city":"Shanghai","weather_date_local":"2026-07-24","weather_metric":"highest_temperature","active":True,"closed":False,"accepting_orders":True,"outcomes":["Yes"],"clob_token_ids":["token-1"],"captured_at_utc":"2026-07-23T06:59:30+00:00","method":"GET","gamma_market_payload":gamma,"clob_market_payload":clob,"gamma_payload_sha256":adapter_hash(gamma),"clob_payload_sha256":adapter_hash(clob)}
-    return {"schema_version":"2.0","forecast_run_id":w["forecast_run_id"],"model_version":"D1_1500","rules_version":"D1_manual_v1.0","station":"ZSPD","city":"Shanghai","weather_date_local":"2026-07-24","weather_metric":"highest_temperature","as_of_time_utc":w["as_of_time_utc"],"generated_at_utc":"2026-07-23T07:01:00+00:00","data_status":"COMPLETE","weather_bundle_sha256":content_hash(w),"market_snapshot_manifest":market,"market_snapshot_sha256":adapter_hash(market),"orderbook_evidence":[evidence],"candidates":[{"forecast_run_id":w["forecast_run_id"],"station":"ZSPD","weather_date_local":"2026-07-24","weather_metric":"highest_temperature","temperature_bucket":"32C","forecast_probability":.35,"market_slug":"shanghai-high","condition_id":"cond-1","token_id":"token-1","outcome":"Yes","market_ask_price":.30,"edge":.05,"recommended_max_price":.33,"intended_usd":10,"reason":"fixture","data_status":"COMPLETE","orderbook_snapshot_id":"ob-1","orderbook_snapshot_sha256":evidence["normalized_book_sha256"],"orderbook_captured_at_utc":"2026-07-23T07:00:00+00:00","orderbook_evidence_ref":"ob-1"}]},w
+    return {"schema_version":"2.0","forecast_run_id":w["forecast_run_id"],"model_version":"D1_1500","rules_version":"D1_manual_v1.0","station":"ZSPD","city":"Shanghai","weather_date_local":"2026-07-24","weather_metric":"highest_temperature","as_of_time_utc":w["as_of_time_utc"],"generated_at_utc":"2026-07-23T07:03:00+00:00","data_status":"COMPLETE","weather_bundle_sha256":content_hash(w),"market_snapshot_manifest":market,"market_snapshot_sha256":adapter_hash(market),"orderbook_evidence":[evidence],"candidates":[{"forecast_run_id":w["forecast_run_id"],"station":"ZSPD","weather_date_local":"2026-07-24","weather_metric":"highest_temperature","temperature_bucket":"32C","forecast_probability":.35,"market_slug":"shanghai-high","condition_id":"cond-1","token_id":"token-1","outcome":"Yes","market_ask_price":.30,"edge":.05,"recommended_max_price":.33,"intended_usd":10,"reason":"fixture","data_status":"COMPLETE","orderbook_snapshot_id":"ob-1","orderbook_snapshot_sha256":evidence["normalized_book_sha256"],"orderbook_captured_at_utc":"2026-07-23T07:00:00+00:00","orderbook_evidence_ref":"ob-1"}]},w
 
 def test_valid_v2_contract_replays():
     v,w=bundle(); assert validate_value_signal_bundle_v2(w,v)["accepted_count"]==1
@@ -158,6 +158,8 @@ def test_top_level_value_identity_must_match_weather(field, replacement, code):
 )
 def test_formal_value_generation_window_includes_exact_boundaries(generated_at):
     value, weather_bundle = bundle()
+    weather_bundle["generated_at_utc"] = "2026-07-23T07:00:00+00:00"
+    bind_weather_hash(value, weather_bundle)
     value["generated_at_utc"] = generated_at
     assert validate_value_signal_bundle_v2(weather_bundle, value)["accepted_count"] == 1
 
@@ -265,3 +267,130 @@ def test_accepted_candidate_identity_and_time_are_derived_from_validated_sources
     assert accepted["condition_id"] == value["orderbook_evidence"][0]["condition_id"]
     assert accepted["token_id"] == value["orderbook_evidence"][0]["token_id"]
     assert accepted["orderbook_captured_at_utc"] == value["orderbook_evidence"][0]["captured_at_utc"]
+
+
+def test_value_generated_before_weather_is_rejected():
+    value, weather_bundle = bundle()
+    value["generated_at_utc"] = "2026-07-23T07:01:00+00:00"
+    with pytest.raises(BridgeError, match="VALUE_V2_GENERATED_BEFORE_WEATHER"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "value_generated",
+    [
+        "2026-07-23T07:02:00+00:00",
+        "2026-07-23T07:03:00+00:00",
+    ],
+)
+def test_value_generated_equal_to_or_after_weather_is_accepted(value_generated):
+    value, weather_bundle = bundle()
+    value["generated_at_utc"] = value_generated
+    assert validate_value_signal_bundle_v2(weather_bundle, value)["accepted_count"] == 1
+
+
+def test_in_window_value_still_cannot_precede_weather():
+    value, weather_bundle = bundle()
+    weather_bundle["generated_at_utc"] = "2026-07-23T07:04:00+00:00"
+    value["generated_at_utc"] = "2026-07-23T07:03:00+00:00"
+    bind_weather_hash(value, weather_bundle)
+    with pytest.raises(BridgeError, match="VALUE_V2_GENERATED_BEFORE_WEATHER"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_nonformal_validation_enforces_weather_value_causality():
+    value, weather_bundle = bundle()
+    weather_bundle["generated_at_utc"] = "2026-07-23T08:02:00+00:00"
+    value["generated_at_utc"] = "2026-07-23T08:01:00+00:00"
+    bind_weather_hash(value, weather_bundle)
+    with pytest.raises(BridgeError, match="VALUE_V2_GENERATED_BEFORE_WEATHER"):
+        validate_value_signal_bundle_v2(weather_bundle, value, formal_mode=False)
+
+
+@pytest.mark.parametrize(
+    "source,outcomes,tokens",
+    [
+        ("gamma", ["Yes", "No"], ["token-1"]),
+        ("gamma", ["Yes"], ["token-1", "token-2"]),
+        ("clob", ["Yes", "No"], ["token-1"]),
+        ("clob", ["Yes"], ["token-1", "token-2"]),
+        ("gamma", ["Yes", ""], ["token-1", "token-2"]),
+        ("gamma", ["Yes", "No"], ["token-1", ""]),
+    ],
+)
+def test_outcome_token_arrays_must_be_complete_and_equal(source, outcomes, tokens):
+    value, weather_bundle = bundle()
+    payload = value["market_snapshot_manifest"][f"{source}_market_payload"]
+    payload["outcomes"] = outcomes
+    payload["clobTokenIds"] = tokens
+    rehash_market(value)
+    with pytest.raises(
+        BridgeError,
+        match="MARKET_OUTCOME_TOKEN_CARDINALITY_MISMATCH",
+    ):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "field,values,code",
+    [
+        ("outcomes", ["Yes", "Yes"], "MARKET_OUTCOME_DUPLICATE"),
+        ("clobTokenIds", ["token-1", "token-1"], "MARKET_TOKEN_DUPLICATE"),
+    ],
+)
+def test_coordinated_duplicate_mapping_is_rejected_after_all_hashes_recomputed(field, values, code):
+    value, weather_bundle = bundle()
+    market = value["market_snapshot_manifest"]
+    outcomes = values if field == "outcomes" else ["Yes", "No"]
+    tokens = values if field == "clobTokenIds" else ["token-1", "token-2"]
+    market["outcomes"] = outcomes
+    market["clob_token_ids"] = tokens
+    for source in ("gamma_market_payload", "clob_market_payload"):
+        market[source]["outcomes"] = outcomes
+        market[source]["clobTokenIds"] = tokens
+    rehash_market(value)
+    with pytest.raises(BridgeError, match=code):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_legal_multi_outcome_mapping_preserves_full_order():
+    value, weather_bundle = bundle()
+    market = value["market_snapshot_manifest"]
+    outcomes = ["Yes", "No"]
+    tokens = ["token-1", "token-2"]
+    market["outcomes"] = outcomes
+    market["clob_token_ids"] = tokens
+    for source in ("gamma_market_payload", "clob_market_payload"):
+        market[source]["outcomes"] = outcomes
+        market[source]["clobTokenIds"] = tokens
+    rehash_market(value)
+    assert validate_value_signal_bundle_v2(weather_bundle, value)["accepted_count"] == 1
+
+
+@pytest.mark.parametrize("condition", [None, "", "cond-x"])
+def test_clob_market_condition_is_required_and_exact(condition):
+    value, weather_bundle = bundle()
+    clob = value["market_snapshot_manifest"]["clob_market_payload"]
+    if condition is None:
+        clob.pop("condition_id")
+        expected = "CLOB_MARKET_CONDITION_REQUIRED"
+    else:
+        clob["condition_id"] = condition
+        expected = (
+            "CLOB_MARKET_CONDITION_REQUIRED"
+            if condition == ""
+            else "ORDERBOOK_TOKEN_BINDING_MISMATCH"
+        )
+    rehash_market(value)
+    with pytest.raises(BridgeError, match=expected):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_coordinated_clob_condition_rehash_cannot_override_gamma_identity():
+    value, weather_bundle = bundle()
+    market = value["market_snapshot_manifest"]
+    market["condition_id"] = "cond-x"
+    market["clob_market_payload"]["condition_id"] = "cond-x"
+    rehash_market(value)
+    with pytest.raises(BridgeError, match="MARKET_IDENTITY_REPLAY_MISMATCH"):
+        validate_value_signal_bundle_v2(weather_bundle, value)

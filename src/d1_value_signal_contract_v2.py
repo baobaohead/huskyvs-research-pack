@@ -56,20 +56,52 @@ def _payload_value(raw: dict[str, Any], *names: str) -> Any:
     return None
 
 
-def _as_list(value: Any) -> list[str]:
+def _as_array(value: Any) -> list[Any] | None:
     if isinstance(value, str):
         import json
         try:
             value = json.loads(value)
         except Exception:
-            return [x.strip() for x in value.split(",") if x.strip()]
-    return [str(x) for x in value] if isinstance(value, list) else []
+            return None
+    return value if isinstance(value, list) else None
 
 
-def _pairs_from_payload(raw: dict[str, Any]) -> list[tuple[str, str]]:
-    outcomes = _as_list(_payload_value(raw, "outcomes", "outcome"))
-    tokens = _as_list(_payload_value(raw, "clobTokenIds", "clob_token_ids", "tokens", "tokenIds"))
-    return list(zip(outcomes, tokens))
+def _extract_exact_outcome_token_pairs(
+    raw: dict[str, Any],
+    *,
+    source: str,
+) -> list[tuple[str, str]]:
+    outcomes = _as_array(_payload_value(raw, "outcomes", "outcome"))
+    tokens = _as_array(
+        _payload_value(raw, "clobTokenIds", "clob_token_ids", "tokens", "tokenIds")
+    )
+    if (
+        not outcomes
+        or not tokens
+        or len(outcomes) != len(tokens)
+        or any(not isinstance(item, str) or item == "" for item in outcomes)
+        or any(not isinstance(item, str) or item == "" for item in tokens)
+    ):
+        _error(
+            "MARKET_OUTCOME_TOKEN_CARDINALITY_MISMATCH",
+            f"{source} outcomes and tokens must be non-empty, exact, equal-length string arrays",
+            source=source,
+            outcome_count=len(outcomes or []),
+            token_count=len(tokens or []),
+        )
+    if len(set(outcomes)) != len(outcomes):
+        _error(
+            "MARKET_OUTCOME_DUPLICATE",
+            f"{source} outcomes must be unique",
+            source=source,
+        )
+    if len(set(tokens)) != len(tokens):
+        _error(
+            "MARKET_TOKEN_DUPLICATE",
+            f"{source} tokens must be unique",
+            source=source,
+        )
+    return [(outcomes[index], tokens[index]) for index in range(len(outcomes))]
 
 
 def _assert_eq(actual: Any, expected: Any, code: str, field: str) -> None:
@@ -103,15 +135,21 @@ def _validate_market(
         raw = _payload_value(gamma, *names)
         if raw is None: _error("MARKET_IDENTITY_REPLAY_MISMATCH", f"gamma {key} unavailable")
         _assert_eq(m[key], raw if isinstance(raw, bool) else str(raw), "MARKET_IDENTITY_REPLAY_MISMATCH", key)
-    pairs = _pairs_from_payload(gamma)
-    if not pairs: _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma outcome/token pairs unavailable")
+    pairs = _extract_exact_outcome_token_pairs(gamma, source="gamma")
     _assert_eq(list(m["outcomes"]), [p[0] for p in pairs], "MARKET_IDENTITY_REPLAY_MISMATCH", "outcomes")
     _assert_eq(list(m["clob_token_ids"]), [p[1] for p in pairs], "ORDERBOOK_TOKEN_BINDING_MISMATCH", "clob_token_ids")
     # The selected public CLOB payload must corroborate the chosen condition.
-    ccond = str(_payload_value(clob, "condition_id", "conditionId", "market") or "")
-    if ccond and ccond != condition: _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "CLOB market condition conflicts with Gamma")
-    cpairs = _pairs_from_payload(clob)
-    if not cpairs or cpairs != pairs:
+    clob_condition = _payload_value(clob, "condition_id", "conditionId", "market")
+    if clob_condition is None:
+        _error(
+            "CLOB_MARKET_CONDITION_REQUIRED",
+            "CLOB market payload must contain a non-empty condition",
+        )
+    ccond = str(clob_condition)
+    if ccond != condition or ccond != m["condition_id"]:
+        _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "CLOB market condition conflicts with Gamma or manifest")
+    cpairs = _extract_exact_outcome_token_pairs(clob, source="clob")
+    if cpairs != pairs:
         _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "CLOB outcome/token mapping does not replay Gamma mapping")
     if (
         m["city"] != weather_city
@@ -235,6 +273,15 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
     )
     if formal_mode and value_time["generated_out_of_window"]:
         _error("VALUE_V2_GENERATED_TIME_INVALID", "value bundle is outside the formal generation window")
+    weather_generated = parse_iso_utc(weather["generated_at_utc"])
+    generated = parse_iso_utc(value["generated_at_utc"])
+    if generated < weather_generated:
+        _error(
+            "VALUE_V2_GENERATED_BEFORE_WEATHER",
+            "value bundle cannot be generated before the weather bundle it hashes",
+            weather_generated_at_utc=weather["generated_at_utc"],
+            value_generated_at_utc=value["generated_at_utc"],
+        )
     if value["weather_bundle_sha256"] != weather_validation["bundle_sha256"]:
         _error("WEATHER_HASH_MISMATCH", "weather hash mismatch")
     value_status = _validate_status_no_upgrade(
@@ -250,7 +297,6 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
         weather_metric=weather_validation["weather_metric"],
     )
     books = _validate_orderbooks(value, market, as_of)
-    generated = parse_iso_utc(value["generated_at_utc"])
     if (
         generated < as_of
         or generated < market["captured"]

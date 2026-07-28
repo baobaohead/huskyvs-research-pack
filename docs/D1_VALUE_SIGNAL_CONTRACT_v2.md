@@ -11,6 +11,13 @@ The verifier recomputes each raw payload hash, calls the existing public
 candidate ask to the replayed best ask.  Candidate evidence references are
 complete: missing and orphaned snapshots both fail validation.
 
+The value bundle must be generated at or after the weather bundle whose
+canonical hash it carries. Gamma and CLOB outcome/token arrays are replayed in
+full: both arrays must be non-empty, equal in length, ordered identically, and
+contain unique non-empty values. The CLOB market payload must also state its
+condition explicitly, matching the Gamma payload, manifest, and orderbook
+evidence.
+
 The bridge dispatches by the bridge manifest version.  Registration performs
 that replay before its SQLite transaction and persists
 `orderbook_hash_verification=self_contained_semantic_replay` in the D1
