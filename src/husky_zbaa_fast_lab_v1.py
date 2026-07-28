@@ -193,8 +193,14 @@ def validate_probability_input(payload: dict[str, Any]) -> dict[str, Any]:
         if not str(payload.get(field) or "").strip():
             raise ValidationError(f"{field}: required")
     as_of_cst = parse_datetime(payload.get("as_of_time_cst"), "as_of_time_cst")
-    as_of_utc = parse_datetime(payload.get("as_of_time_utc"), "as_of_time_utc")
-    generated = parse_datetime(payload.get("generated_at_utc"), "generated_at_utc")
+    as_of_utc = parse_datetime(
+        parse_utc_evidence_time(payload.get("as_of_time_utc"), "as_of_time_utc"),
+        "as_of_time_utc",
+    )
+    generated = parse_datetime(
+        parse_utc_evidence_time(payload.get("generated_at_utc"), "generated_at_utc"),
+        "generated_at_utc",
+    )
     if as_of_cst.utcoffset() != timedelta(hours=8) or as_of_cst.timetz().replace(tzinfo=None) != time(15, 0, 0):
         raise ValidationError("as_of_time_cst: must be D-1 15:00:00+08:00")
     expected_utc = as_of_cst.astimezone(UTC)
@@ -206,8 +212,10 @@ def validate_probability_input(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValidationError("weather_date_local: invalid date") from exc
     if weather_date != as_of_cst.date() + timedelta(days=1):
         raise ValidationError("weather_date_local: must be the next local day after as_of_time_cst")
-    if generated.astimezone(UTC) > expected_utc:
-        raise ValidationError("generated_at_utc: information generated after the 15:00 CST cutoff is not allowed")
+    if generated < expected_utc:
+        raise ValidationError("GENERATED_BEFORE_CUTOFF: generated_at_utc must not precede weather cutoff")
+    if generated > expected_utc + timedelta(minutes=5):
+        raise ValidationError("GENERATED_AFTER_OUTPUT_WINDOW: generated_at_utc must be no later than 15:05 CST")
     probabilities = probability_rows(payload)
     return {
         **payload,
@@ -1267,10 +1275,12 @@ def render_daily_report(
             "# ZBAA 每日影子模拟报告",
             "",
             f"证据来源：`{source_label}`。",
-            f"天气预测截面时间：`{time_context.get('weather_as_of_time_utc', probability_input['as_of_time_utc'])}`。",
+            f"天气资料截止时间：`{time_context.get('weather_as_of_time_utc', probability_input['as_of_time_utc'])}`。",
+            f"概率计算完成时间：`{time_context.get('forecast_generated_at_utc', probability_input['generated_at_utc'])}`。",
             f"入场盘口实际抓取时间：`{time_context.get('entry_market_captured_at_utc_min', '见逐市场快照')}` 至 `{time_context.get('entry_market_captured_at_utc_max', '见逐市场快照')}`。",
             f"程序生成报告时间：`{time_context.get('decision_created_at_utc', '未提供')}`。",
-            "盘口证据时间决定这笔影子交易在历史时间轴上的位置；程序处理时间只表示什么时候运行了命令。",
+            "天气资料截止时间约束概率可使用的信息；概率计算完成时间可以在截止后五分钟内。",
+            "盘口证据时间决定影子交易在历史时间轴上的位置；程序处理时间只表示什么时候运行了命令。",
             "",
             "## 一、天气判断",
             "",
@@ -1350,12 +1360,26 @@ def run_shadow(
     if len(token_ids) != len(set(token_ids)):
         raise ValidationError("duplicate YES token binding across markets is rejected")
     weather_as_of_time_utc = probability_input["as_of_time_utc"]
+    entry_cutoff = parse_datetime(weather_as_of_time_utc, "as_of_time_utc")
+    entry_window_start = entry_cutoff - timedelta(seconds=60)
+    entry_window_end = entry_cutoff + timedelta(seconds=60)
+    for market in markets:
+        market_time = parse_datetime(market["market_captured_at_utc"], "market_captured_at_utc")
+        if market_time < entry_window_start:
+            raise ValidationError(
+                f"ENTRY_MARKET_BEFORE_CUTOFF_WINDOW: {market['token_id']} evidence predates 15:00 - 60 seconds"
+            )
+        if market_time > entry_window_end:
+            raise ValidationError(
+                f"ENTRY_MARKET_AFTER_CUTOFF_WINDOW: {market['token_id']} evidence exceeds 15:00 + 60 seconds"
+            )
     evidence_times = [market["market_captured_at_utc"] for market in markets]
     entry_market_captured_at_utc_min = min(evidence_times, key=lambda value: parse_datetime(value, "market_captured_at_utc"))
     entry_market_captured_at_utc_max = max(evidence_times, key=lambda value: parse_datetime(value, "market_captured_at_utc"))
     decision_created_at_utc = iso_utc()
     time_context = {
         "weather_as_of_time_utc": weather_as_of_time_utc,
+        "forecast_generated_at_utc": probability_input["generated_at_utc"],
         "entry_market_captured_at_utc_min": entry_market_captured_at_utc_min,
         "entry_market_captured_at_utc_max": entry_market_captured_at_utc_max,
         "decision_created_at_utc": decision_created_at_utc,

@@ -99,10 +99,51 @@ def test_06_formal_probability_mode_rejected(probability_payload: dict) -> None:
         validate_probability_input(probability_payload)
 
 
-def test_07_post_cutoff_generation_rejected(probability_payload: dict) -> None:
-    probability_payload["generated_at_utc"] = "2026-07-21T07:00:01Z"
-    with pytest.raises(ValidationError, match="after"):
+def test_07_generation_after_output_window_rejected(probability_payload: dict) -> None:
+    probability_payload["generated_at_utc"] = "2026-07-21T07:05:01Z"
+    with pytest.raises(ValidationError, match="GENERATED_AFTER_OUTPUT_WINDOW"):
         validate_probability_input(probability_payload)
+
+
+def test_cutoff_generated_at_exactly_1500_passes(probability_payload: dict) -> None:
+    probability_payload["generated_at_utc"] = "2026-07-21T07:00:00Z"
+    assert validate_probability_input(probability_payload)["generated_at_utc"] == "2026-07-21T07:00:00Z"
+
+
+def test_cutoff_generated_at_1503_passes(probability_payload: dict) -> None:
+    probability_payload["generated_at_utc"] = "2026-07-21T07:03:00Z"
+    assert validate_probability_input(probability_payload)["generated_at_utc"] == "2026-07-21T07:03:00Z"
+
+
+def test_cutoff_generated_at_exactly_1505_passes(probability_payload: dict) -> None:
+    probability_payload["generated_at_utc"] = "2026-07-21T07:05:00Z"
+    assert validate_probability_input(probability_payload)["generated_at_utc"] == "2026-07-21T07:05:00Z"
+
+
+def test_cutoff_generated_before_1500_rejected(probability_payload: dict) -> None:
+    probability_payload["generated_at_utc"] = "2026-07-21T06:59:59Z"
+    with pytest.raises(ValidationError, match="GENERATED_BEFORE_CUTOFF"):
+        validate_probability_input(probability_payload)
+
+
+def test_cutoff_generated_without_timezone_rejected(probability_payload: dict) -> None:
+    probability_payload["generated_at_utc"] = "2026-07-21T07:03:00"
+    with pytest.raises(ValidationError, match="timezone is required"):
+        validate_probability_input(probability_payload)
+
+
+def test_cutoff_generated_with_non_utc_offset_rejected(probability_payload: dict) -> None:
+    probability_payload["generated_at_utc"] = "2026-07-21T15:03:00+08:00"
+    with pytest.raises(ValidationError, match="explicit UTC"):
+        validate_probability_input(probability_payload)
+
+
+def test_cutoff_template_uses_valid_generation_window() -> None:
+    payload = json.loads(INPUT_PATH.read_text(encoding="utf-8"))
+    validated_template = validate_probability_input(payload)
+    assert validated_template["as_of_time_cst"] == "2026-07-21T15:00:00+08:00"
+    assert validated_template["as_of_time_utc"] == "2026-07-21T07:00:00Z"
+    assert validated_template["generated_at_utc"] == "2026-07-21T07:03:00Z"
 
 
 def test_08_duplicate_temperature_rejected(probability_payload: dict) -> None:
@@ -389,7 +430,7 @@ def _dated_evidence(
     payload = json.loads(EVIDENCE_PATH.read_text(encoding="utf-8"))
     day = int(weather_date[-2:])
     payload["evidence_label"] = f"TEST_FIXTURE_{book_mode.upper()}_{weather_date}"
-    default_hour = {"entry": 8, "no_trigger": 9, "fake_best_bid": 9, "trigger": 9}[book_mode]
+    default_hour = {"entry": 7, "no_trigger": 8, "fake_best_bid": 8, "trigger": 8}[book_mode]
     payload["captured_at_utc"] = captured_at_utc or f"2026-07-{day - 1:02d}T{default_hour:02d}:00:00Z"
     for record in payload["markets"]:
         gamma = record["gamma"]
@@ -440,6 +481,86 @@ def _ledger_rows(run_dir: Path, table: str) -> list[sqlite3.Row]:
     with sqlite3.connect(run_dir / "demo_ledger.sqlite3") as connection:
         connection.row_factory = sqlite3.Row
         return connection.execute(f"SELECT * FROM {table} ORDER BY signal_id,exit_rule").fetchall()
+
+
+def _run_at_entry_capture(tmp_path: Path, captured_at_utc: str, name: str) -> tuple[Path, dict]:
+    probability = _dated_probability(tmp_path, "2026-07-22", f"forecast-{name}")
+    evidence = _dated_evidence(
+        tmp_path,
+        "2026-07-22",
+        suffix=f"-{name}",
+        captured_at_utc=captured_at_utc,
+    )
+    run_dir = tmp_path / name
+    return run_dir, run_shadow(probability, Decimal("20"), run_dir, evidence)
+
+
+def test_cutoff_entry_1459_boundary_passes(tmp_path: Path) -> None:
+    _, report = _run_at_entry_capture(tmp_path, "2026-07-21T06:59:00Z", "entry-1459")
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T06:59:00Z"
+
+
+def test_cutoff_entry_1500_passes(tmp_path: Path) -> None:
+    _, report = _run_at_entry_capture(tmp_path, "2026-07-21T07:00:00Z", "entry-1500")
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T07:00:00Z"
+
+
+def test_cutoff_entry_1501_boundary_passes(tmp_path: Path) -> None:
+    _, report = _run_at_entry_capture(tmp_path, "2026-07-21T07:01:00Z", "entry-1501")
+    assert report["entry_market_captured_at_utc_max"] == "2026-07-21T07:01:00Z"
+
+
+def test_cutoff_entry_too_early_rejected_without_partial_run(tmp_path: Path) -> None:
+    probability = _dated_probability(tmp_path, "2026-07-22", "too-early")
+    evidence = _dated_evidence(
+        tmp_path,
+        "2026-07-22",
+        suffix="-too-early",
+        captured_at_utc="2026-07-21T06:58:59Z",
+    )
+    run_dir = tmp_path / "too-early-run"
+    with pytest.raises(ValidationError, match="ENTRY_MARKET_BEFORE_CUTOFF_WINDOW"):
+        run_shadow(probability, Decimal("20"), run_dir, evidence)
+    assert not run_dir.exists()
+    assert not (run_dir / "demo_ledger.sqlite3").exists()
+
+
+def test_cutoff_entry_too_late_rejected_without_partial_run(tmp_path: Path) -> None:
+    probability = _dated_probability(tmp_path, "2026-07-22", "too-late")
+    evidence = _dated_evidence(
+        tmp_path,
+        "2026-07-22",
+        suffix="-too-late",
+        captured_at_utc="2026-07-21T07:01:01Z",
+    )
+    run_dir = tmp_path / "too-late-run"
+    with pytest.raises(ValidationError, match="ENTRY_MARKET_AFTER_CUTOFF_WINDOW"):
+        run_shadow(probability, Decimal("20"), run_dir, evidence)
+    assert not run_dir.exists()
+    assert not (run_dir / "demo_ledger.sqlite3").exists()
+
+
+def test_cutoff_one_market_outside_window_rejects_entire_run(tmp_path: Path) -> None:
+    probability = _dated_probability(tmp_path, "2026-07-22", "multi-market")
+    evidence_path = _dated_evidence(
+        tmp_path,
+        "2026-07-22",
+        suffix="-multi-market",
+        captured_at_utc="2026-07-21T07:00:00Z",
+    )
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    evidence["markets"][-1]["captured_at_utc"] = "2026-07-21T07:01:01Z"
+    _json_file(evidence_path, evidence)
+    run_dir = tmp_path / "multi-market-run"
+    with pytest.raises(ValidationError, match="ENTRY_MARKET_AFTER_CUTOFF_WINDOW"):
+        run_shadow(probability, Decimal("20"), run_dir, evidence_path)
+    assert not run_dir.exists()
+
+
+def test_cutoff_repository_saved_fixture_is_bound_to_window(tmp_path: Path) -> None:
+    report = run_shadow(INPUT_PATH, Decimal("20"), tmp_path / "saved-fixture", EVIDENCE_PATH)
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T07:00:00Z"
+    assert report["entry_market_captured_at_utc_max"] == "2026-07-21T07:00:04Z"
 
 
 def test_36_run_id_binds_required_identity(validated: dict) -> None:
@@ -751,13 +872,13 @@ def test_time_01_run_preserves_weather_as_of(tmp_path: Path) -> None:
 def test_time_02_saved_evidence_capture_is_preserved(tmp_path: Path) -> None:
     run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
     manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
-    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T08:00:00Z"
-    assert report["entry_market_captured_at_utc_max"] == "2026-07-21T08:00:00Z"
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T07:00:00Z"
+    assert report["entry_market_captured_at_utc_max"] == "2026-07-21T07:00:00Z"
     assert manifest["entry_market_captured_at_utc_min"] == report["entry_market_captured_at_utc_min"]
     assert manifest["entry_market_captured_at_utc_max"] == report["entry_market_captured_at_utc_max"]
-    assert {item["market_captured_at_utc"] for item in report["markets"]} == {"2026-07-21T08:00:00Z"}
+    assert {item["market_captured_at_utc"] for item in report["markets"]} == {"2026-07-21T07:00:00Z"}
     snapshot = json.loads((run_dir / "market_snapshot.json").read_text(encoding="utf-8"))
-    assert {item["market_captured_at_utc"] for item in snapshot["markets"]} == {"2026-07-21T08:00:00Z"}
+    assert {item["market_captured_at_utc"] for item in snapshot["markets"]} == {"2026-07-21T07:00:00Z"}
 
 
 def test_time_03_live_received_time_is_market_capture(tmp_path: Path, evidence_records: list[dict]) -> None:
@@ -783,13 +904,42 @@ def test_time_03_live_received_time_is_market_capture(tmp_path: Path, evidence_r
         def orderbook(self, _token_id: str) -> SimpleNamespace:
             return SimpleNamespace(
                 payload=record["orderbook"],
-                received_at_utc="2026-07-21T09:30:00+00:00",
+                received_at_utc="2026-07-21T07:00:30+00:00",
                 url="https://clob.test/book",
             )
 
     report = run_shadow(INPUT_PATH, Decimal("20"), tmp_path / "live", live_readonly=True, adapter=FakeAdapter())
-    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T09:30:00Z"
-    assert report["markets"][0]["market_captured_at_utc"] == "2026-07-21T09:30:00Z"
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T07:00:30Z"
+    assert report["markets"][0]["market_captured_at_utc"] == "2026-07-21T07:00:30Z"
+
+
+def test_cutoff_live_received_outside_window_rejected(tmp_path: Path, evidence_records: list[dict]) -> None:
+    record = deepcopy(evidence_records[3])
+
+    class LateLiveAdapter:
+        visited_endpoints = [{"method": "GET"}]
+
+        def search(self, *_args: object, **_kwargs: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                payload=[record["gamma"]],
+                received_at_utc="2026-07-21T07:00:00Z",
+                url="https://gamma.test/search",
+            )
+
+        def clob_market_info(self, _condition_id: str) -> SimpleNamespace:
+            return SimpleNamespace(payload=record["clob"], url="https://clob.test/market")
+
+        def orderbook(self, _token_id: str) -> SimpleNamespace:
+            return SimpleNamespace(
+                payload=record["orderbook"],
+                received_at_utc="2026-07-21T07:01:01Z",
+                url="https://clob.test/book",
+            )
+
+    run_dir = tmp_path / "late-live"
+    with pytest.raises(ValidationError, match="ENTRY_MARKET_AFTER_CUTOFF_WINDOW"):
+        run_shadow(INPUT_PATH, Decimal("20"), run_dir, live_readonly=True, adapter=LateLiveAdapter())
+    assert not run_dir.exists()
 
 
 def test_time_04_decision_time_is_not_evidence_time(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -801,12 +951,30 @@ def test_time_04_decision_time_is_not_evidence_time(tmp_path: Path, monkeypatch:
     assert report["decision_created_at_utc"] != report["entry_market_captured_at_utc_max"]
 
 
+def test_cutoff_report_and_manifest_keep_four_time_meanings(tmp_path: Path) -> None:
+    run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    expected_fields = {
+        "weather_as_of_time_utc",
+        "forecast_generated_at_utc",
+        "entry_market_captured_at_utc_min",
+        "entry_market_captured_at_utc_max",
+        "decision_created_at_utc",
+    }
+    assert expected_fields <= report.keys()
+    assert expected_fields <= manifest.keys()
+    assert report["forecast_generated_at_utc"] == "2026-07-21T07:00:00Z"
+    markdown = (run_dir / "decision_report.md").read_text(encoding="utf-8")
+    for phrase in ("天气资料截止时间", "概率计算完成时间", "入场盘口实际抓取时间", "程序生成报告时间"):
+        assert phrase in markdown
+
+
 def test_time_05_signal_contains_three_times(tmp_path: Path) -> None:
     run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
     with sqlite3.connect(run_dir / "demo_ledger.sqlite3") as connection:
         signal = json.loads(connection.execute("SELECT payload_json FROM demo_signals ORDER BY signal_id").fetchone()[0])
     assert signal["weather_as_of_time_utc"] == report["weather_as_of_time_utc"]
-    assert signal["market_captured_at_utc"] == "2026-07-21T08:00:00Z"
+    assert signal["market_captured_at_utc"] == "2026-07-21T07:00:00Z"
     assert signal["decision_created_at_utc"] == report["decision_created_at_utc"]
 
 
@@ -815,7 +983,7 @@ def test_time_06_entry_fill_contains_three_times(tmp_path: Path) -> None:
     with sqlite3.connect(run_dir / "demo_ledger.sqlite3") as connection:
         fill = json.loads(connection.execute("SELECT payload_json FROM demo_entry_fills ORDER BY signal_id").fetchone()[0])
     assert fill["weather_as_of_time_utc"] == report["weather_as_of_time_utc"]
-    assert fill["market_captured_at_utc"] == "2026-07-21T08:00:00Z"
+    assert fill["market_captured_at_utc"] == "2026-07-21T07:00:00Z"
     assert fill["decision_created_at_utc"] == report["decision_created_at_utc"]
 
 
@@ -824,13 +992,13 @@ def test_time_07_market_snapshot_names_write_time_separately(tmp_path: Path) -> 
     snapshot = json.loads((run_dir / "market_snapshot.json").read_text(encoding="utf-8"))
     assert "captured_at_utc" not in snapshot
     assert snapshot["snapshot_written_at_utc"] == report["decision_created_at_utc"]
-    assert snapshot["entry_market_captured_at_utc_min"] == "2026-07-21T08:00:00Z"
+    assert snapshot["entry_market_captured_at_utc_min"] == "2026-07-21T07:00:00Z"
 
 
 def test_time_08_saved_capture_does_not_follow_current_clock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(fast_lab, "utcnow", lambda: datetime(2035, 1, 2, 3, 4, 5, tzinfo=timezone.utc))
     _, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
-    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T08:00:00Z"
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T07:00:00Z"
     assert report["decision_created_at_utc"] == "2035-01-02T03:04:05Z"
 
 
@@ -876,7 +1044,7 @@ def test_time_14_trigger_time_uses_evidence_time(tmp_path: Path, monkeypatch: py
     evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
     result = update_shadow(run_dir, evidence)
     triggered = [item for item in result["results"] if item["status"] == "TRIGGERED"]
-    assert triggered and all(item["trigger_time_utc"] == "2026-07-21T09:00:00Z" for item in triggered)
+    assert triggered and all(item["trigger_time_utc"] == "2026-07-21T08:00:00Z" for item in triggered)
 
 
 def test_time_15_update_processed_time_is_separate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -884,16 +1052,30 @@ def test_time_15_update_processed_time_is_separate(tmp_path: Path, monkeypatch: 
     monkeypatch.setattr(fast_lab, "utcnow", lambda: datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc))
     evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger")
     result = update_shadow(run_dir, evidence)
-    assert result["evidence_captured_at_utc"] == "2026-07-21T09:00:00Z"
+    assert result["evidence_captured_at_utc"] == "2026-07-21T08:00:00Z"
     assert result["update_processed_at_utc"] == "2026-07-28T12:00:00Z"
     assert all(item["update_processed_at_utc"] == result["update_processed_at_utc"] for item in result["results"])
+
+
+def test_cutoff_update_shadow_is_not_limited_to_entry_window(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(
+        tmp_path,
+        "2026-07-22",
+        suffix="-run",
+        book_mode="no_trigger",
+        captured_at_utc="2026-07-21T10:00:00Z",
+    )
+    result = update_shadow(run_dir, evidence)
+    assert result["evidence_captured_at_utc"] == "2026-07-21T10:00:00Z"
+    assert all(item["status"] in {"OPEN", "OPEN_NO_TRIGGER"} for item in result["results"])
 
 
 def test_time_16_update_before_entry_rejected(tmp_path: Path) -> None:
     run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
     evidence = _dated_evidence(
         tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger",
-        captured_at_utc="2026-07-21T07:59:59Z",
+        captured_at_utc="2026-07-21T06:59:59Z",
     )
     with pytest.raises(ValidationError, match="OUT_OF_ORDER_EVIDENCE"):
         update_shadow(run_dir, evidence)
@@ -911,12 +1093,12 @@ def test_time_18_earlier_than_previous_update_rejected(tmp_path: Path) -> None:
     run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
     newest = _dated_evidence(
         tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger",
-        captured_at_utc="2026-07-21T10:00:00Z",
+        captured_at_utc="2026-07-21T09:00:00Z",
     )
     update_shadow(run_dir, newest)
     older = _dated_evidence(
         tmp_path, "2026-07-22", suffix="-run", book_mode="trigger",
-        captured_at_utc="2026-07-21T09:00:00Z",
+        captured_at_utc="2026-07-21T08:00:00Z",
     )
     with pytest.raises(ValidationError, match="OUT_OF_ORDER_EVIDENCE"):
         update_shadow(run_dir, older)
@@ -936,7 +1118,7 @@ def test_time_20_order_rejection_writes_no_snapshot(tmp_path: Path) -> None:
     run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
     evidence = _dated_evidence(
         tmp_path, "2026-07-22", suffix="-run", book_mode="trigger",
-        captured_at_utc="2026-07-21T07:00:00Z",
+        captured_at_utc="2026-07-21T06:00:00Z",
     )
     with pytest.raises(ValidationError, match="OUT_OF_ORDER_EVIDENCE"):
         update_shadow(run_dir, evidence)
@@ -950,7 +1132,7 @@ def test_time_21_update_snapshot_stores_both_times(tmp_path: Path, monkeypatch: 
     evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger")
     result = update_shadow(run_dir, evidence)
     row = _ledger_rows(run_dir, "demo_update_snapshots")[0]
-    assert row["evidence_captured_at_utc"] == "2026-07-21T09:00:00Z"
+    assert row["evidence_captured_at_utc"] == "2026-07-21T08:00:00Z"
     assert row["update_processed_at_utc"] == "2026-07-28T12:00:00Z"
     snapshot = json.loads((run_dir / "update_snapshots" / f"{result['update_id']}.json").read_text(encoding="utf-8"))
     assert snapshot["evidence_captured_at_utc"] == row["evidence_captured_at_utc"]

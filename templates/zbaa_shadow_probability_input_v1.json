@@ -5,7 +5,7 @@
   "weather_date_local": "2026-07-22",
   "as_of_time_cst": "2026-07-21T15:00:00+08:00",
   "as_of_time_utc": "2026-07-21T07:00:00Z",
-  "generated_at_utc": "2026-07-21T07:00:00Z",
+  "generated_at_utc": "2026-07-21T07:03:00Z",
   "data_status": "EXAMPLE_NOT_A_FORECAST",
   "confidence": "EXAMPLE",
   "explanation": "Template values only. Replace every probability and explanation with the user's D-1 15:00 CST ZBAA forecast.",

@@ -1,10 +1,10 @@
 {
   "evidence_label": "ZBAA_FAST_LAB_TEST_FIXTURE_NOT_LIVE",
   "fixture": true,
-  "captured_at_utc": "2026-07-21T07:05:00Z",
+  "captured_at_utc": "2026-07-21T07:00:00Z",
   "markets": [
     {
-      "captured_at_utc": "2026-07-21T07:05:00Z",
+      "captured_at_utc": "2026-07-21T07:00:00Z",
       "gamma": {
         "active": true,
         "closed": false,
@@ -32,7 +32,7 @@
       }
     },
     {
-      "captured_at_utc": "2026-07-21T07:05:01Z",
+      "captured_at_utc": "2026-07-21T07:00:01Z",
       "gamma": {
         "active": true,
         "closed": false,
@@ -60,7 +60,7 @@
       }
     },
     {
-      "captured_at_utc": "2026-07-21T07:05:02Z",
+      "captured_at_utc": "2026-07-21T07:00:02Z",
       "gamma": {
         "active": true,
         "closed": false,
@@ -91,7 +91,7 @@
       }
     },
     {
-      "captured_at_utc": "2026-07-21T07:05:03Z",
+      "captured_at_utc": "2026-07-21T07:00:03Z",
       "gamma": {
         "active": true,
         "closed": false,
@@ -122,7 +122,7 @@
       }
     },
     {
-      "captured_at_utc": "2026-07-21T07:05:04Z",
+      "captured_at_utc": "2026-07-21T07:00:04Z",
       "gamma": {
         "active": true,
         "closed": false,

@@ -57,19 +57,29 @@ Each run writes `decision_report.json`, `decision_report.md`,
 
 ## Evidence time versus processing time
 
-Every run keeps three different clocks:
+Every run keeps four different clocks:
 
-- `weather_as_of_time_utc` is the manual weather forecast cutoff.
+- `weather_as_of_time_utc` is the weather-information cutoff: D-1 15:00 CST
+  (07:00 UTC).
+- `forecast_generated_at_utc` is when the manual probability calculation
+  finished. It may be from 15:00 through 15:05 CST, inclusive.
 - `market_captured_at_utc` is when that specific order book was actually
   received or saved.
 - `decision_created_at_utc` is when the program calculated the decision and
   wrote the report.
 
-Signals and entry fills contain all three. The manifest and decision report
-also show the earliest and latest entry evidence times. `market_snapshot.json`
-uses `snapshot_written_at_utc` for the file-writing time and keeps each
-market's real capture time; it never relabels the current clock as market
-evidence time.
+The first time limits what weather information may enter the probability. The
+second time only records when that frozen-input probability was completed;
+generation after 15:00 does not by itself mean weather leakage. Generation
+before 15:00 is rejected as `GENERATED_BEFORE_CUTOFF`, and generation after
+15:05 is rejected as `GENERATED_AFTER_OUTPUT_WINDOW`.
+
+Signals and entry fills keep the weather cutoff, market capture, and decision
+processing times separately. The manifest and decision report explicitly keep
+all four meanings and show the earliest and latest entry evidence times.
+`market_snapshot.json` uses `snapshot_written_at_utc` for the file-writing time
+and keeps each market's real capture time; it never relabels the current clock
+as market evidence time.
 
 In plain language: the market evidence time determines where the shadow trade
 sits on the historical timeline. The processing time only says when the
@@ -80,6 +90,14 @@ days or years later. Live-readonly evidence uses the HTTP order-book response's
 Every evidence record must have a non-empty, valid ISO-8601 timestamp with an
 explicit UTC timezone. Missing, timezone-naive, non-UTC, or fabricated fallback
 times are rejected.
+
+For entry only, every saved or live-readonly order book must fall within D-1
+15:00 CST ±60 seconds (06:59:00Z through 07:01:00Z, inclusive). One market
+outside that fixed window rejects the complete run before an output directory
+or ledger is created, using `ENTRY_MARKET_BEFORE_CUTOFF_WINDOW` or
+`ENTRY_MARKET_AFTER_CUTOFF_WINDOW`. This entry window is not applied to later
+`update-shadow` evidence; updates retain their strict rules of being later than
+entry and later than the previous update.
 
 ## Stable run identity
 
