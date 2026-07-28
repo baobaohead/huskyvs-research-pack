@@ -567,6 +567,9 @@ def init_ledger(root: Path, mode: str, config_path: Path) -> Path:
     try:
         conn.executescript(schema_path(root, config).read_text(encoding="utf-8"))
         with conn:
+            d1_columns = {row[1] for row in conn.execute("PRAGMA table_info(d1_registration_evidence)")}
+            if "orderbook_hash_verification" not in d1_columns:
+                conn.execute("ALTER TABLE d1_registration_evidence ADD COLUMN orderbook_hash_verification TEXT NOT NULL DEFAULT ''")
             defaults = {
                 "schema_version": SCHEMA_VERSION,
                 "mode": mode,
@@ -965,10 +968,10 @@ def persist_d1_registration_evidence(conn: sqlite3.Connection, mode: str, verifi
         """
         INSERT OR IGNORE INTO d1_registration_evidence(
           evidence_id,verification_time_utc,forecast_run_id,bridge_version,model_version,rules_version,run_directory_relative,
-          bridge_manifest_sha256,bridge_manifest_core_sha256,weather_bundle_sha256,value_bundle_sha256,semantic_replay_result,
+          bridge_manifest_sha256,bridge_manifest_core_sha256,weather_bundle_sha256,value_bundle_sha256,orderbook_hash_verification,semantic_replay_result,
           execution_eligible,formal_mode,source,verified_signal_count,verified_signal_ids_json,formal_ledger_used,
           wallet_or_real_order_used,mode
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             evidence_id,
@@ -982,6 +985,7 @@ def persist_d1_registration_evidence(conn: sqlite3.Connection, mode: str, verifi
             verification["bridge_manifest_core_sha256"],
             verification["weather_bundle_sha256"],
             verification["value_bundle_sha256"],
+            verification.get("orderbook_hash_verification", ""),
             verification["semantic_replay_result"],
             int(bool(verification["execution_eligible"])),
             int(bool(verification["formal_mode"])),

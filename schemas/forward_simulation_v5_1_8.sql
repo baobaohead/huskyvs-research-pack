@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS d1_registration_evidence (
   bridge_manifest_core_sha256 TEXT NOT NULL,
   weather_bundle_sha256 TEXT NOT NULL,
   value_bundle_sha256 TEXT NOT NULL,
+  orderbook_hash_verification TEXT NOT NULL DEFAULT '',
   semantic_replay_result TEXT NOT NULL,
   execution_eligible INTEGER NOT NULL,
   formal_mode INTEGER NOT NULL,

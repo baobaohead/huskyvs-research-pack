@@ -22,7 +22,6 @@ try:
         ORDERBOOK_HASH_VALIDATION_LEVEL,
         RULES_VERSION_REQUIRED,
         SOURCE_TAG,
-        verify_bridge_output,
     )
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
     from d1_signal_bridge_v1 import (
@@ -30,8 +29,13 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
         ORDERBOOK_HASH_VALIDATION_LEVEL,
         RULES_VERSION_REQUIRED,
         SOURCE_TAG,
-        verify_bridge_output,
     )
+try:
+    from src.d1_signal_bridge_dispatch import verify_bridge_output_dispatch
+    from src.d1_signal_bridge_v2 import ORDERBOOK_HASH_VALIDATION_LEVEL as V2_ORDERBOOK_HASH_VALIDATION_LEVEL, SOURCE_TAG as V2_SOURCE_TAG
+except ModuleNotFoundError:  # pragma: no cover
+    from d1_signal_bridge_dispatch import verify_bridge_output_dispatch
+    from d1_signal_bridge_v2 import ORDERBOOK_HASH_VALIDATION_LEVEL as V2_ORDERBOOK_HASH_VALIDATION_LEVEL, SOURCE_TAG as V2_SOURCE_TAG
 
 
 CANONICAL_CSV_NAME = "husky_entry_signals.csv"
@@ -45,6 +49,7 @@ REQUIRED_OUTPUT_FILES = (
     "bridge_manifest.sha256",
 )
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+SOURCE_TAGS = {SOURCE_TAG, V2_SOURCE_TAG}
 
 
 class D1RegistrationGateError(ValueError):
@@ -186,11 +191,8 @@ def _assert_safety_flags(core: dict[str, Any], manifest: dict[str, Any], report:
         raise D1RegistrationGateError("D1_EXECUTION_NOT_ELIGIBLE")
     if any(value.get("formal_ledger_used") is not False or value.get("wallet_or_real_order_used") is not False for value in (core, manifest, report)):
         raise D1RegistrationGateError("D1_SAFETY_FLAG_INVALID")
-    if (
-        core.get("conversion_parameters", {}).get("orderbook_hash_verification") != ORDERBOOK_HASH_VALIDATION_LEVEL
-        or manifest.get("orderbook_hash_verification") != ORDERBOOK_HASH_VALIDATION_LEVEL
-        or report.get("orderbook_hash_verification") != ORDERBOOK_HASH_VALIDATION_LEVEL
-    ):
+    expected_level = V2_ORDERBOOK_HASH_VALIDATION_LEVEL if manifest.get("bridge_version") == "d1_signal_bridge_v2" else ORDERBOOK_HASH_VALIDATION_LEVEL
+    if (core.get("conversion_parameters", {}).get("orderbook_hash_verification") != expected_level or manifest.get("orderbook_hash_verification") != expected_level or report.get("orderbook_hash_verification") != expected_level):
         raise D1RegistrationGateError("D1_ORDERBOOK_VERIFICATION_LEVEL_INVALID")
 
 
@@ -257,17 +259,20 @@ def verify_d1_registration_bundle(
     del mode  # Both modes deliberately share one verification path.
     candidate_path = Path(csv_path)
     sources = {str(row.get("source", "")) for row in parsed_rows}
-    d1_present = SOURCE_TAG in sources
+    d1_present = bool(sources & SOURCE_TAGS)
     if not d1_present:
         # A changed source column must not turn an otherwise complete D1 run
         # into an unverified legacy submission.
         if candidate_path.name == CANONICAL_CSV_NAME and all((candidate_path.parent / name).is_file() for name in REQUIRED_OUTPUT_FILES):
             raise D1RegistrationGateError("D1_MIXED_SOURCE_FILE", "bridge directory CSV must retain the D1 source tag")
         return None
-    if sources != {SOURCE_TAG}:
+    if len(sources) != 1 or not sources <= SOURCE_TAGS:
         raise D1RegistrationGateError("D1_MIXED_SOURCE_FILE")
     run_dir = _gate_run_directory(candidate_path)
-    verified = verify_bridge_output(run_dir)
+    try:
+        verified = verify_bridge_output_dispatch(run_dir)
+    except Exception as exc:
+        raise D1RegistrationGateError("D1_BRIDGE_VERIFY_FAILED", str(exc)) from exc
     if not _all_bridge_results_ok(verified):
         # The bridge verifier remains authoritative.  Classify a malformed
         # deadline precisely after it has run, so callers receive the stable
@@ -333,7 +338,8 @@ def verify_d1_registration_bundle(
         "semantic_replay_result": "pass",
         "execution_eligible": True,
         "formal_mode": True,
-        "source": SOURCE_TAG,
+        "source": next(iter(sources)),
+        "orderbook_hash_verification": manifest.get("orderbook_hash_verification", ""),
         "verified_signal_count": len(canonical_rows),
         "verified_signal_ids_json": json.dumps([row.get("signal_id", "") for row in canonical_rows], separators=(",", ":")),
         "formal_ledger_used": False,

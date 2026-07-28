@@ -1,0 +1,185 @@
+"""Self-contained D1 value evidence contract v2.
+
+V2 deliberately validates raw Gamma/CLOB and orderbook evidence again instead
+of treating hashes as assertions.  It is read-only and has no network path.
+"""
+from __future__ import annotations
+
+from datetime import datetime, time, timezone
+from decimal import Decimal
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+try:
+    from jsonschema import Draft202012Validator, FormatChecker
+except ModuleNotFoundError:  # pragma: no cover
+    Draft202012Validator = None  # type: ignore
+    FormatChecker = None  # type: ignore
+
+try:
+    from src.d1_signal_bridge_v1 import (ALLOWED_DATA_STATUS, BridgeError, assert_sha256_hex, content_hash as bridge_hash, dstr, normalize_city_for_station, normalize_temp_bucket_label, normalize_weather_metric, parse_iso_utc, validate_d1_1500_time_fields, validate_weather_probability_bundle)
+    from src.polymarket_public_adapter_v5_1_8 import CLOB_BASE, NORMALIZED_BOOK_ALGORITHM_VERSION, content_hash, dstr as adapter_dstr, normalize_orderbook
+except ModuleNotFoundError:  # pragma: no cover
+    from d1_signal_bridge_v1 import (ALLOWED_DATA_STATUS, BridgeError, assert_sha256_hex, content_hash as bridge_hash, dstr, normalize_city_for_station, normalize_temp_bucket_label, normalize_weather_metric, parse_iso_utc, validate_d1_1500_time_fields, validate_weather_probability_bundle)
+    from polymarket_public_adapter_v5_1_8 import CLOB_BASE, NORMALIZED_BOOK_ALGORITHM_VERSION, content_hash, dstr as adapter_dstr, normalize_orderbook
+
+SCHEMA_VERSION = "2.0"
+ORDERBOOK_HASH_VALIDATION_LEVEL = "self_contained_semantic_replay"
+SOURCE_TAG = "d1_signal_bridge_v2"
+UTC = timezone.utc
+CST = ZoneInfo("Asia/Shanghai")
+
+
+def _error(code: str, msg: str, **details: Any) -> None:
+    raise BridgeError(code, msg, details)
+
+
+def validate_v2_schema(value: Any) -> dict[str, Any]:
+    if Draft202012Validator is None or FormatChecker is None:
+        _error("JSON_SCHEMA_DEPENDENCY_MISSING", "jsonschema is required")
+    path = Path(__file__).resolve().parents[1] / "schemas" / "d1_value_signal_v2.schema.json"
+    import json
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    errors = sorted(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(value), key=lambda e: list(e.absolute_path))
+    if errors:
+        err = errors[0]
+        _error("VALUE_V2_SCHEMA_INVALID", err.message, json_path="/" + "/".join(map(str, err.absolute_path)))
+    return {"ok": True, "validator": "Draft202012Validator", "format_checker": True}
+
+
+def _payload_value(raw: dict[str, Any], *names: str) -> Any:
+    for name in names:
+        if name in raw and raw[name] not in (None, ""):
+            return raw[name]
+    return None
+
+
+def _as_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        import json
+        try:
+            value = json.loads(value)
+        except Exception:
+            return [x.strip() for x in value.split(",") if x.strip()]
+    return [str(x) for x in value] if isinstance(value, list) else []
+
+
+def _pairs_from_payload(raw: dict[str, Any]) -> list[tuple[str, str]]:
+    outcomes = _as_list(_payload_value(raw, "outcomes", "outcome"))
+    tokens = _as_list(_payload_value(raw, "clobTokenIds", "clob_token_ids", "tokens", "tokenIds"))
+    return list(zip(outcomes, tokens))
+
+
+def _assert_eq(actual: Any, expected: Any, code: str, field: str) -> None:
+    if actual != expected:
+        _error(code, f"{field} does not match replayed evidence", actual=actual, expected=expected)
+
+
+def _validate_market(value: dict[str, Any], as_of: datetime) -> dict[str, Any]:
+    m = value["market_snapshot_manifest"]
+    if content_hash(m) != assert_sha256_hex(value["market_snapshot_sha256"], field="market_snapshot_sha256"):
+        _error("MARKET_SNAPSHOT_HASH_MISMATCH", "market_snapshot_sha256 must replay from manifest")
+    if m.get("method") != "GET": _error("MARKET_IDENTITY_REPLAY_MISMATCH", "market method must be GET")
+    captured = parse_iso_utc(m["captured_at_utc"])
+    if captured > as_of: _error("VALUE_V2_LEAKAGE_INVALID", "market captured after as_of_time_utc")
+    gamma, clob = m["gamma_market_payload"], m["clob_market_payload"]
+    if content_hash(gamma) != assert_sha256_hex(m["gamma_payload_sha256"], field="gamma_payload_sha256"):
+        _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma payload hash mismatch")
+    if content_hash(clob) != assert_sha256_hex(m["clob_payload_sha256"], field="clob_payload_sha256"):
+        _error("MARKET_IDENTITY_REPLAY_MISMATCH", "clob payload hash mismatch")
+    condition = str(_payload_value(gamma, "conditionId", "condition_id", "condition") or "")
+    if not condition: _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma condition id unavailable")
+    _assert_eq(m["condition_id"], condition, "MARKET_IDENTITY_REPLAY_MISMATCH", "condition_id")
+    for key, names in (("market_slug", ("slug", "market_slug")), ("event_id", ("eventId", "event_id", "id")), ("question", ("question", "title")), ("city", ("city",)), ("weather_date_local", ("weatherDateLocal", "weather_date_local")), ("weather_metric", ("weatherMetric", "weather_metric")), ("active", ("active",)), ("closed", ("closed",)), ("accepting_orders", ("acceptingOrders", "accepting_orders"))):
+        raw = _payload_value(gamma, *names)
+        if raw is None: _error("MARKET_IDENTITY_REPLAY_MISMATCH", f"gamma {key} unavailable")
+        _assert_eq(m[key], raw if isinstance(raw, bool) else str(raw), "MARKET_IDENTITY_REPLAY_MISMATCH", key)
+    pairs = _pairs_from_payload(gamma)
+    if not pairs: _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma outcome/token pairs unavailable")
+    _assert_eq(list(m["outcomes"]), [p[0] for p in pairs], "MARKET_IDENTITY_REPLAY_MISMATCH", "outcomes")
+    _assert_eq(list(m["clob_token_ids"]), [p[1] for p in pairs], "ORDERBOOK_TOKEN_BINDING_MISMATCH", "clob_token_ids")
+    # The selected public CLOB payload must corroborate the chosen condition.
+    ccond = str(_payload_value(clob, "condition_id", "conditionId", "market") or "")
+    if ccond and ccond != condition: _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "CLOB market condition conflicts with Gamma")
+    cpairs = _pairs_from_payload(clob)
+    if not cpairs or cpairs != pairs:
+        _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "CLOB outcome/token mapping does not replay Gamma mapping")
+    return {"manifest": m, "captured": captured, "pairs": dict(pairs)}
+
+
+def _validate_orderbooks(value: dict[str, Any], market: dict[str, Any], as_of: datetime) -> dict[str, dict[str, Any]]:
+    evidence: dict[str, dict[str, Any]] = {}
+    for item in value["orderbook_evidence"]:
+        sid = item["orderbook_snapshot_id"]
+        if sid in evidence: _error("ORDERBOOK_EVIDENCE_REF_MISSING", "duplicate orderbook snapshot id", snapshot_id=sid)
+        if item["method"] != "GET" or item["status_code"] != 200 or not str(item["endpoint"]).startswith(CLOB_BASE + "/book"):
+            _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "orderbook endpoint/status/method invalid", snapshot_id=sid)
+        captured = parse_iso_utc(item["captured_at_utc"])
+        started = parse_iso_utc(item["request_started_at_utc"])
+        if started > captured or captured > as_of or captured.astimezone(CST).time() > time(15, 0):
+            _error("VALUE_V2_LEAKAGE_INVALID", "orderbook acquisition violates cutoff", snapshot_id=sid)
+        if content_hash(item["raw_payload"]) != assert_sha256_hex(item["raw_payload_sha256"], field="raw_payload_sha256"):
+            _error("ORDERBOOK_RAW_HASH_MISMATCH", "raw orderbook hash mismatch", snapshot_id=sid)
+        if item["condition_id"] != market["manifest"]["condition_id"] or item["token_id"] not in market["pairs"].values():
+            _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "orderbook token not in market snapshot", snapshot_id=sid)
+        try:
+            normalized = normalize_orderbook(item["raw_payload"], item["token_id"], item["condition_id"], market["manifest"]["gamma_market_payload"])
+        except Exception as exc:
+            _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", f"orderbook normalization failed: {exc}", snapshot_id=sid)
+        if item["normalization_algorithm_version"] != NORMALIZED_BOOK_ALGORITHM_VERSION:
+            _error("ORDERBOOK_NORMALIZED_HASH_MISMATCH", "normalization algorithm version mismatch", snapshot_id=sid)
+        if content_hash(normalized["normalized_book"]) != assert_sha256_hex(item["normalized_book_sha256"], field="normalized_book_sha256"):
+            _error("ORDERBOOK_NORMALIZED_HASH_MISMATCH", "normalized orderbook hash mismatch", snapshot_id=sid)
+        if content_hash(item["normalized_book"]) != content_hash(normalized["normalized_book"]):
+            _error("ORDERBOOK_NORMALIZED_HASH_MISMATCH", "normalized orderbook payload mismatch", snapshot_id=sid)
+        bid, ask = normalized["best_bid"], normalized["best_ask"]
+        if (item["best_bid"] is None) != (bid is None) or (bid is not None and Decimal(str(item["best_bid"])) != bid):
+            _error("ORDERBOOK_BEST_ASK_MISMATCH", "best_bid mismatch", snapshot_id=sid)
+        if (item["best_ask"] is None) != (ask is None) or (ask is not None and Decimal(str(item["best_ask"])) != ask):
+            _error("ORDERBOOK_BEST_ASK_MISMATCH", "best_ask mismatch", snapshot_id=sid)
+        evidence[sid] = {"item": item, "normalized": normalized, "captured": captured}
+    return evidence
+
+
+def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, Any], *, formal_mode: bool = True) -> dict[str, Any]:
+    if isinstance(value, dict) and value.get("orderbook_evidence") == [] and value.get("candidates"):
+        _error("ORDERBOOK_EVIDENCE_REF_MISSING", "candidate references cannot be satisfied by an empty evidence set")
+    validate_v2_schema(value)
+    weather_validation = validate_weather_probability_bundle(weather, formal_mode=formal_mode)
+    if value.get("schema_version") != SCHEMA_VERSION: _error("VALUE_BUNDLE_VERSION_UNKNOWN", "V2 schema_version required")
+    if weather_validation["data_status"] == "LEAKAGE_INVALID" or value["data_status"] == "LEAKAGE_INVALID":
+        _error("VALUE_V2_LEAKAGE_INVALID", "LEAKAGE_INVALID cannot produce an executable CSV")
+    for key in ("forecast_run_id", "model_version", "rules_version", "weather_date_local"):
+        _assert_eq(value[key], weather[key], "MARKET_IDENTITY_REPLAY_MISMATCH", key)
+    if str(value["station"]).upper() != str(weather["station"]).upper() or normalize_city_for_station(str(weather["station"]).upper(), value["city"]) != weather_validation["city"] or normalize_weather_metric(value["weather_metric"], formal_mode=True) != weather_validation["weather_metric"]:
+        _error("MARKET_IDENTITY_REPLAY_MISMATCH", "V2 identity does not match weather bundle")
+    as_of = parse_iso_utc(value["as_of_time_utc"])
+    if as_of != parse_iso_utc(weather["as_of_time_utc"]): _error("VALUE_V2_LEAKAGE_INVALID", "as_of must match weather bundle")
+    validate_d1_1500_time_fields(value["as_of_time_utc"], weather["as_of_time_cst"], value["weather_date_local"], value["generated_at_utc"], formal_mode=False)
+    if value["weather_bundle_sha256"] != weather_validation["bundle_sha256"]: _error("MARKET_IDENTITY_REPLAY_MISMATCH", "weather hash mismatch")
+    market = _validate_market(value, as_of)
+    books = _validate_orderbooks(value, market, as_of)
+    generated = parse_iso_utc(value["generated_at_utc"])
+    if generated < as_of or any(generated < b["captured"] for b in books.values()): _error("VALUE_V2_LEAKAGE_INVALID", "generated_at precedes evidence")
+    probabilities = {r["temperature_bucket"]: Decimal(r["forecast_probability"]) for r in weather_validation["normalized_probabilities"] if r["marketable"]}
+    accepted, refs = [], set()
+    for raw in value["candidates"]:
+        ref = raw["orderbook_evidence_ref"]
+        if ref not in books: _error("ORDERBOOK_EVIDENCE_REF_MISSING", "candidate evidence reference missing", reference=ref)
+        b = books[ref]["item"]
+        if raw["orderbook_snapshot_id"] != ref or raw["condition_id"] != b["condition_id"] or raw["token_id"] != b["token_id"]:
+            _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "candidate/evidence identity mismatch", reference=ref)
+        if raw["market_slug"] != market["manifest"]["market_slug"] or raw["outcome"] != {v:k for k,v in market["pairs"].items()}.get(raw["token_id"]):
+            _error("MARKET_IDENTITY_REPLAY_MISMATCH", "candidate market identity mismatch")
+        bucket = normalize_temp_bucket_label(raw["temperature_bucket"])
+        fp, ask = Decimal(str(raw["forecast_probability"])), Decimal(str(raw["market_ask_price"]))
+        if bucket not in probabilities or fp != probabilities[bucket]: _error("MARKET_IDENTITY_REPLAY_MISMATCH", "forecast probability mismatch")
+        best_ask = books[ref]["normalized"]["best_ask"]
+        if best_ask is None or ask != best_ask: _error("ORDERBOOK_BEST_ASK_MISMATCH", "candidate ask must equal replayed best ask")
+        if raw["orderbook_snapshot_sha256"] != b["normalized_book_sha256"] or Decimal(str(raw["edge"])) != fp - ask:
+            _error("ORDERBOOK_BEST_ASK_MISMATCH", "candidate orderbook hash or edge mismatch")
+        refs.add(ref)
+        accepted.append({**raw, "model_version": value["model_version"], "rules_version": value["rules_version"], "city": weather_validation["city"], "temperature_bucket": bucket, "forecast_probability": dstr(fp), "market_ask_price": dstr(ask), "edge": dstr(fp-ask), "recommended_max_price": dstr(Decimal(str(raw["recommended_max_price"]))), "intended_usd": dstr(Decimal(str(raw["intended_usd"]))), "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL})
+    if refs != set(books): _error("ORDERBOOK_EVIDENCE_ORPHANED", "all orderbook evidence must be referenced", orphaned=sorted(set(books)-refs))
+    return {"ok": True, "accepted": accepted, "rejected": [], "accepted_count": len(accepted), "rejected_count": 0, "value_sha256": bridge_hash(value), "weather_sha256": weather_validation["bundle_sha256"], "data_status": value["data_status"], "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL, "schema_runtime": {"validator":"Draft202012Validator", "format_checker":True}}
