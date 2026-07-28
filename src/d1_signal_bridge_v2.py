@@ -17,6 +17,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 BRIDGE_VERSION = "d1_signal_bridge_v2"
 REQUIRED_OUTPUT_FILES = ("weather_probability_bundle.json", "value_signal_bundle.json", "husky_entry_signals.csv", "bridge_manifest_core.json", "bridge_manifest.json", "bridge_manifest.sha256", "validation_report.json")
+MANIFEST_HASHED_FILES = ("weather_probability_bundle.json", "value_signal_bundle.json", "bridge_manifest_core.json", "husky_entry_signals.csv", "validation_report.json")
 
 
 def _core(weather: dict[str, Any], weather_v: dict[str, Any], value_v: dict[str, Any], entry_valid_minutes: int) -> dict[str, Any]:
@@ -35,7 +36,7 @@ def _report(weather: dict[str, Any], weather_v: dict[str, Any], value_v: dict[st
 
 
 def _manifest(weather: dict[str, Any], weather_v: dict[str, Any], value_v: dict[str, Any], rows: list[dict[str, str]], work: Path, core_sha: str) -> dict[str, Any]:
-    return {"bridge_version": BRIDGE_VERSION, "value_schema_version": "2.0", "forecast_run_id": weather["forecast_run_id"], "model_version": weather["model_version"], "rules_version": weather["rules_version"], "station": weather_v["station"], "city": weather_v["city"], "weather_date_local": weather["weather_date_local"], "weather_metric": weather_v["weather_metric"], "as_of_time_utc": weather["as_of_time_utc"], "as_of_time_cst": weather["as_of_time_cst"], "data_status": value_v["data_status"], "converted_signal_count": len(rows), "rejected_signal_count": 0, "formal_ledger_used": False, "wallet_or_real_order_used": False, "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL, "execution_eligible": True, "input_content_hashes": {"weather_probability_bundle": weather_v["bundle_sha256"], "value_signal_bundle": value_v["value_sha256"]}, "files": {name: {"path": name, "sha256": sha256_file(work / name)} for name in ("weather_probability_bundle.json", "value_signal_bundle.json", "bridge_manifest_core.json", "husky_entry_signals.csv", "validation_report.json")}}
+    return {"bridge_version": BRIDGE_VERSION, "value_schema_version": "2.0", "forecast_run_id": weather["forecast_run_id"], "model_version": weather["model_version"], "rules_version": weather["rules_version"], "station": weather_v["station"], "city": weather_v["city"], "weather_date_local": weather["weather_date_local"], "weather_metric": weather_v["weather_metric"], "as_of_time_utc": weather["as_of_time_utc"], "as_of_time_cst": weather["as_of_time_cst"], "data_status": value_v["data_status"], "converted_signal_count": len(rows), "rejected_signal_count": 0, "formal_ledger_used": False, "wallet_or_real_order_used": False, "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL, "execution_eligible": True, "input_content_hashes": {"weather_probability_bundle": weather_v["bundle_sha256"], "value_signal_bundle": value_v["value_sha256"]}, "files": {name: {"path": name, "sha256": sha256_file(work / name)} for name in MANIFEST_HASHED_FILES}}
 
 
 def verify_bridge_output(output_dir: Path) -> dict[str, Any]:
@@ -46,8 +47,19 @@ def verify_bridge_output(output_dir: Path) -> dict[str, Any]:
     try:
         weather, value, core, report, manifest = (load_json(out / n) for n in ("weather_probability_bundle.json", "value_signal_bundle.json", "bridge_manifest_core.json", "validation_report.json", "bridge_manifest.json"))
         if (out / "bridge_manifest.sha256").read_text(encoding="utf-8").strip() != sha256_file(out / "bridge_manifest.json"): errors.append("detached_manifest_sha_mismatch")
-        for name, meta in manifest.get("files", {}).items():
-            if name not in REQUIRED_OUTPUT_FILES or meta.get("path") != name or sha256_file(out / name) != meta.get("sha256"): errors.append("artifact_hash_mismatch:" + name)
+        files = manifest.get("files")
+        if not isinstance(files, dict) or set(files) != set(MANIFEST_HASHED_FILES):
+            errors.append("manifest_files_set_mismatch")
+            files = files if isinstance(files, dict) else {}
+        for name in MANIFEST_HASHED_FILES:
+            meta = files.get(name)
+            if (
+                not isinstance(meta, dict)
+                or set(meta) != {"path", "sha256"}
+                or meta.get("path") != name
+                or sha256_file(out / name) != meta.get("sha256")
+            ):
+                errors.append("artifact_hash_mismatch:" + name)
         if manifest.get("bridge_version") != BRIDGE_VERSION: errors.append("VALUE_BUNDLE_VERSION_UNKNOWN")
         if manifest.get("orderbook_hash_verification") != ORDERBOOK_HASH_VALIDATION_LEVEL: errors.append("VALUE_V2_DOWNGRADE_FORBIDDEN")
         weather_v = validate_weather_probability_bundle(weather, formal_mode=True); result["weather_revalidation_result"]={"ok":True}
@@ -61,8 +73,7 @@ def verify_bridge_output(output_dir: Path) -> dict[str, Any]:
         if report == _report(weather, weather_v, value_v, rows): result["report_rebuild_result"]={"ok":True}
         else: errors.append("report_rebuild_mismatch")
         expected = _manifest(weather, weather_v, value_v, rows, out, sha256_file(out / "bridge_manifest_core.json"))
-        # File hashes were checked above; all non-file identity is deterministic.
-        if {k:v for k,v in manifest.items() if k != "files"} == {k:v for k,v in expected.items() if k != "files"}: result["manifest_identity_result"]={"ok":True}
+        if manifest == expected: result["manifest_identity_result"]={"ok":True}
         else: errors.append("manifest_identity_mismatch")
     except BridgeError as exc:
         errors.append(exc.code)

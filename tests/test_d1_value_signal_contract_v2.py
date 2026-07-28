@@ -34,3 +34,234 @@ def test_coordinated_tampering_is_rejected(mutation,code):
     elif mutation=="orphan": v["orderbook_evidence"].append(deepcopy(v["orderbook_evidence"][0])); v["orderbook_evidence"][1]["orderbook_snapshot_id"]="ob-2"
     else: v["schema_version"]="1.0"
     with pytest.raises(BridgeError, match=code): validate_value_signal_bundle_v2(w,v)
+
+
+def rehash_market(value):
+    market = value["market_snapshot_manifest"]
+    market["gamma_payload_sha256"] = adapter_hash(market["gamma_market_payload"])
+    market["clob_payload_sha256"] = adapter_hash(market["clob_market_payload"])
+    value["market_snapshot_sha256"] = adapter_hash(market)
+
+
+def rehash_raw_orderbook(value):
+    evidence = value["orderbook_evidence"][0]
+    evidence["raw_payload_sha256"] = adapter_hash(evidence["raw_payload"])
+
+
+def bind_weather_hash(value, weather_bundle):
+    value["weather_bundle_sha256"] = content_hash(weather_bundle)
+
+
+@pytest.mark.parametrize(
+    "field,gamma_field,replacement",
+    [
+        ("city", "city", "Beijing"),
+        ("weather_date_local", "weatherDateLocal", "2026-07-25"),
+    ],
+)
+def test_market_weather_identity_survives_coordinated_market_rehash(field, gamma_field, replacement):
+    value, weather_bundle = bundle()
+    market = value["market_snapshot_manifest"]
+    market[field] = replacement
+    market["gamma_market_payload"][gamma_field] = replacement
+    rehash_market(value)
+    with pytest.raises(BridgeError, match="MARKET_WEATHER_IDENTITY_MISMATCH"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_market_metric_coordinated_rehash_is_rejected_by_contract():
+    value, weather_bundle = bundle()
+    market = value["market_snapshot_manifest"]
+    market["weather_metric"] = "daily_temperature"
+    market["gamma_market_payload"]["weatherMetric"] = "daily_temperature"
+    rehash_market(value)
+    with pytest.raises(BridgeError, match="VALUE_V2_SCHEMA_INVALID"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "field,gamma_field,replacement",
+    [
+        ("active", "active", False),
+        ("closed", "closed", True),
+        ("accepting_orders", "acceptingOrders", False),
+    ],
+)
+def test_market_must_be_tradable(field, gamma_field, replacement):
+    value, weather_bundle = bundle()
+    market = value["market_snapshot_manifest"]
+    market[field] = replacement
+    market["gamma_market_payload"][gamma_field] = replacement
+    rehash_market(value)
+    with pytest.raises(BridgeError, match="MARKET_NOT_TRADABLE"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize("weather_status", ["PARTIAL", "CONFLICTING"])
+def test_value_cannot_upgrade_incomplete_weather_to_complete(weather_status):
+    value, weather_bundle = bundle()
+    weather_bundle["data_status"] = weather_status
+    bind_weather_hash(value, weather_bundle)
+    with pytest.raises(BridgeError, match="STATUS_UPGRADE_FORBIDDEN"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_candidate_cannot_upgrade_partial_value_to_complete():
+    value, weather_bundle = bundle()
+    value["data_status"] = "PARTIAL"
+    with pytest.raises(BridgeError, match="STATUS_UPGRADE_FORBIDDEN"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "field,replacement,code",
+    [
+        ("forecast_run_id", "other-run", "FORECAST_RUN_ID_MISMATCH"),
+        ("station", "ZBAA", "STATION_MISMATCH"),
+        ("weather_date_local", "2026-07-25", "WEATHER_DATE_MISMATCH"),
+        ("weather_metric", "daily_temperature", "VALUE_V2_SCHEMA_INVALID"),
+    ],
+)
+def test_candidate_identity_must_match_validated_weather_and_value(field, replacement, code):
+    value, weather_bundle = bundle()
+    value["candidates"][0][field] = replacement
+    with pytest.raises(BridgeError, match=code):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "field,replacement,code",
+    [
+        ("forecast_run_id", "other-run", "FORECAST_RUN_ID_MISMATCH"),
+        ("model_version", "OTHER_MODEL", "VALUE_V2_SCHEMA_INVALID"),
+        ("rules_version", "other-rules", "VALUE_V2_SCHEMA_INVALID"),
+        ("station", "ZBAA", "STATION_MISMATCH"),
+        ("city", "Beijing", "CITY_MISMATCH"),
+        ("weather_date_local", "2026-07-25", "WEATHER_DATE_MISMATCH"),
+        ("weather_metric", "daily_temperature", "VALUE_V2_SCHEMA_INVALID"),
+        ("weather_bundle_sha256", "0" * 64, "WEATHER_HASH_MISMATCH"),
+    ],
+)
+def test_top_level_value_identity_must_match_weather(field, replacement, code):
+    value, weather_bundle = bundle()
+    value[field] = replacement
+    with pytest.raises(BridgeError, match=code):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "generated_at",
+    [
+        "2026-07-23T07:00:00+00:00",
+        "2026-07-23T07:05:00+00:00",
+    ],
+)
+def test_formal_value_generation_window_includes_exact_boundaries(generated_at):
+    value, weather_bundle = bundle()
+    value["generated_at_utc"] = generated_at
+    assert validate_value_signal_bundle_v2(weather_bundle, value)["accepted_count"] == 1
+
+
+@pytest.mark.parametrize(
+    "generated_at",
+    [
+        "2026-07-23T06:59:59.999999+00:00",
+        "2026-07-23T07:05:00.000001+00:00",
+    ],
+)
+def test_formal_value_generation_window_rejects_outside_microsecond(generated_at):
+    value, weather_bundle = bundle()
+    value["generated_at_utc"] = generated_at
+    with pytest.raises(BridgeError, match="VALUE_V2_GENERATED_TIME_INVALID"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_weather_outside_formal_window_blocks_in_window_value():
+    value, weather_bundle = bundle()
+    weather_bundle["generated_at_utc"] = "2026-07-23T07:05:00.000001+00:00"
+    bind_weather_hash(value, weather_bundle)
+    with pytest.raises(BridgeError, match="FORMAL_TIME_WINDOW_BLOCKED"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_value_outside_formal_window_blocks_in_window_weather():
+    value, weather_bundle = bundle()
+    value["generated_at_utc"] = "2026-07-23T06:59:59.999999+00:00"
+    with pytest.raises(BridgeError, match="VALUE_V2_GENERATED_TIME_INVALID"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "candidate_time",
+    [
+        "2026-07-23T06:59:00+00:00",
+        "2026-07-23T07:01:00+00:00",
+    ],
+)
+def test_candidate_orderbook_time_must_equal_evidence_instant(candidate_time):
+    value, weather_bundle = bundle()
+    value["candidates"][0]["orderbook_captured_at_utc"] = candidate_time
+    with pytest.raises(BridgeError, match="ORDERBOOK_EVIDENCE_TIME_MISMATCH"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_candidate_equivalent_utc_offset_time_is_accepted_and_canonicalized_from_evidence():
+    value, weather_bundle = bundle()
+    value["candidates"][0]["orderbook_captured_at_utc"] = "2026-07-23T15:00:00+08:00"
+    accepted = validate_value_signal_bundle_v2(weather_bundle, value)["accepted"][0]
+    assert accepted["orderbook_captured_at_utc"] == value["orderbook_evidence"][0]["captured_at_utc"]
+
+
+@pytest.mark.parametrize(
+    "mutation,code",
+    [
+        ("missing_token", "ORDERBOOK_RAW_TOKEN_REQUIRED"),
+        ("missing_condition", "ORDERBOOK_RAW_CONDITION_REQUIRED"),
+        ("wrong_token", "ORDERBOOK_TOKEN_BINDING_MISMATCH"),
+        ("wrong_condition", "ORDERBOOK_TOKEN_BINDING_MISMATCH"),
+    ],
+)
+def test_raw_orderbook_identity_is_required_and_exact(mutation, code):
+    value, weather_bundle = bundle()
+    raw = value["orderbook_evidence"][0]["raw_payload"]
+    if mutation == "missing_token":
+        raw.pop("asset_id")
+    elif mutation == "missing_condition":
+        raw.pop("market")
+    elif mutation == "wrong_token":
+        raw["asset_id"] = "token-x"
+    else:
+        raw["market"] = "cond-x"
+    rehash_raw_orderbook(value)
+    with pytest.raises(BridgeError, match=code):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://clob.polymarket.com/book?token_id=token-x",
+        "https://clob.polymarket.com/book-extra?token_id=token-1",
+        "https://clob.polymarket.com.evil.example/book?token_id=token-1",
+        "https://user@clob.polymarket.com/book?token_id=token-1",
+        "https://clob.polymarket.com/book?token_id=token-1&token_id=token-1",
+        "https://clob.polymarket.com/book?token_id=token-1#fragment",
+    ],
+)
+def test_orderbook_endpoint_is_exactly_bound(endpoint):
+    value, weather_bundle = bundle()
+    value["orderbook_evidence"][0]["endpoint"] = endpoint
+    with pytest.raises(BridgeError, match="ORDERBOOK_TOKEN_BINDING_MISMATCH"):
+        validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+def test_accepted_candidate_identity_and_time_are_derived_from_validated_sources():
+    value, weather_bundle = bundle()
+    accepted = validate_value_signal_bundle_v2(weather_bundle, value)["accepted"][0]
+    assert accepted["forecast_run_id"] == weather_bundle["forecast_run_id"]
+    assert accepted["station"] == weather_bundle["station"]
+    assert accepted["weather_date_local"] == weather_bundle["weather_date_local"]
+    assert accepted["weather_metric"] == weather_bundle["weather_metric"]
+    assert accepted["condition_id"] == value["orderbook_evidence"][0]["condition_id"]
+    assert accepted["token_id"] == value["orderbook_evidence"][0]["token_id"]
+    assert accepted["orderbook_captured_at_utc"] == value["orderbook_evidence"][0]["captured_at_utc"]

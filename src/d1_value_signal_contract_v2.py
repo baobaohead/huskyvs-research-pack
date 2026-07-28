@@ -9,6 +9,7 @@ from datetime import datetime, time, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 try:
@@ -18,10 +19,10 @@ except ModuleNotFoundError:  # pragma: no cover
     FormatChecker = None  # type: ignore
 
 try:
-    from src.d1_signal_bridge_v1 import (ALLOWED_DATA_STATUS, BridgeError, assert_sha256_hex, content_hash as bridge_hash, dstr, normalize_city_for_station, normalize_temp_bucket_label, normalize_weather_metric, parse_iso_utc, validate_d1_1500_time_fields, validate_weather_probability_bundle)
+    from src.d1_signal_bridge_v1 import (BridgeError, _validate_status_no_upgrade, assert_sha256_hex, content_hash as bridge_hash, dstr, normalize_city_for_station, normalize_temp_bucket_label, normalize_weather_metric, parse_iso_utc, validate_d1_1500_time_fields, validate_weather_probability_bundle)
     from src.polymarket_public_adapter_v5_1_8 import CLOB_BASE, NORMALIZED_BOOK_ALGORITHM_VERSION, content_hash, dstr as adapter_dstr, normalize_orderbook
 except ModuleNotFoundError:  # pragma: no cover
-    from d1_signal_bridge_v1 import (ALLOWED_DATA_STATUS, BridgeError, assert_sha256_hex, content_hash as bridge_hash, dstr, normalize_city_for_station, normalize_temp_bucket_label, normalize_weather_metric, parse_iso_utc, validate_d1_1500_time_fields, validate_weather_probability_bundle)
+    from d1_signal_bridge_v1 import (BridgeError, _validate_status_no_upgrade, assert_sha256_hex, content_hash as bridge_hash, dstr, normalize_city_for_station, normalize_temp_bucket_label, normalize_weather_metric, parse_iso_utc, validate_d1_1500_time_fields, validate_weather_probability_bundle)
     from polymarket_public_adapter_v5_1_8 import CLOB_BASE, NORMALIZED_BOOK_ALGORITHM_VERSION, content_hash, dstr as adapter_dstr, normalize_orderbook
 
 SCHEMA_VERSION = "2.0"
@@ -76,7 +77,14 @@ def _assert_eq(actual: Any, expected: Any, code: str, field: str) -> None:
         _error(code, f"{field} does not match replayed evidence", actual=actual, expected=expected)
 
 
-def _validate_market(value: dict[str, Any], as_of: datetime) -> dict[str, Any]:
+def _validate_market(
+    value: dict[str, Any],
+    as_of: datetime,
+    *,
+    weather_city: str,
+    weather_date_local: str,
+    weather_metric: str,
+) -> dict[str, Any]:
     m = value["market_snapshot_manifest"]
     if content_hash(m) != assert_sha256_hex(value["market_snapshot_sha256"], field="market_snapshot_sha256"):
         _error("MARKET_SNAPSHOT_HASH_MISMATCH", "market_snapshot_sha256 must replay from manifest")
@@ -105,7 +113,49 @@ def _validate_market(value: dict[str, Any], as_of: datetime) -> dict[str, Any]:
     cpairs = _pairs_from_payload(clob)
     if not cpairs or cpairs != pairs:
         _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "CLOB outcome/token mapping does not replay Gamma mapping")
+    if (
+        m["city"] != weather_city
+        or m["weather_date_local"] != weather_date_local
+        or m["weather_metric"] != weather_metric
+    ):
+        _error(
+            "MARKET_WEATHER_IDENTITY_MISMATCH",
+            "market snapshot weather identity does not match the validated weather bundle",
+        )
+    if m["active"] is not True or m["closed"] is not False or m["accepting_orders"] is not True:
+        _error("MARKET_NOT_TRADABLE", "market snapshot is not active and accepting orders")
     return {"manifest": m, "captured": captured, "pairs": dict(pairs)}
+
+
+def _validate_orderbook_endpoint(endpoint: str, token_id: str, *, snapshot_id: str) -> None:
+    try:
+        parsed = urlsplit(str(endpoint))
+        port = parsed.port
+        query = parse_qs(parsed.query, keep_blank_values=True, strict_parsing=True)
+    except (TypeError, ValueError):
+        _error(
+            "ORDERBOOK_TOKEN_BINDING_MISMATCH",
+            "orderbook endpoint is malformed",
+            snapshot_id=snapshot_id,
+        )
+    official = urlsplit(CLOB_BASE)
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != official.hostname
+        or port not in (None, 443)
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path != "/book"
+        or bool(parsed.fragment)
+        or set(query) != {"token_id"}
+        or len(query["token_id"]) != 1
+        or query["token_id"][0] != token_id
+    ):
+        _error(
+            "ORDERBOOK_TOKEN_BINDING_MISMATCH",
+            "orderbook endpoint is not exactly bound to the evidence token",
+            snapshot_id=snapshot_id,
+        )
 
 
 def _validate_orderbooks(value: dict[str, Any], market: dict[str, Any], as_of: datetime) -> dict[str, dict[str, Any]]:
@@ -113,8 +163,9 @@ def _validate_orderbooks(value: dict[str, Any], market: dict[str, Any], as_of: d
     for item in value["orderbook_evidence"]:
         sid = item["orderbook_snapshot_id"]
         if sid in evidence: _error("ORDERBOOK_EVIDENCE_REF_MISSING", "duplicate orderbook snapshot id", snapshot_id=sid)
-        if item["method"] != "GET" or item["status_code"] != 200 or not str(item["endpoint"]).startswith(CLOB_BASE + "/book"):
+        if item["method"] != "GET" or item["status_code"] != 200:
             _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "orderbook endpoint/status/method invalid", snapshot_id=sid)
+        _validate_orderbook_endpoint(item["endpoint"], item["token_id"], snapshot_id=sid)
         captured = parse_iso_utc(item["captured_at_utc"])
         started = parse_iso_utc(item["request_started_at_utc"])
         if started > captured or captured > as_of or captured.astimezone(CST).time() > time(15, 0):
@@ -123,6 +174,14 @@ def _validate_orderbooks(value: dict[str, Any], market: dict[str, Any], as_of: d
             _error("ORDERBOOK_RAW_HASH_MISMATCH", "raw orderbook hash mismatch", snapshot_id=sid)
         if item["condition_id"] != market["manifest"]["condition_id"] or item["token_id"] not in market["pairs"].values():
             _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "orderbook token not in market snapshot", snapshot_id=sid)
+        raw_token = _payload_value(item["raw_payload"], "asset_id", "token_id")
+        if raw_token is None:
+            _error("ORDERBOOK_RAW_TOKEN_REQUIRED", "raw orderbook token field is required", snapshot_id=sid)
+        raw_condition = _payload_value(item["raw_payload"], "market", "condition_id", "conditionId")
+        if raw_condition is None:
+            _error("ORDERBOOK_RAW_CONDITION_REQUIRED", "raw orderbook condition field is required", snapshot_id=sid)
+        if str(raw_token) != item["token_id"] or str(raw_condition) != item["condition_id"]:
+            _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "raw orderbook identity does not match evidence", snapshot_id=sid)
         try:
             normalized = normalize_orderbook(item["raw_payload"], item["token_id"], item["condition_id"], market["manifest"]["gamma_market_payload"])
         except Exception as exc:
@@ -148,20 +207,56 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
     validate_v2_schema(value)
     weather_validation = validate_weather_probability_bundle(weather, formal_mode=formal_mode)
     if value.get("schema_version") != SCHEMA_VERSION: _error("VALUE_BUNDLE_VERSION_UNKNOWN", "V2 schema_version required")
+    if formal_mode and weather_validation.get("formal_blocked"):
+        _error("FORMAL_TIME_WINDOW_BLOCKED", "weather bundle is outside the formal generation window")
     if weather_validation["data_status"] == "LEAKAGE_INVALID" or value["data_status"] == "LEAKAGE_INVALID":
         _error("VALUE_V2_LEAKAGE_INVALID", "LEAKAGE_INVALID cannot produce an executable CSV")
-    for key in ("forecast_run_id", "model_version", "rules_version", "weather_date_local"):
-        _assert_eq(value[key], weather[key], "MARKET_IDENTITY_REPLAY_MISMATCH", key)
-    if str(value["station"]).upper() != str(weather["station"]).upper() or normalize_city_for_station(str(weather["station"]).upper(), value["city"]) != weather_validation["city"] or normalize_weather_metric(value["weather_metric"], formal_mode=True) != weather_validation["weather_metric"]:
-        _error("MARKET_IDENTITY_REPLAY_MISMATCH", "V2 identity does not match weather bundle")
+    for key, code in (
+        ("forecast_run_id", "FORECAST_RUN_ID_MISMATCH"),
+        ("model_version", "MODEL_VERSION_MISMATCH"),
+        ("rules_version", "RULES_VERSION_MISMATCH"),
+        ("weather_date_local", "WEATHER_DATE_MISMATCH"),
+    ):
+        _assert_eq(value[key], weather[key], code, key)
+    if str(value["station"]).upper() != weather_validation["station"]:
+        _error("STATION_MISMATCH", "value station does not match weather bundle")
+    if normalize_city_for_station(weather_validation["station"], value["city"]) != weather_validation["city"]:
+        _error("CITY_MISMATCH", "value city does not match weather bundle")
+    if normalize_weather_metric(value["weather_metric"], formal_mode=formal_mode) != weather_validation["weather_metric"]:
+        _error("WEATHER_METRIC_MISMATCH", "value weather metric does not match weather bundle")
     as_of = parse_iso_utc(value["as_of_time_utc"])
     if as_of != parse_iso_utc(weather["as_of_time_utc"]): _error("VALUE_V2_LEAKAGE_INVALID", "as_of must match weather bundle")
-    validate_d1_1500_time_fields(value["as_of_time_utc"], weather["as_of_time_cst"], value["weather_date_local"], value["generated_at_utc"], formal_mode=False)
-    if value["weather_bundle_sha256"] != weather_validation["bundle_sha256"]: _error("MARKET_IDENTITY_REPLAY_MISMATCH", "weather hash mismatch")
-    market = _validate_market(value, as_of)
+    value_time = validate_d1_1500_time_fields(
+        value["as_of_time_utc"],
+        weather["as_of_time_cst"],
+        value["weather_date_local"],
+        value["generated_at_utc"],
+        formal_mode=formal_mode,
+    )
+    if formal_mode and value_time["generated_out_of_window"]:
+        _error("VALUE_V2_GENERATED_TIME_INVALID", "value bundle is outside the formal generation window")
+    if value["weather_bundle_sha256"] != weather_validation["bundle_sha256"]:
+        _error("WEATHER_HASH_MISMATCH", "weather hash mismatch")
+    value_status = _validate_status_no_upgrade(
+        weather_validation["data_status"],
+        value["data_status"],
+        field="value.data_status",
+    )
+    market = _validate_market(
+        value,
+        as_of,
+        weather_city=weather_validation["city"],
+        weather_date_local=str(weather["weather_date_local"]),
+        weather_metric=weather_validation["weather_metric"],
+    )
     books = _validate_orderbooks(value, market, as_of)
     generated = parse_iso_utc(value["generated_at_utc"])
-    if generated < as_of or any(generated < b["captured"] for b in books.values()): _error("VALUE_V2_LEAKAGE_INVALID", "generated_at precedes evidence")
+    if (
+        generated < as_of
+        or generated < market["captured"]
+        or any(generated < b["captured"] for b in books.values())
+    ):
+        _error("VALUE_V2_GENERATED_TIME_INVALID", "value generated_at precedes market or orderbook evidence")
     probabilities = {r["temperature_bucket"]: Decimal(r["forecast_probability"]) for r in weather_validation["normalized_probabilities"] if r["marketable"]}
     accepted, refs = [], set()
     for raw in value["candidates"]:
@@ -170,6 +265,22 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
         b = books[ref]["item"]
         if raw["orderbook_snapshot_id"] != ref or raw["condition_id"] != b["condition_id"] or raw["token_id"] != b["token_id"]:
             _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "candidate/evidence identity mismatch", reference=ref)
+        if raw["forecast_run_id"] != value["forecast_run_id"]:
+            _error("FORECAST_RUN_ID_MISMATCH", "candidate forecast_run_id does not match value bundle")
+        if str(raw["station"]).upper() != weather_validation["station"]:
+            _error("STATION_MISMATCH", "candidate station does not match weather bundle")
+        if raw["weather_date_local"] != value["weather_date_local"]:
+            _error("WEATHER_DATE_MISMATCH", "candidate weather date does not match value bundle")
+        if normalize_weather_metric(raw["weather_metric"], formal_mode=formal_mode) != weather_validation["weather_metric"]:
+            _error("WEATHER_METRIC_MISMATCH", "candidate weather metric does not match weather bundle")
+        candidate_captured = parse_iso_utc(raw["orderbook_captured_at_utc"])
+        if candidate_captured != books[ref]["captured"]:
+            _error("ORDERBOOK_EVIDENCE_TIME_MISMATCH", "candidate orderbook time does not match referenced evidence")
+        candidate_status = _validate_status_no_upgrade(
+            value_status,
+            raw["data_status"],
+            field="candidate.data_status",
+        )
         if raw["market_slug"] != market["manifest"]["market_slug"] or raw["outcome"] != {v:k for k,v in market["pairs"].items()}.get(raw["token_id"]):
             _error("MARKET_IDENTITY_REPLAY_MISMATCH", "candidate market identity mismatch")
         bucket = normalize_temp_bucket_label(raw["temperature_bucket"])
@@ -180,6 +291,31 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
         if raw["orderbook_snapshot_sha256"] != b["normalized_book_sha256"] or Decimal(str(raw["edge"])) != fp - ask:
             _error("ORDERBOOK_BEST_ASK_MISMATCH", "candidate orderbook hash or edge mismatch")
         refs.add(ref)
-        accepted.append({**raw, "model_version": value["model_version"], "rules_version": value["rules_version"], "city": weather_validation["city"], "temperature_bucket": bucket, "forecast_probability": dstr(fp), "market_ask_price": dstr(ask), "edge": dstr(fp-ask), "recommended_max_price": dstr(Decimal(str(raw["recommended_max_price"]))), "intended_usd": dstr(Decimal(str(raw["intended_usd"]))), "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL})
+        accepted.append({
+            "forecast_run_id": value["forecast_run_id"],
+            "model_version": value["model_version"],
+            "rules_version": value["rules_version"],
+            "station": weather_validation["station"],
+            "city": weather_validation["city"],
+            "weather_date_local": value["weather_date_local"],
+            "weather_metric": weather_validation["weather_metric"],
+            "temperature_bucket": bucket,
+            "forecast_probability": dstr(fp),
+            "market_slug": market["manifest"]["market_slug"],
+            "condition_id": b["condition_id"],
+            "token_id": b["token_id"],
+            "outcome": {v: k for k, v in market["pairs"].items()}[b["token_id"]],
+            "market_ask_price": dstr(ask),
+            "edge": dstr(fp - ask),
+            "recommended_max_price": dstr(Decimal(str(raw["recommended_max_price"]))),
+            "intended_usd": dstr(Decimal(str(raw["intended_usd"]))),
+            "reason": str(raw["reason"]),
+            "data_status": candidate_status,
+            "orderbook_snapshot_id": b["orderbook_snapshot_id"],
+            "orderbook_snapshot_sha256": b["normalized_book_sha256"],
+            "orderbook_captured_at_utc": books[ref]["captured"].isoformat(),
+            "orderbook_evidence_ref": ref,
+            "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL,
+        })
     if refs != set(books): _error("ORDERBOOK_EVIDENCE_ORPHANED", "all orderbook evidence must be referenced", orphaned=sorted(set(books)-refs))
-    return {"ok": True, "accepted": accepted, "rejected": [], "accepted_count": len(accepted), "rejected_count": 0, "value_sha256": bridge_hash(value), "weather_sha256": weather_validation["bundle_sha256"], "data_status": value["data_status"], "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL, "schema_runtime": {"validator":"Draft202012Validator", "format_checker":True}}
+    return {"ok": True, "accepted": accepted, "rejected": [], "accepted_count": len(accepted), "rejected_count": 0, "value_sha256": bridge_hash(value), "weather_sha256": weather_validation["bundle_sha256"], "data_status": value_status, "orderbook_hash_verification": ORDERBOOK_HASH_VALIDATION_LEVEL, "schema_runtime": {"validator":"Draft202012Validator", "format_checker":True}}
