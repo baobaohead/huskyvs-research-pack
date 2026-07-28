@@ -114,6 +114,16 @@ def parse_datetime(value: Any, field: str) -> datetime:
     return parsed
 
 
+def parse_utc_evidence_time(value: Any, field: str = "captured_at_utc") -> str:
+    """Require an explicit UTC evidence timestamp and return canonical Z form."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValidationError(f"{field}: non-empty timestamp is required")
+    parsed = parse_datetime(value.strip(), field)
+    if parsed.utcoffset() != timedelta(0):
+        raise ValidationError(f"{field}: explicit UTC timezone is required")
+    return iso_utc(parsed)
+
+
 def decimal(value: Any, field: str = "value") -> Decimal:
     try:
         result = Decimal(str(value))
@@ -843,6 +853,7 @@ def normalize_evidence_record(record: dict[str, Any], probability_input: dict[st
         parsed["bucket_type"],
         decimal(parsed["threshold_value"], "threshold_value"),
     )
+    market_captured_at_utc = parse_utc_evidence_time(record.get("captured_at_utc"))
     return {
         "gamma": gamma,
         "clob": clob,
@@ -856,7 +867,7 @@ def normalize_evidence_record(record: dict[str, Any], probability_input: dict[st
         "temperature_bucket": parsed["canonical_label"],
         "forecast_probability": forecast_probability,
         "book": normalized_book,
-        "captured_at_utc": str(record.get("captured_at_utc") or raw_book.get("timestamp") or ""),
+        "market_captured_at_utc": market_captured_at_utc,
     }
 
 
@@ -964,7 +975,7 @@ def evaluate_market(market: dict[str, Any], intended_usd: Decimal) -> dict[str, 
         "orderbook_status": fill["status"],
         "thin_orderbook": fill["status"] != "filled",
         "consumed_levels": fill["levels"],
-        "captured_at_utc": market["captured_at_utc"],
+        "market_captured_at_utc": market["market_captured_at_utc"],
     }
 
 
@@ -1018,6 +1029,8 @@ def simulate_portfolio_fills(
     run_id: str,
     portfolios: dict[str, dict[str, Any]],
     market_by_bucket: dict[str, dict[str, Any]],
+    weather_as_of_time_utc: str,
+    decision_created_at_utc: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     signals: list[dict[str, Any]] = []
     fills: list[dict[str, Any]] = []
@@ -1045,7 +1058,10 @@ def simulate_portfolio_fills(
                         "token_id": market["token_id"],
                         "side": "BUY",
                         "intended_usd": allocation["intended_usd"],
-                        "created_at_utc": iso_utc(),
+                        "weather_as_of_time_utc": weather_as_of_time_utc,
+                        "market_captured_at_utc": market["market_captured_at_utc"],
+                        "decision_created_at_utc": decision_created_at_utc,
+                        "created_at_utc": decision_created_at_utc,
                     }
                 )
                 fills.append(
@@ -1066,6 +1082,9 @@ def simulate_portfolio_fills(
                         "unfilled_usd": fill["unfilled_usd"],
                         "best_ask": fill["best_ask"],
                         "executable_edge": fill["executable_edge"],
+                        "weather_as_of_time_utc": weather_as_of_time_utc,
+                        "market_captured_at_utc": market["market_captured_at_utc"],
+                        "decision_created_at_utc": decision_created_at_utc,
                     }
                 )
     return signals, fills
@@ -1111,6 +1130,8 @@ def write_demo_ledger(path: Path, run_identity: dict[str, str], signals: list[di
               simulated_proceeds TEXT NOT NULL DEFAULT '0',
               remaining_shares TEXT NOT NULL,
               realized_pnl_so_far TEXT NOT NULL DEFAULT '0',
+              entry_market_captured_at_utc TEXT NOT NULL,
+              last_update_evidence_captured_at_utc TEXT,
               last_update_id TEXT,
               PRIMARY KEY(signal_id, exit_rule),
               FOREIGN KEY(signal_id) REFERENCES demo_signals(signal_id)
@@ -1118,7 +1139,9 @@ def write_demo_ledger(path: Path, run_identity: dict[str, str], signals: list[di
             CREATE TABLE demo_update_snapshots(
               update_id TEXT NOT NULL, run_id TEXT NOT NULL,
               signal_id TEXT NOT NULL, exit_rule TEXT NOT NULL,
-              captured_at_utc TEXT NOT NULL, payload_json TEXT NOT NULL,
+              evidence_captured_at_utc TEXT NOT NULL,
+              update_processed_at_utc TEXT NOT NULL,
+              payload_json TEXT NOT NULL,
               PRIMARY KEY(update_id, signal_id, exit_rule)
             );
             CREATE TABLE demo_settlements(
@@ -1169,8 +1192,8 @@ def write_demo_ledger(path: Path, run_identity: dict[str, str], signals: list[di
                       run_id,signal_id,edge_rule,portfolio_rule,temperature_bucket,
                       bucket_type,threshold_value,token_id,exit_rule,status,
                       trigger_multiple,sell_fraction,invested_usd,entry_shares,
-                      entry_vwap,remaining_shares
-                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                      entry_vwap,remaining_shares,entry_market_captured_at_utc
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     (
                         run_identity["run_id"], fill["signal_id"], fill["edge_rule"],
@@ -1179,6 +1202,7 @@ def write_demo_ledger(path: Path, run_identity: dict[str, str], signals: list[di
                         trigger, fraction, dstr(fill["filled_usd"]), dstr(fill["filled_shares"]),
                         None if fill["entry_vwap"] is None else dstr(fill["entry_vwap"]),
                         dstr(fill["filled_shares"]),
+                        fill["market_captured_at_utc"],
                     ),
                 )
         for key, value in FORMAL_ZERO_STATUS.items():
@@ -1229,6 +1253,7 @@ def render_daily_report(
     portfolios: dict[str, Any],
     fills: list[dict[str, Any]],
     source_meta: dict[str, Any],
+    time_context: dict[str, str] | None = None,
 ) -> str:
     main_probability = max(probability_input["integer_temperature_probabilities"], key=lambda row: row["probability"])
     trade_count = sum(1 for fill in fills if fill["filled_usd"] > 0)
@@ -1236,11 +1261,16 @@ def render_daily_report(
     filled = sum((fill["filled_usd"] for fill in fills), Decimal("0"))
     unfilled = sum((fill["unfilled_usd"] for fill in fills), Decimal("0"))
     source_label = source_meta.get("evidence_label") or ("LIVE_READONLY" if source_meta.get("search_url") else "saved-public-evidence")
+    time_context = time_context or {}
     return "\n".join(
         [
             "# ZBAA 每日影子模拟报告",
             "",
-            f"证据来源：`{source_label}`。抓取/保存时间：`{source_meta.get('captured_at_utc') or source_meta.get('search_received_at_utc') or '见逐市场快照'}`。",
+            f"证据来源：`{source_label}`。",
+            f"天气预测截面时间：`{time_context.get('weather_as_of_time_utc', probability_input['as_of_time_utc'])}`。",
+            f"入场盘口实际抓取时间：`{time_context.get('entry_market_captured_at_utc_min', '见逐市场快照')}` 至 `{time_context.get('entry_market_captured_at_utc_max', '见逐市场快照')}`。",
+            f"程序生成报告时间：`{time_context.get('decision_created_at_utc', '未提供')}`。",
+            "盘口证据时间决定这笔影子交易在历史时间轴上的位置；程序处理时间只表示什么时候运行了命令。",
             "",
             "## 一、天气判断",
             "",
@@ -1303,7 +1333,6 @@ def run_shadow(
     existing = inspect_existing_run(output_dir, run_identity)
     if existing is not None:
         return existing
-    output_dir.mkdir(parents=True, exist_ok=True)
     if live_readonly:
         records, source_meta = discover_live_evidence(probability_input, adapter)
         source_meta["fixture"] = False
@@ -1320,13 +1349,27 @@ def run_shadow(
     token_ids = [market["token_id"] for market in markets]
     if len(token_ids) != len(set(token_ids)):
         raise ValidationError("duplicate YES token binding across markets is rejected")
+    weather_as_of_time_utc = probability_input["as_of_time_utc"]
+    evidence_times = [market["market_captured_at_utc"] for market in markets]
+    entry_market_captured_at_utc_min = min(evidence_times, key=lambda value: parse_datetime(value, "market_captured_at_utc"))
+    entry_market_captured_at_utc_max = max(evidence_times, key=lambda value: parse_datetime(value, "market_captured_at_utc"))
+    decision_created_at_utc = iso_utc()
+    time_context = {
+        "weather_as_of_time_utc": weather_as_of_time_utc,
+        "entry_market_captured_at_utc_min": entry_market_captured_at_utc_min,
+        "entry_market_captured_at_utc_max": entry_market_captured_at_utc_max,
+        "decision_created_at_utc": decision_created_at_utc,
+    }
     evaluations = [evaluate_market(market, intended_usd) for market in markets]
     portfolios = build_portfolios(evaluations, intended_usd)
     signals, fills = simulate_portfolio_fills(
         run_identity["run_id"],
         portfolios,
         {market["temperature_bucket"]: market for market in markets},
+        weather_as_of_time_utc,
+        decision_created_at_utc,
     )
+    output_dir.mkdir(parents=True, exist_ok=True)
     ledger = write_demo_ledger(output_dir / "demo_ledger.sqlite3", run_identity, signals, fills)
 
     orderbook_dir = output_dir / "orderbook_snapshots"
@@ -1334,12 +1377,24 @@ def run_shadow(
     for market in markets:
         safe_name = market["temperature_bucket"].replace(":", "_")
         (orderbook_dir / f"{safe_name}.json").write_text(
-            json.dumps(json_safe({"raw": market["raw_orderbook"], "normalized": market["book"]}), ensure_ascii=False, indent=2, sort_keys=True),
+            json.dumps(
+                json_safe(
+                    {
+                        "market_captured_at_utc": market["market_captured_at_utc"],
+                        "raw": market["raw_orderbook"],
+                        "normalized": market["book"],
+                    }
+                ),
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            ),
             encoding="utf-8",
         )
     market_snapshot = {
         "source": source_meta,
-        "captured_at_utc": iso_utc(),
+        **time_context,
+        "snapshot_written_at_utc": decision_created_at_utc,
         "markets": evaluations,
     }
     decision_report = {
@@ -1347,6 +1402,7 @@ def run_shadow(
         "run_status": "CREATED",
         "run_identity": run_identity,
         "mode": "DEMO",
+        **time_context,
         "probability_input": probability_input,
         "markets": evaluations,
         "entry_rules": portfolios,
@@ -1365,7 +1421,7 @@ def run_shadow(
         "version": VERSION,
         "run_identity": run_identity,
         "run_environment": "DEMO",
-        "created_at_utc": iso_utc(),
+        **time_context,
         "probability_input_path": str(probability_path),
         "saved_public_evidence_path": str(saved_public_evidence) if saved_public_evidence else None,
         "live_readonly": live_readonly,
@@ -1380,7 +1436,7 @@ def run_shadow(
     (output_dir / "market_snapshot.json").write_text(json.dumps(json_safe(market_snapshot), ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     (output_dir / "run_manifest.json").write_text(json.dumps(json_safe(manifest), ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     (output_dir / "decision_report.md").write_text(
-        render_daily_report(probability_input, evaluations, portfolios, fills, source_meta),
+        render_daily_report(probability_input, evaluations, portfolios, fills, source_meta, time_context),
         encoding="utf-8",
     )
     write_csv(
@@ -1390,7 +1446,8 @@ def run_shadow(
             "signal_id", "run_id", "mode", "edge_rule", "portfolio_rule", "weather_date_local",
             "city", "station", "weather_metric", "temperature_bucket",
             "forecast_probability", "condition_id", "token_id", "side",
-            "intended_usd", "created_at_utc",
+            "intended_usd", "weather_as_of_time_utc", "market_captured_at_utc",
+            "decision_created_at_utc", "created_at_utc",
         ],
     )
     return decision_report
@@ -1461,7 +1518,7 @@ def update_shadow(
         raise ValidationError("duplicate token records in update evidence are rejected")
     market_by_token = {market["token_id"]: market for market in markets}
     update_id = _update_id()
-    captured_at = iso_utc()
+    update_processed_at_utc = iso_utc()
     results: list[dict[str, Any]] = []
     with sqlite3.connect(ledger_path) as connection:
         connection.row_factory = sqlite3.Row
@@ -1475,9 +1532,37 @@ def update_shadow(
         missing = sorted(run_tokens - set(market_by_token))
         if missing:
             raise ValidationError(f"update evidence is missing run token(s): {','.join(missing)}")
+        # Validate the complete update before the first mutation so stale or
+        # out-of-order evidence cannot partially change the ledger.
+        for token_id in sorted(run_tokens):
+            token_rows = [row for row in rows if str(row["token_id"]) == token_id]
+            entry_times = {str(row["entry_market_captured_at_utc"]) for row in token_rows}
+            previous_times = {
+                str(row["last_update_evidence_captured_at_utc"])
+                for row in token_rows
+                if row["last_update_evidence_captured_at_utc"] is not None
+            }
+            if len(entry_times) != 1 or len(previous_times) > 1:
+                raise ValidationError(f"ledger evidence time binding is inconsistent for token {token_id}")
+            evidence_time = market_by_token[token_id]["market_captured_at_utc"]
+            evidence_dt = parse_datetime(evidence_time, "evidence_captured_at_utc")
+            entry_time = next(iter(entry_times))
+            entry_dt = parse_datetime(entry_time, "entry_market_captured_at_utc")
+            if evidence_dt == entry_dt:
+                raise ValidationError(f"STALE_OR_REPEATED_EVIDENCE: token {token_id} equals entry evidence time")
+            if evidence_dt < entry_dt:
+                raise ValidationError(f"OUT_OF_ORDER_EVIDENCE: token {token_id} predates entry evidence")
+            if previous_times:
+                previous_time = next(iter(previous_times))
+                previous_dt = parse_datetime(previous_time, "last_update_evidence_captured_at_utc")
+                if evidence_dt == previous_dt:
+                    raise ValidationError(f"STALE_OR_REPEATED_EVIDENCE: token {token_id} repeats prior update evidence")
+                if evidence_dt < previous_dt:
+                    raise ValidationError(f"OUT_OF_ORDER_EVIDENCE: token {token_id} predates prior update evidence")
         for row in rows:
             market = market_by_token[str(row["token_id"])]
             book = market["book"]
+            evidence_captured_at_utc = market["market_captured_at_utc"]
             base = {
                 "update_id": update_id,
                 "run_id": row["run_id"],
@@ -1486,7 +1571,8 @@ def update_shadow(
                 "portfolio_rule": row["portfolio_rule"],
                 "temperature_bucket": row["temperature_bucket"],
                 "exit_rule": row["exit_rule"],
-                "captured_at_utc": captured_at,
+                "evidence_captured_at_utc": evidence_captured_at_utc,
+                "update_processed_at_utc": update_processed_at_utc,
                 "best_bid": book["best_bid"],
                 "best_ask": book["best_ask"],
                 "orderbook_snapshot": book,
@@ -1537,13 +1623,13 @@ def update_shadow(
                           status='TRIGGERED',trigger_time_utc=?,target_sell_shares=?,
                           filled_sell_shares=?,unfilled_sell_shares=?,
                           executable_sell_vwap=?,simulated_proceeds=?,
-                          remaining_shares=?,realized_pnl_so_far=?,last_update_id=?
+                          remaining_shares=?,realized_pnl_so_far=?
                         WHERE signal_id=? AND exit_rule=? AND status='OPEN'
                         """,
                         (
-                            captured_at, dstr(target), dstr(executable["filled_shares"]),
+                            evidence_captured_at_utc, dstr(target), dstr(executable["filled_shares"]),
                             dstr(executable["remaining_shares"]), dstr(sell_vwap), dstr(proceeds),
-                            dstr(remaining), dstr(realized_pnl), update_id,
+                            dstr(remaining), dstr(realized_pnl),
                             row["signal_id"], row["exit_rule"],
                         ),
                     )
@@ -1554,7 +1640,7 @@ def update_shadow(
                     simulated_proceeds = proceeds
                     remaining_shares = remaining
                     realized = realized_pnl
-                    trigger_time = captured_at
+                    trigger_time = evidence_captured_at_utc
                 else:
                     status = "OPEN_NO_TRIGGER"
                     filled_sell_shares = Decimal("0")
@@ -1566,12 +1652,12 @@ def update_shadow(
                         """
                         UPDATE demo_exit_experiments SET
                           target_sell_shares=?,unfilled_sell_shares=?,
-                          executable_sell_vwap=?,last_update_id=?
+                          executable_sell_vwap=?
                         WHERE signal_id=? AND exit_rule=? AND status='OPEN'
                         """,
                         (
                             dstr(target), dstr(target),
-                            None if sell_vwap is None else dstr(sell_vwap), update_id,
+                            None if sell_vwap is None else dstr(sell_vwap),
                             row["signal_id"], row["exit_rule"],
                         ),
                     )
@@ -1591,10 +1677,19 @@ def update_shadow(
                     "best_bid_only_would_trigger": book["best_bid"] is not None and book["best_bid"] >= threshold,
                 }
             connection.execute(
-                "INSERT INTO demo_update_snapshots VALUES(?,?,?,?,?,?)",
+                """
+                UPDATE demo_exit_experiments SET
+                  last_update_evidence_captured_at_utc=?,last_update_id=?
+                WHERE signal_id=? AND exit_rule=?
+                """,
+                (evidence_captured_at_utc, update_id, row["signal_id"], row["exit_rule"]),
+            )
+            connection.execute(
+                "INSERT INTO demo_update_snapshots VALUES(?,?,?,?,?,?,?)",
                 (
                     update_id, row["run_id"], row["signal_id"], row["exit_rule"],
-                    captured_at, stable_payload_json(result),
+                    evidence_captured_at_utc, update_processed_at_utc,
+                    stable_payload_json(result),
                 ),
             )
             results.append(result)
@@ -1604,11 +1699,24 @@ def update_shadow(
     snapshot_path = snapshot_dir / f"{update_id}.json"
     if snapshot_path.exists():
         raise ValidationError("update snapshot collision; refusing overwrite")
+    update_evidence_times = {
+        market_by_token[token]["market_captured_at_utc"]
+        for token in run_tokens
+    }
     payload = {
         "version": VERSION,
         "update_id": update_id,
         "run_id": manifest["run_identity"]["run_id"],
-        "captured_at_utc": captured_at,
+        "evidence_captured_at_utc": next(iter(update_evidence_times)) if len(update_evidence_times) == 1 else None,
+        "evidence_captured_at_utc_min": min(
+            update_evidence_times,
+            key=lambda value: parse_datetime(value, "evidence_captured_at_utc"),
+        ),
+        "evidence_captured_at_utc_max": max(
+            update_evidence_times,
+            key=lambda value: parse_datetime(value, "evidence_captured_at_utc"),
+        ),
+        "update_processed_at_utc": update_processed_at_utc,
         "source": source_meta,
         "ignored_non_run_tokens": sorted(set(market_by_token) - run_tokens),
         "results": results,

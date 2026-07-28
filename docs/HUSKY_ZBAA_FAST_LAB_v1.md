@@ -55,6 +55,32 @@ Each run writes `decision_report.json`, `decision_report.md`,
 `shadow_signals.csv`, `market_snapshot.json`, `orderbook_snapshots/`,
 `run_manifest.json`, and an isolated `demo_ledger.sqlite3`.
 
+## Evidence time versus processing time
+
+Every run keeps three different clocks:
+
+- `weather_as_of_time_utc` is the manual weather forecast cutoff.
+- `market_captured_at_utc` is when that specific order book was actually
+  received or saved.
+- `decision_created_at_utc` is when the program calculated the decision and
+  wrote the report.
+
+Signals and entry fills contain all three. The manifest and decision report
+also show the earliest and latest entry evidence times. `market_snapshot.json`
+uses `snapshot_written_at_utc` for the file-writing time and keeps each
+market's real capture time; it never relabels the current clock as market
+evidence time.
+
+In plain language: the market evidence time determines where the shadow trade
+sits on the historical timeline. The processing time only says when the
+command was run. Saved evidence keeps its saved timestamp even when replayed
+days or years later. Live-readonly evidence uses the HTTP order-book response's
+`received_at_utc`.
+
+Every evidence record must have a non-empty, valid ISO-8601 timestamp with an
+explicit UTC timezone. Missing, timezone-naive, non-UTC, or fabricated fallback
+times are rejected.
+
 ## Stable run identity
 
 `run_id` is deterministically bound to `forecast_run_id`, station,
@@ -83,6 +109,17 @@ The 50% or 75% target is sold only when the complete target quantity has an
 executable bid-side VWAP at least twice its entry VWAP. Best bid alone never
 triggers an exit. HOLD remains open. Every update adds a new immutable snapshot
 file and ledger snapshot row.
+
+An update records both `evidence_captured_at_utc` (the order-book evidence
+time) and `update_processed_at_utc` (when the command ran). If an exit is
+triggered, `trigger_time_utc` equals the evidence time, not the processing
+time. Per token, update evidence must be strictly later than entry evidence
+and strictly later than the previous update evidence. Reusing the same
+evidence is rejected as `STALE_OR_REPEATED_EVIDENCE`; going backward is
+rejected as `OUT_OF_ORDER_EVIDENCE`. These checks happen before any ledger
+change, so a rejected update cannot partially sell or append snapshots. A
+fresh later update after an already-triggered exit remains
+`REPEATED_EXIT_REJECTED` and cannot sell the position twice.
 
 ## Settle and summarize
 

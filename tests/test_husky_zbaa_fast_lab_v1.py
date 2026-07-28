@@ -4,11 +4,14 @@ import csv
 import json
 import sqlite3
 from copy import deepcopy
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+import src.husky_zbaa_fast_lab_v1 as fast_lab
 from src.husky_zbaa_fast_lab_v1 import (
     FORMAL_ZERO_STATUS,
     ValidationError,
@@ -381,11 +384,13 @@ def _dated_evidence(
     *,
     suffix: str,
     book_mode: str = "entry",
+    captured_at_utc: str | None = None,
 ) -> Path:
     payload = json.loads(EVIDENCE_PATH.read_text(encoding="utf-8"))
     day = int(weather_date[-2:])
     payload["evidence_label"] = f"TEST_FIXTURE_{book_mode.upper()}_{weather_date}"
-    payload["captured_at_utc"] = f"2026-07-{day - 1:02d}T08:00:00Z"
+    default_hour = {"entry": 8, "no_trigger": 9, "fake_best_bid": 9, "trigger": 9}[book_mode]
+    payload["captured_at_utc"] = captured_at_utc or f"2026-07-{day - 1:02d}T{default_hour:02d}:00:00Z"
     for record in payload["markets"]:
         gamma = record["gamma"]
         gamma["question"] = gamma["question"].replace("July 22", f"July {day}")
@@ -558,7 +563,14 @@ def test_48_repeated_exit_is_rejected_and_not_resold(tmp_path: Path) -> None:
         (row["signal_id"], row["exit_rule"]): row["simulated_proceeds"]
         for row in _ledger_rows(run_dir, "demo_exit_experiments")
     }
-    repeated = update_shadow(run_dir, evidence)
+    later = _dated_evidence(
+        tmp_path,
+        "2026-07-22",
+        suffix="-run",
+        book_mode="trigger",
+        captured_at_utc="2026-07-21T10:00:00Z",
+    )
+    repeated = update_shadow(run_dir, later)
     assert all(
         item["status"] == "REPEATED_EXIT_REJECTED"
         for item in repeated["results"]
@@ -575,7 +587,14 @@ def test_49_updates_append_snapshots(tmp_path: Path) -> None:
     run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
     evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger")
     first = update_shadow(run_dir, evidence)
-    second = update_shadow(run_dir, evidence)
+    later = _dated_evidence(
+        tmp_path,
+        "2026-07-22",
+        suffix="-run",
+        book_mode="no_trigger",
+        captured_at_utc="2026-07-21T10:00:00Z",
+    )
+    second = update_shadow(run_dir, later)
     assert first["update_id"] != second["update_id"]
     assert len(list((run_dir / "update_snapshots").glob("*.json"))) == 2
     assert len(_ledger_rows(run_dir, "demo_update_snapshots")) == 42
@@ -715,6 +734,227 @@ def test_no_trade_run_can_settle_and_be_summarized(tmp_path: Path) -> None:
     summary = summarize_shadow(root)
     assert summary["settled_event_count"] == 1
     assert all(item["traded_event_count"] == 0 for item in summary["strategies"])
+
+
+def _ledger_dump(run_dir: Path) -> str:
+    with sqlite3.connect(run_dir / "demo_ledger.sqlite3") as connection:
+        return "\n".join(connection.iterdump())
+
+
+def test_time_01_run_preserves_weather_as_of(tmp_path: Path) -> None:
+    run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    assert report["weather_as_of_time_utc"] == "2026-07-21T07:00:00Z"
+    assert manifest["weather_as_of_time_utc"] == "2026-07-21T07:00:00Z"
+
+
+def test_time_02_saved_evidence_capture_is_preserved(tmp_path: Path) -> None:
+    run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T08:00:00Z"
+    assert report["entry_market_captured_at_utc_max"] == "2026-07-21T08:00:00Z"
+    assert manifest["entry_market_captured_at_utc_min"] == report["entry_market_captured_at_utc_min"]
+    assert manifest["entry_market_captured_at_utc_max"] == report["entry_market_captured_at_utc_max"]
+    assert {item["market_captured_at_utc"] for item in report["markets"]} == {"2026-07-21T08:00:00Z"}
+    snapshot = json.loads((run_dir / "market_snapshot.json").read_text(encoding="utf-8"))
+    assert {item["market_captured_at_utc"] for item in snapshot["markets"]} == {"2026-07-21T08:00:00Z"}
+
+
+def test_time_03_live_received_time_is_market_capture(tmp_path: Path, evidence_records: list[dict]) -> None:
+    record = deepcopy(evidence_records[3])
+
+    class FakeAdapter:
+        visited_endpoints = [
+            {"method": "GET", "url": "https://gamma.test/search"},
+            {"method": "GET", "url": "https://clob.test/market"},
+            {"method": "GET", "url": "https://clob.test/book"},
+        ]
+
+        def search(self, *_args: object, **_kwargs: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                payload=[record["gamma"]],
+                received_at_utc="2026-07-21T09:29:59Z",
+                url="https://gamma.test/search",
+            )
+
+        def clob_market_info(self, _condition_id: str) -> SimpleNamespace:
+            return SimpleNamespace(payload=record["clob"], url="https://clob.test/market")
+
+        def orderbook(self, _token_id: str) -> SimpleNamespace:
+            return SimpleNamespace(
+                payload=record["orderbook"],
+                received_at_utc="2026-07-21T09:30:00+00:00",
+                url="https://clob.test/book",
+            )
+
+    report = run_shadow(INPUT_PATH, Decimal("20"), tmp_path / "live", live_readonly=True, adapter=FakeAdapter())
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T09:30:00Z"
+    assert report["markets"][0]["market_captured_at_utc"] == "2026-07-21T09:30:00Z"
+
+
+def test_time_04_decision_time_is_not_evidence_time(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(fast_lab, "utcnow", lambda: datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc))
+    run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    assert report["decision_created_at_utc"] == "2026-07-28T12:00:00Z"
+    assert manifest["decision_created_at_utc"] == report["decision_created_at_utc"]
+    assert report["decision_created_at_utc"] != report["entry_market_captured_at_utc_max"]
+
+
+def test_time_05_signal_contains_three_times(tmp_path: Path) -> None:
+    run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    with sqlite3.connect(run_dir / "demo_ledger.sqlite3") as connection:
+        signal = json.loads(connection.execute("SELECT payload_json FROM demo_signals ORDER BY signal_id").fetchone()[0])
+    assert signal["weather_as_of_time_utc"] == report["weather_as_of_time_utc"]
+    assert signal["market_captured_at_utc"] == "2026-07-21T08:00:00Z"
+    assert signal["decision_created_at_utc"] == report["decision_created_at_utc"]
+
+
+def test_time_06_entry_fill_contains_three_times(tmp_path: Path) -> None:
+    run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    with sqlite3.connect(run_dir / "demo_ledger.sqlite3") as connection:
+        fill = json.loads(connection.execute("SELECT payload_json FROM demo_entry_fills ORDER BY signal_id").fetchone()[0])
+    assert fill["weather_as_of_time_utc"] == report["weather_as_of_time_utc"]
+    assert fill["market_captured_at_utc"] == "2026-07-21T08:00:00Z"
+    assert fill["decision_created_at_utc"] == report["decision_created_at_utc"]
+
+
+def test_time_07_market_snapshot_names_write_time_separately(tmp_path: Path) -> None:
+    run_dir, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    snapshot = json.loads((run_dir / "market_snapshot.json").read_text(encoding="utf-8"))
+    assert "captured_at_utc" not in snapshot
+    assert snapshot["snapshot_written_at_utc"] == report["decision_created_at_utc"]
+    assert snapshot["entry_market_captured_at_utc_min"] == "2026-07-21T08:00:00Z"
+
+
+def test_time_08_saved_capture_does_not_follow_current_clock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(fast_lab, "utcnow", lambda: datetime(2035, 1, 2, 3, 4, 5, tzinfo=timezone.utc))
+    _, _, _, report = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    assert report["entry_market_captured_at_utc_min"] == "2026-07-21T08:00:00Z"
+    assert report["decision_created_at_utc"] == "2035-01-02T03:04:05Z"
+
+
+def test_time_09_missing_capture_rejected(validated: dict, evidence_records: list[dict]) -> None:
+    record = deepcopy(evidence_records[0])
+    record.pop("captured_at_utc")
+    with pytest.raises(ValidationError, match="non-empty timestamp"):
+        normalize_evidence_record(record, validated)
+
+
+def test_time_10_empty_capture_rejected(validated: dict, evidence_records: list[dict]) -> None:
+    record = deepcopy(evidence_records[0])
+    record["captured_at_utc"] = ""
+    with pytest.raises(ValidationError, match="non-empty timestamp"):
+        normalize_evidence_record(record, validated)
+
+
+def test_time_11_naive_capture_rejected(validated: dict, evidence_records: list[dict]) -> None:
+    record = deepcopy(evidence_records[0])
+    record["captured_at_utc"] = "2026-07-21T08:00:00"
+    with pytest.raises(ValidationError, match="timezone is required"):
+        normalize_evidence_record(record, validated)
+
+
+def test_time_12_non_utc_capture_rejected(validated: dict, evidence_records: list[dict]) -> None:
+    record = deepcopy(evidence_records[0])
+    record["captured_at_utc"] = "2026-07-21T16:00:00+08:00"
+    with pytest.raises(ValidationError, match="explicit UTC"):
+        normalize_evidence_record(record, validated)
+
+
+def test_time_13_orderbook_timestamp_is_not_a_fallback(validated: dict, evidence_records: list[dict]) -> None:
+    record = deepcopy(evidence_records[0])
+    record.pop("captured_at_utc")
+    record["orderbook"]["timestamp"] = "2026-07-21T08:00:00Z"
+    with pytest.raises(ValidationError, match="non-empty timestamp"):
+        normalize_evidence_record(record, validated)
+
+
+def test_time_14_trigger_time_uses_evidence_time(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    monkeypatch.setattr(fast_lab, "utcnow", lambda: datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc))
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="trigger")
+    result = update_shadow(run_dir, evidence)
+    triggered = [item for item in result["results"] if item["status"] == "TRIGGERED"]
+    assert triggered and all(item["trigger_time_utc"] == "2026-07-21T09:00:00Z" for item in triggered)
+
+
+def test_time_15_update_processed_time_is_separate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    monkeypatch.setattr(fast_lab, "utcnow", lambda: datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc))
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger")
+    result = update_shadow(run_dir, evidence)
+    assert result["evidence_captured_at_utc"] == "2026-07-21T09:00:00Z"
+    assert result["update_processed_at_utc"] == "2026-07-28T12:00:00Z"
+    assert all(item["update_processed_at_utc"] == result["update_processed_at_utc"] for item in result["results"])
+
+
+def test_time_16_update_before_entry_rejected(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(
+        tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger",
+        captured_at_utc="2026-07-21T07:59:59Z",
+    )
+    with pytest.raises(ValidationError, match="OUT_OF_ORDER_EVIDENCE"):
+        update_shadow(run_dir, evidence)
+
+
+def test_time_17_same_update_evidence_rejected(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger")
+    update_shadow(run_dir, evidence)
+    with pytest.raises(ValidationError, match="STALE_OR_REPEATED_EVIDENCE"):
+        update_shadow(run_dir, evidence)
+
+
+def test_time_18_earlier_than_previous_update_rejected(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    newest = _dated_evidence(
+        tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger",
+        captured_at_utc="2026-07-21T10:00:00Z",
+    )
+    update_shadow(run_dir, newest)
+    older = _dated_evidence(
+        tmp_path, "2026-07-22", suffix="-run", book_mode="trigger",
+        captured_at_utc="2026-07-21T09:00:00Z",
+    )
+    with pytest.raises(ValidationError, match="OUT_OF_ORDER_EVIDENCE"):
+        update_shadow(run_dir, older)
+
+
+def test_time_19_stale_rejection_is_ledger_atomic(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger")
+    update_shadow(run_dir, evidence)
+    before = _ledger_dump(run_dir)
+    with pytest.raises(ValidationError, match="STALE_OR_REPEATED_EVIDENCE"):
+        update_shadow(run_dir, evidence)
+    assert _ledger_dump(run_dir) == before
+
+
+def test_time_20_order_rejection_writes_no_snapshot(tmp_path: Path) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    evidence = _dated_evidence(
+        tmp_path, "2026-07-22", suffix="-run", book_mode="trigger",
+        captured_at_utc="2026-07-21T07:00:00Z",
+    )
+    with pytest.raises(ValidationError, match="OUT_OF_ORDER_EVIDENCE"):
+        update_shadow(run_dir, evidence)
+    assert not (run_dir / "update_snapshots").exists()
+    assert _ledger_rows(run_dir, "demo_update_snapshots") == []
+
+
+def test_time_21_update_snapshot_stores_both_times(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    run_dir, _, _, _ = _new_run(tmp_path, "run", "2026-07-22", "forecast")
+    monkeypatch.setattr(fast_lab, "utcnow", lambda: datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc))
+    evidence = _dated_evidence(tmp_path, "2026-07-22", suffix="-run", book_mode="no_trigger")
+    result = update_shadow(run_dir, evidence)
+    row = _ledger_rows(run_dir, "demo_update_snapshots")[0]
+    assert row["evidence_captured_at_utc"] == "2026-07-21T09:00:00Z"
+    assert row["update_processed_at_utc"] == "2026-07-28T12:00:00Z"
+    snapshot = json.loads((run_dir / "update_snapshots" / f"{result['update_id']}.json").read_text(encoding="utf-8"))
+    assert snapshot["evidence_captured_at_utc"] == row["evidence_captured_at_utc"]
+    assert snapshot["update_processed_at_utc"] == row["update_processed_at_utc"]
 
 
 @pytest.mark.parametrize(
