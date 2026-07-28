@@ -1,0 +1,732 @@
+{
+  "field_mapping": {
+    "entry_price": [
+      "first BUY price from weather_trades_normalized.csv",
+      "weighted_avg_buy_price",
+      "avgPrice"
+    ],
+    "event_identity": [
+      "city",
+      "weather_date",
+      "weather_metric"
+    ],
+    "exit_price": [
+      "weighted_avg_sell_price",
+      "SELL price from weather_trades_normalized.csv"
+    ],
+    "position_identity": [
+      "asset",
+      "conditionId",
+      "eventSlug",
+      "slug"
+    ],
+    "realized_pnl": [
+      "authoritative_realized_pnl",
+      "realizedPnl"
+    ],
+    "remaining_fraction": [
+      "max(buy_shares - sell_shares, 0) / buy_shares"
+    ],
+    "settlement_pnl": [
+      "hold_to_settlement_pnl in exit-rule detail when available"
+    ],
+    "sold_fraction": [
+      "sell_shares / buy_shares"
+    ],
+    "stake": [
+      "buy_usd",
+      "initialValue",
+      "totalBought",
+      "usdcSize"
+    ],
+    "temperature_bucket": [
+      "bucket_label",
+      "bucket_kind",
+      "bucket_low",
+      "bucket_high",
+      "outcome"
+    ],
+    "timestamps": [
+      "timestamp",
+      "timestamp_utc",
+      "first_buy_utc",
+      "last_trade_utc"
+    ],
+    "trade_side": [
+      "side"
+    ]
+  },
+  "general_husky_hypothesis_only": true,
+  "historical_exit_rule_comparison": {
+    "rules": {
+      "DOUBLE_SELL_50": {
+        "out_of_sample_result": "NOT_VALIDATED_OUT_OF_SAMPLE",
+        "train_haircut_0_8": {
+          "delta_vs_hold_pnl": -1763.6647116941992,
+          "events": 1064,
+          "leave_top1_out_net_pnl": 8843.4601156862,
+          "leave_top5_out_net_pnl": 7673.357099423343,
+          "net_pnl": 9621.580321701415,
+          "positions": 2023,
+          "roi_on_buy_usd": 0.32188161387001635
+        },
+        "train_sampled_1_0": {
+          "delta_vs_hold_pnl": 1295.0368696775,
+          "events": 1064,
+          "leave_top1_out_net_pnl": 11901.592033057901,
+          "leave_top5_out_net_pnl": 10666.849838526241,
+          "net_pnl": 12680.281903073113,
+          "positions": 2023,
+          "roi_on_buy_usd": 0.4242078189673298
+        },
+        "validation_haircut_0_8": {
+          "delta_vs_hold_pnl": -2439.0372387333996,
+          "events": 456,
+          "leave_top1_out_net_pnl": 3515.784892910213,
+          "leave_top5_out_net_pnl": 1525.7301408903677,
+          "net_pnl": 4170.942748916254,
+          "positions": 998,
+          "roi_on_buy_usd": 0.2547540234945276
+        },
+        "validation_sampled_1_0": {
+          "delta_vs_hold_pnl": 591.6010099770003,
+          "events": 456,
+          "leave_top1_out_net_pnl": 6492.149997607228,
+          "leave_top5_out_net_pnl": 4274.7502616051715,
+          "net_pnl": 7201.580997626654,
+          "positions": 998,
+          "roi_on_buy_usd": 0.4398602055000206
+        }
+      },
+      "DOUBLE_SELL_75": {
+        "out_of_sample_result": "NOT_VALIDATED_OUT_OF_SAMPLE",
+        "train_haircut_0_8": {
+          "delta_vs_hold_pnl": -2645.497067541299,
+          "events": 1064,
+          "leave_top1_out_net_pnl": 8015.318591839101,
+          "leave_top5_out_net_pnl": 7009.5900818357895,
+          "net_pnl": 8739.747965854314,
+          "positions": 2023,
+          "roi_on_buy_usd": 0.2923806782261439
+        },
+        "train_sampled_1_0": {
+          "delta_vs_hold_pnl": 1942.5553045162499,
+          "events": 1064,
+          "leave_top1_out_net_pnl": 12602.51646789665,
+          "leave_top5_out_net_pnl": 11505.637869939992,
+          "net_pnl": 13327.800337911864,
+          "positions": 2023,
+          "roi_on_buy_usd": 0.44586998587211407
+        },
+        "validation_haircut_0_8": {
+          "delta_vs_hold_pnl": -3658.555858100099,
+          "events": 456,
+          "leave_top1_out_net_pnl": 2360.522205543513,
+          "leave_top5_out_net_pnl": 525.7328233430931,
+          "net_pnl": 2951.424129549554,
+          "positions": 998,
+          "roi_on_buy_usd": 0.18026791958171745
+        },
+        "validation_sampled_1_0": {
+          "delta_vs_hold_pnl": 887.4015149655006,
+          "events": 456,
+          "leave_top1_out_net_pnl": 6788.9630025957285,
+          "leave_top5_out_net_pnl": 4753.531301593672,
+          "net_pnl": 7497.381502615153,
+          "positions": 998,
+          "roi_on_buy_usd": 0.4579271925899569
+        }
+      },
+      "HOLD": {
+        "out_of_sample_result": "HOLD_COMPARATOR_BASELINE",
+        "train_haircut_0_8": {
+          "delta_vs_hold_pnl": 0.0,
+          "events": 1064,
+          "leave_top1_out_net_pnl": 10499.7431633804,
+          "leave_top5_out_net_pnl": 8558.18127336818,
+          "net_pnl": 11385.245033395613,
+          "positions": 2023,
+          "roi_on_buy_usd": 0.38088348515776127
+        },
+        "train_sampled_1_0": {
+          "delta_vs_hold_pnl": 0.0,
+          "events": 1064,
+          "leave_top1_out_net_pnl": 10499.7431633804,
+          "leave_top5_out_net_pnl": 8558.18127336818,
+          "net_pnl": 11385.245033395613,
+          "positions": 2023,
+          "roi_on_buy_usd": 0.38088348515776127
+        },
+        "validation_haircut_0_8": {
+          "delta_vs_hold_pnl": 0.0,
+          "events": 456,
+          "leave_top1_out_net_pnl": 5824.77352265371,
+          "leave_top5_out_net_pnl": 2967.113766631252,
+          "net_pnl": 6609.979987649653,
+          "positions": 998,
+          "roi_on_buy_usd": 0.4037262313201479
+        },
+        "validation_sampled_1_0": {
+          "delta_vs_hold_pnl": 0.0,
+          "events": 456,
+          "leave_top1_out_net_pnl": 5824.77352265371,
+          "leave_top5_out_net_pnl": 2967.113766631252,
+          "net_pnl": 6609.979987649653,
+          "positions": 998,
+          "roi_on_buy_usd": 0.4037262313201479
+        }
+      }
+    },
+    "split": "chronological train/validation already fixed in v4; no parameters changed here",
+    "status": "EXISTING_V4_GRID_READ_ONLY"
+  },
+  "hypotheses": [
+    {
+      "classification": "INFERRED",
+      "id": "H1_ADJACENT_BASKET",
+      "out_of_sample_result": "VALIDATED_AS_RECURRING_BEHAVIOR",
+      "profitability_claim": "NOT_SUPPORTED_BY_AVAILABLE_DATA",
+      "statement": "Husky often combines adjacent temperature buckets within one weather event.",
+      "train_rate": 0.45614035087719296,
+      "validation_rate": 0.5971370143149284
+    },
+    {
+      "classification": "INFERRED",
+      "id": "H2_PARTIAL_EXIT_AT_2X",
+      "out_of_sample_result": "NOT_VALIDATED_OUT_OF_SAMPLE",
+      "profitability_claim": "NOT_SUPPORTED_BY_AVAILABLE_DATA",
+      "statement": "Partial exits and exits around/above 2x are candidates for forward testing, not proven rules.",
+      "train_rate": 0.1631578947368421,
+      "validation_rate": 0.11042944785276074
+    },
+    {
+      "classification": "INFERRED",
+      "id": "H3_HOLD_TO_SETTLEMENT",
+      "out_of_sample_result": "BASELINE_BEHAVIOR_ONLY_NOT_PROFITABILITY_VALIDATION",
+      "profitability_claim": "NOT_SUPPORTED_BY_AVAILABLE_DATA",
+      "statement": "Holding all recorded shares without a pre-resolution sell is a recurring behavior.",
+      "train_rate": 0.306140350877193,
+      "validation_rate": 0.6114519427402862
+    }
+  ],
+  "inventory": [
+    {
+      "columns": [
+        "asset",
+        "bio",
+        "conditionId",
+        "eventSlug",
+        "icon",
+        "name",
+        "outcome",
+        "outcomeIndex",
+        "price",
+        "profileImage",
+        "profileImageOptimized",
+        "proxyWallet",
+        "pseudonym",
+        "side",
+        "size",
+        "slug",
+        "timestamp",
+        "title",
+        "transactionHash"
+      ],
+      "exists": true,
+      "path": "data/raw/trades.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 12589929
+    },
+    {
+      "columns": [
+        "asset",
+        "bio",
+        "conditionId",
+        "eventSlug",
+        "icon",
+        "isCombo",
+        "name",
+        "outcome",
+        "outcomeIndex",
+        "price",
+        "profileImage",
+        "profileImageOptimized",
+        "proxyWallet",
+        "pseudonym",
+        "side",
+        "size",
+        "slug",
+        "timestamp",
+        "title",
+        "transactionHash",
+        "type",
+        "usdcSize"
+      ],
+      "exists": true,
+      "path": "data/raw/activity.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 13479240
+    },
+    {
+      "columns": [
+        "asset",
+        "avgPrice",
+        "conditionId",
+        "curPrice",
+        "endDate",
+        "eventSlug",
+        "icon",
+        "oppositeAsset",
+        "oppositeOutcome",
+        "outcome",
+        "outcomeIndex",
+        "proxyWallet",
+        "realizedPnl",
+        "slug",
+        "timestamp",
+        "title",
+        "totalBought"
+      ],
+      "exists": true,
+      "path": "data/raw/closed_positions.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 1308776
+    },
+    {
+      "columns": [
+        "asset",
+        "avgPrice",
+        "cashPnl",
+        "conditionId",
+        "curPrice",
+        "currentValue",
+        "endDate",
+        "eventId",
+        "eventSlug",
+        "icon",
+        "initialValue",
+        "mergeable",
+        "negativeRisk",
+        "oppositeAsset",
+        "oppositeOutcome",
+        "outcome",
+        "outcomeIndex",
+        "percentPnl",
+        "percentRealizedPnl",
+        "proxyWallet",
+        "realizedPnl",
+        "redeemable",
+        "size",
+        "slug",
+        "title",
+        "totalBought"
+      ],
+      "exists": true,
+      "path": "data/raw/current_positions.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 1014258
+    },
+    {
+      "columns": [
+        "asset",
+        "bio",
+        "bucket_high",
+        "bucket_kind",
+        "bucket_label",
+        "bucket_low",
+        "city",
+        "conditionId",
+        "date_year_inferred",
+        "endDate",
+        "eventSlug",
+        "icon",
+        "market_end_epoch",
+        "name",
+        "notional_usd",
+        "observation_cutoff_epoch",
+        "observation_cutoff_utc",
+        "oppositeAsset",
+        "oppositeOutcome",
+        "outcome",
+        "outcomeIndex",
+        "price",
+        "profileImage",
+        "profileImageOptimized",
+        "proxyWallet",
+        "pseudonym",
+        "seen_in_closed_positions",
+        "seen_in_current_positions",
+        "seen_in_trades",
+        "side",
+        "size",
+        "slug",
+        "timestamp",
+        "timestamp_utc",
+        "title",
+        "transactionHash",
+        "unit",
+        "weather_date",
+        "weather_metric"
+      ],
+      "exists": true,
+      "path": "data/processed/weather_trades_normalized.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 16895905
+    },
+    {
+      "columns": [
+        "asset",
+        "asset_won",
+        "authoritative_realized_pnl",
+        "bucket_high",
+        "bucket_kind",
+        "bucket_label",
+        "bucket_low",
+        "buy_after_market_end_count",
+        "buy_after_observation_proxy_count",
+        "buy_count",
+        "buy_shares",
+        "buy_usd",
+        "cashflow_pnl_before_transform_adjustment",
+        "cashflow_reliable",
+        "city",
+        "closed_avg_price",
+        "closed_cur_price",
+        "closed_implied_buy_usd",
+        "closed_position_realized_pnl",
+        "closed_total_bought_shares",
+        "conditionId",
+        "conversion_count",
+        "current_cash_pnl",
+        "current_initial_value",
+        "entry_price_bin",
+        "eventSlug",
+        "exit_mode",
+        "first_buy_ts",
+        "first_buy_utc",
+        "first_entry_lead_bin",
+        "first_entry_lead_hours",
+        "first_entry_lead_to_market_end_hours",
+        "first_trade_ts",
+        "first_trade_utc",
+        "last_trade_ts",
+        "last_trade_utc",
+        "market_end_epoch",
+        "market_end_utc",
+        "merge_count",
+        "net_traded_shares",
+        "non_transform_exit_mode",
+        "observation_cutoff_epoch",
+        "observation_cutoff_utc",
+        "outcome",
+        "pnl_status",
+        "redeem_activity_count_by_condition",
+        "sell_count",
+        "sell_shares",
+        "sell_usd",
+        "slug",
+        "split_count",
+        "title",
+        "transform_affected",
+        "unit",
+        "weather_date",
+        "weather_metric",
+        "weighted_avg_buy_price",
+        "weighted_avg_buy_ts",
+        "weighted_avg_buy_utc",
+        "weighted_avg_sell_price",
+        "weighted_entry_lead_bin",
+        "weighted_entry_lead_hours"
+      ],
+      "exists": true,
+      "path": "data/processed/weather_position_lifecycle.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 3295675
+    },
+    {
+      "columns": [
+        "adjacent_exact_or_range",
+        "authoritative_realized_pnl_sum",
+        "bucket_count",
+        "buckets",
+        "buy_usd",
+        "cashflow_pnl_before_resolution",
+        "city",
+        "closed_yes_asset_count",
+        "has_transform_events",
+        "max_entry_state_payout",
+        "max_entry_state_pnl",
+        "max_remaining_state_payout",
+        "min_entry_state_payout",
+        "min_entry_state_pnl",
+        "min_remaining_state_payout",
+        "net_cost_after_pre_resolution_sells",
+        "open_or_unresolved_yes_asset_count",
+        "sell_usd",
+        "state_model_note",
+        "state_model_valid",
+        "unequal_share_ratio_entry",
+        "unit",
+        "weather_date",
+        "weather_metric",
+        "winner_bucket_labels",
+        "winner_in_visible_yes_basket"
+      ],
+      "exists": true,
+      "path": "data/processed/weather_city_day_baskets.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 393284
+    },
+    {
+      "columns": [
+        "asset_count",
+        "buy_usd",
+        "city",
+        "closed_asset_count",
+        "closed_authoritative_pnl",
+        "exit_modes",
+        "has_open_or_unresolved",
+        "has_transform_events",
+        "losing_closed_assets",
+        "no_asset_count",
+        "open_mark_to_market_cash_pnl",
+        "open_or_unresolved_asset_count",
+        "sell_usd",
+        "transform_asset_count",
+        "unit",
+        "weather_date",
+        "weather_metric",
+        "winning_closed_assets",
+        "yes_asset_count"
+      ],
+      "exists": true,
+      "path": "data/processed/city_day_pnl.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 204287
+    },
+    {
+      "columns": [
+        "gross_loss_pnl",
+        "gross_positive_pnl",
+        "items_with_pnl",
+        "leave_top1_out_pnl",
+        "level",
+        "top10_cutoff_id",
+        "top10_pnl",
+        "top10_share_of_gross_positive_pnl",
+        "top10_share_of_total_net_pnl",
+        "top1_id",
+        "top1_pnl",
+        "top1_share_of_gross_positive_pnl",
+        "top1_share_of_total_net_pnl",
+        "top5_cutoff_id",
+        "top5_pnl",
+        "top5_share_of_gross_positive_pnl",
+        "top5_share_of_total_net_pnl",
+        "total_net_pnl"
+      ],
+      "exists": true,
+      "path": "data/processed/profit_concentration.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 1647
+    },
+    {
+      "columns": [
+        "rule_id",
+        "rule_family",
+        "rule_description",
+        "split",
+        "price_scenario",
+        "haircut",
+        "group_type",
+        "group",
+        "positions",
+        "events",
+        "cities",
+        "price_bins",
+        "buy_usd",
+        "net_pnl",
+        "roi_on_buy_usd",
+        "win_rate",
+        "median_pnl",
+        "median_roi",
+        "max_single_loss",
+        "top1_profit_share_of_net",
+        "top5_profit_share_of_net",
+        "top10_profit_share_of_net",
+        "leave_top1_out_net_pnl",
+        "leave_top5_out_net_pnl",
+        "weather_date_sequence_drawdown",
+        "delta_vs_hold_pnl",
+        "saved_loser_to_profit_count",
+        "roundtrip_2x_loss_improved_count",
+        "roundtrip_2x_loss_saved_to_profit_count",
+        "premature_correct_sell_loss_count",
+        "premature_correct_sell_loss_usd",
+        "max_city_abs_pnl_share",
+        "max_price_bin_abs_pnl_share"
+      ],
+      "exists": true,
+      "path": "data/exit_rule_grid_v4.csv",
+      "read_policy": "HEADER_ONLY_OR_STREAMED",
+      "size_bytes": 64968
+    },
+    {
+      "columns": [
+        "asset",
+        "event_key",
+        "split",
+        "position_structure",
+        "city",
+        "weather_date",
+        "weather_metric",
+        "bucket_label",
+        "entry_price_bin",
+        "first_entry_lead_bin_local",
+        "local_weather_day_end_utc",
+        "rule_id",
+        "rule_family",
+        "price_scenario",
+        "haircut",
+        "history_status",
+        "history_points_pre_end",
+        "buy_count",
+        "buy_shares",
+        "buy_usd",
+        "weighted_avg_buy_price",
+        "settlement_price_v2",
+        "asset_won_v2",
+        "hold_to_settlement_pnl",
+        "actual_huskyvs_pnl_v2",
+        "simulated_pnl",
+        "simulated_roi",
+        "delta_vs_hold_pnl",
+        "simulated_sell_proceeds",
+        "simulated_settlement_value",
+        "simulated_sold_shares",
+        "simulated_remaining_shares",
+        "triggered_steps",
+        "first_trigger_utc",
+        "last_trigger_utc",
+        "first_trigger_price",
+        "last_trigger_price",
+        "max_price_pre_end",
+        "max_multiple_pre_end",
+        "saved_loser_to_profit",
+        "roundtrip_2x_loss_improved",
+        "roundtrip_2x_loss_saved_to_profit",
+        "premature_correct_sell_loss",
+        "no_future_sell_violation"
+      ],
+      "exists": true,
+      "path": "data/exit_rule_position_detail_v4.csv",
+      "read_policy": "STREAM_ONLY_NOT_USED",
+      "size_bytes": 102497256
+    }
+  ],
+  "not_supported": [
+    "Husky's private intent, psychology, unpublished bankroll, or fixed decision rule.",
+    "A historical weather-probability edge at entry because no contemporaneous Husky weather probability series is available.",
+    "ZBAA station identity for Beijing history when the historical records identify only the city/market.",
+    "A causal or profitable strategy rule from descriptive historical behavior.",
+    "Whether every position with no recorded SELL was actually held through final settlement.",
+    "Husky's intended stake when only actual fills/cash flows were recorded."
+  ],
+  "observed": [
+    "1629 weather events and 3663 YES positions are directly recorded after normalization.",
+    "1037 events contain more than one purchased temperature bucket; 812 are adjacent by normalized interval.",
+    "2144 positions have more than one BUY record; 677 positions have a recorded partial sell.",
+    "2010 positions have no recorded SELL in the available trade window."
+  ],
+  "out_of_sample_result": [
+    "VALIDATED_AS_RECURRING_BEHAVIOR",
+    "NOT_VALIDATED_OUT_OF_SAMPLE",
+    "BASELINE_BEHAVIOR_ONLY_NOT_PROFITABILITY_VALIDATION"
+  ],
+  "sample": {
+    "beijing_event_count": 50,
+    "position_count": 3663,
+    "time_split": {
+      "rule": "chronological 70/30 by weather event",
+      "train_event_count": 1140,
+      "validation_event_count": 489
+    },
+    "weather_event_count": 1629,
+    "zbaa_station_confirmed_event_count": 0
+  },
+  "statistics": {
+    "added_buy_position_count": 2144,
+    "adjacent_bucket_event_count": 812,
+    "event_pnl": {
+      "bootstrap_mean_95pct_ci": [
+        29.408636,
+        39.301899
+      ],
+      "maximum_consecutive_loss": {
+        "cumulative_pnl": -115.421564,
+        "ending_event": [
+          "Panama City",
+          "2026-04-21",
+          "high"
+        ],
+        "events": 6
+      },
+      "remove_top_1": 36951.787865,
+      "remove_top_5": 34231.916884,
+      "slippage_sensitivity_assumption": {
+        "plus_0c": 37894.360569,
+        "plus_1c": 29330.711739,
+        "plus_2c": 20767.06291
+      },
+      "supported_events": 1107,
+      "top_event_share_of_gross_positive": 0.022019523139933297,
+      "total": 37894.360569
+    },
+    "first_buy_price": {
+      "max": 0.999,
+      "median": 0.08,
+      "min": 0.001,
+      "p90": 0.4,
+      "supported_positions": 3654
+    },
+    "main_bucket_with_adjacent_event_count": 901,
+    "multi_bucket_event_count": 1037,
+    "no_recorded_sell_position_count": 2010,
+    "partial_sell_position_count": 677,
+    "positions_per_event": {
+      "distribution": {
+        "1": 592,
+        "2": 510,
+        "3": 275,
+        "4": 130,
+        "5": 66,
+        "6": 34,
+        "7": 10,
+        "8": 7,
+        "9": 4,
+        "10": 1
+      },
+      "max": 10,
+      "median": 2,
+      "min": 1
+    },
+    "sell_to_buy_price_multiple": {
+      "at_or_above_2x_count": 467,
+      "median": 1.1138531717514124,
+      "p90": 5.141833216996231,
+      "supported_positions": 1649
+    },
+    "sold_fraction": {
+      "median": 1.0,
+      "p10": 0.40363039907048015,
+      "p90": 1.0
+    },
+    "stake_fraction_per_bucket": {
+      "median": 0.3482360570602675,
+      "p10": 0.042091656345443984,
+      "p90": 1.0,
+      "supported_positions": 3659
+    }
+  },
+  "version": "husky_zbaa_fast_lab_v1"
+}

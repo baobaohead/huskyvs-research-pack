@@ -1,0 +1,31 @@
+version: husky_zbaa_fast_lab_v1
+scope:
+  station: ZBAA
+  city: Beijing
+  weather_metric: highest_temperature
+  probability_mode: SHADOW_MANUAL
+  run_environment: DEMO
+entry_rules:
+  EDGE_05: 0.05
+  EDGE_10: 0.10
+  EDGE_15: 0.15
+portfolio_rules:
+  MAIN_ONLY:
+    main_fraction: 1.0
+  TOP2_ADJACENT:
+    main_fraction: 0.70
+    adjacent_fraction: 0.30
+exit_rules:
+  HOLD: {}
+  DOUBLE_SELL_50:
+    trigger_multiple: 2.0
+    sold_fraction: 0.50
+  DOUBLE_SELL_75:
+    trigger_multiple: 2.0
+    sold_fraction: 0.75
+safety:
+  PUBLIC_GET_ONLY: true
+  ACCOUNT_CONNECTION: false
+  SIGNING: false
+  REAL_ORDER: false
+  FORMAL_ALLOWED: false

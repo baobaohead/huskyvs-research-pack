@@ -1,0 +1,153 @@
+{
+  "evidence_label": "ZBAA_FAST_LAB_TEST_FIXTURE_NOT_LIVE",
+  "fixture": true,
+  "captured_at_utc": "2026-07-21T07:00:00Z",
+  "markets": [
+    {
+      "captured_at_utc": "2026-07-21T07:00:00Z",
+      "gamma": {
+        "active": true,
+        "closed": false,
+        "acceptingOrders": true,
+        "conditionId": "0xzbaa25below",
+        "question": "Will the highest temperature in Beijing be 25°C or below on July 22?",
+        "title": "Highest temperature in Beijing on July 22?",
+        "slug": "highest-temperature-in-beijing-on-july-22-2026-25corbelow",
+        "groupItemTitle": "25°C or below",
+        "endDate": "2026-07-22T12:00:00Z",
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"yes25below\", \"no25below\"]",
+        "orderPriceMinTickSize": "0.01",
+        "orderMinSize": "5"
+      },
+      "clob": {"condition_id": "0xzbaa25below"},
+      "orderbook": {
+        "market": "0xzbaa25below",
+        "asset_id": "yes25below",
+        "timestamp": "2026-07-21T07:05:00Z",
+        "tick_size": "0.01",
+        "min_order_size": "5",
+        "bids": [{"price": "0.02", "size": "100"}],
+        "asks": [{"price": "0.03", "size": "1000"}]
+      }
+    },
+    {
+      "captured_at_utc": "2026-07-21T07:00:01Z",
+      "gamma": {
+        "active": true,
+        "closed": false,
+        "acceptingOrders": true,
+        "conditionId": "0xzbaa26",
+        "question": "Will the highest temperature in Beijing be 26°C on July 22?",
+        "title": "Highest temperature in Beijing on July 22?",
+        "slug": "highest-temperature-in-beijing-on-july-22-2026-26c",
+        "groupItemTitle": "26°C",
+        "endDate": "2026-07-22T12:00:00Z",
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"yes26\", \"no26\"]",
+        "orderPriceMinTickSize": "0.01",
+        "orderMinSize": "5"
+      },
+      "clob": {"condition_id": "0xzbaa26"},
+      "orderbook": {
+        "market": "0xzbaa26",
+        "asset_id": "yes26",
+        "timestamp": "2026-07-21T07:05:01Z",
+        "tick_size": "0.01",
+        "min_order_size": "5",
+        "bids": [{"price": "0.08", "size": "100"}],
+        "asks": [{"price": "0.09", "size": "1000"}]
+      }
+    },
+    {
+      "captured_at_utc": "2026-07-21T07:00:02Z",
+      "gamma": {
+        "active": true,
+        "closed": false,
+        "acceptingOrders": true,
+        "conditionId": "0xzbaa27",
+        "question": "Will the highest temperature in Beijing be 27°C on July 22?",
+        "title": "Highest temperature in Beijing on July 22?",
+        "slug": "highest-temperature-in-beijing-on-july-22-2026-27c",
+        "groupItemTitle": "27°C",
+        "endDate": "2026-07-22T12:00:00Z",
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"yes27\", \"no27\"]",
+        "orderPriceMinTickSize": "0.01",
+        "orderMinSize": "5"
+      },
+      "clob": {"condition_id": "0xzbaa27"},
+      "orderbook": {
+        "market": "0xzbaa27",
+        "asset_id": "yes27",
+        "timestamp": "2026-07-21T07:05:02Z",
+        "tick_size": "0.01",
+        "min_order_size": "5",
+        "bids": [{"price": "0.07", "size": "100"}],
+        "asks": [
+          {"price": "0.08", "size": "25"},
+          {"price": "0.12", "size": "1000"}
+        ]
+      }
+    },
+    {
+      "captured_at_utc": "2026-07-21T07:00:03Z",
+      "gamma": {
+        "active": true,
+        "closed": false,
+        "acceptingOrders": true,
+        "conditionId": "0xzbaa28",
+        "question": "Will the highest temperature in Beijing be 28°C on July 22?",
+        "title": "Highest temperature in Beijing on July 22?",
+        "slug": "highest-temperature-in-beijing-on-july-22-2026-28c",
+        "groupItemTitle": "28°C",
+        "endDate": "2026-07-22T12:00:00Z",
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"yes28\", \"no28\"]",
+        "orderPriceMinTickSize": "0.01",
+        "orderMinSize": "5"
+      },
+      "clob": {"condition_id": "0xzbaa28"},
+      "orderbook": {
+        "market": "0xzbaa28",
+        "asset_id": "yes28",
+        "timestamp": "2026-07-21T07:05:03Z",
+        "tick_size": "0.01",
+        "min_order_size": "5",
+        "bids": [{"price": "0.13", "size": "100"}],
+        "asks": [
+          {"price": "0.14", "size": "50"},
+          {"price": "0.16", "size": "1000"}
+        ]
+      }
+    },
+    {
+      "captured_at_utc": "2026-07-21T07:00:04Z",
+      "gamma": {
+        "active": true,
+        "closed": false,
+        "acceptingOrders": true,
+        "conditionId": "0xzbaa29higher",
+        "question": "Will the highest temperature in Beijing be 29°C or higher on July 22?",
+        "title": "Highest temperature in Beijing on July 22?",
+        "slug": "highest-temperature-in-beijing-on-july-22-2026-29corhigher",
+        "groupItemTitle": "29°C or higher",
+        "endDate": "2026-07-22T12:00:00Z",
+        "outcomes": "[\"Yes\", \"No\"]",
+        "clobTokenIds": "[\"yes29higher\", \"no29higher\"]",
+        "orderPriceMinTickSize": "0.01",
+        "orderMinSize": "5"
+      },
+      "clob": {"condition_id": "0xzbaa29higher"},
+      "orderbook": {
+        "market": "0xzbaa29higher",
+        "asset_id": "yes29higher",
+        "timestamp": "2026-07-21T07:05:04Z",
+        "tick_size": "0.01",
+        "min_order_size": "5",
+        "bids": [{"price": "0.18", "size": "25"}],
+        "asks": [{"price": "0.19", "size": "25"}]
+      }
+    }
+  ]
+}

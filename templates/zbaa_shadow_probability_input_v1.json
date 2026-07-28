@@ -1,0 +1,21 @@
+{
+  "forecast_run_id": "REPLACE_WITH_USER_FORECAST_RUN_ID",
+  "station": "ZBAA",
+  "city": "Beijing",
+  "weather_date_local": "2026-07-22",
+  "as_of_time_cst": "2026-07-21T15:00:00+08:00",
+  "as_of_time_utc": "2026-07-21T07:00:00Z",
+  "generated_at_utc": "2026-07-21T07:03:00Z",
+  "data_status": "EXAMPLE_NOT_A_FORECAST",
+  "confidence": "EXAMPLE",
+  "explanation": "Template values only. Replace every probability and explanation with the user's D-1 15:00 CST ZBAA forecast.",
+  "mode": "SHADOW_MANUAL",
+  "weather_metric": "highest_temperature",
+  "integer_temperature_probabilities": [
+    {"temperature_c": 25, "probability": 0.05},
+    {"temperature_c": 26, "probability": 0.10},
+    {"temperature_c": 27, "probability": 0.20},
+    {"temperature_c": 28, "probability": 0.35},
+    {"temperature_c": 29, "probability": 0.30}
+  ]
+}
