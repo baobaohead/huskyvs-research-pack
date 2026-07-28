@@ -56,6 +56,42 @@ def _payload_value(raw: dict[str, Any], *names: str) -> Any:
     return None
 
 
+def _require_evidence_string(value: Any, *, source: str, field: str) -> str:
+    if not isinstance(value, str) or not value or value != value.strip():
+        _error(
+            "EVIDENCE_STRING_INVALID",
+            f"{source} {field} must be a non-empty unpadded string",
+            source=source,
+            field=field,
+        )
+    return value
+
+
+def _strict_scalar_alias(
+    raw: dict[str, Any],
+    names: tuple[str, ...],
+    *,
+    source: str,
+    alias_group: str,
+) -> str | None:
+    present = [(name, raw[name]) for name in names if name in raw]
+    if not present:
+        return None
+    values = [
+        _require_evidence_string(value, source=source, field=name)
+        for name, value in present
+    ]
+    if any(value != values[0] for value in values[1:]):
+        _error(
+            "EVIDENCE_ALIAS_CONFLICT",
+            f"{source} {alias_group} aliases conflict",
+            source=source,
+            alias_group=alias_group,
+            present_aliases=[name for name, _ in present],
+        )
+    return values[0]
+
+
 def _as_array(value: Any) -> list[Any] | None:
     if isinstance(value, str):
         import json
@@ -66,21 +102,54 @@ def _as_array(value: Any) -> list[Any] | None:
     return value if isinstance(value, list) else None
 
 
+def _strict_array_alias(
+    raw: dict[str, Any],
+    names: tuple[str, ...],
+    *,
+    source: str,
+    alias_group: str,
+) -> list[Any] | None:
+    present = [(name, raw[name]) for name in names if name in raw]
+    if not present:
+        return None
+    parsed = [(name, _as_array(value)) for name, value in present]
+    if any(value is None for _, value in parsed):
+        return None
+    first = parsed[0][1]
+    if any(value != first for _, value in parsed[1:]):
+        _error(
+            "EVIDENCE_ALIAS_CONFLICT",
+            f"{source} {alias_group} aliases conflict",
+            source=source,
+            alias_group=alias_group,
+            present_aliases=[name for name, _ in present],
+        )
+    return first
+
+
 def _extract_exact_outcome_token_pairs(
     raw: dict[str, Any],
     *,
     source: str,
 ) -> list[tuple[str, str]]:
-    outcomes = _as_array(_payload_value(raw, "outcomes", "outcome"))
-    tokens = _as_array(
-        _payload_value(raw, "clobTokenIds", "clob_token_ids", "tokens", "tokenIds")
+    outcomes = _strict_array_alias(
+        raw,
+        ("outcomes", "outcome"),
+        source=source,
+        alias_group="outcomes",
+    )
+    tokens = _strict_array_alias(
+        raw,
+        ("clobTokenIds", "clob_token_ids", "tokens", "tokenIds"),
+        source=source,
+        alias_group="tokens",
     )
     if (
         not outcomes
         or not tokens
         or len(outcomes) != len(tokens)
-        or any(not isinstance(item, str) or item == "" for item in outcomes)
-        or any(not isinstance(item, str) or item == "" for item in tokens)
+        or any(not isinstance(item, str) for item in outcomes)
+        or any(not isinstance(item, str) for item in tokens)
     ):
         _error(
             "MARKET_OUTCOME_TOKEN_CARDINALITY_MISMATCH",
@@ -89,6 +158,14 @@ def _extract_exact_outcome_token_pairs(
             outcome_count=len(outcomes or []),
             token_count=len(tokens or []),
         )
+    outcomes = [
+        _require_evidence_string(item, source=source, field=f"outcomes[{index}]")
+        for index, item in enumerate(outcomes)
+    ]
+    tokens = [
+        _require_evidence_string(item, source=source, field=f"tokens[{index}]")
+        for index, item in enumerate(tokens)
+    ]
     if len(set(outcomes)) != len(outcomes):
         _error(
             "MARKET_OUTCOME_DUPLICATE",
@@ -128,25 +205,48 @@ def _validate_market(
         _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma payload hash mismatch")
     if content_hash(clob) != assert_sha256_hex(m["clob_payload_sha256"], field="clob_payload_sha256"):
         _error("MARKET_IDENTITY_REPLAY_MISMATCH", "clob payload hash mismatch")
-    condition = str(_payload_value(gamma, "conditionId", "condition_id", "condition") or "")
-    if not condition: _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma condition id unavailable")
+    manifest_condition = _require_evidence_string(
+        m["condition_id"],
+        source="market_manifest",
+        field="condition_id",
+    )
+    condition = _strict_scalar_alias(
+        gamma,
+        ("conditionId", "condition_id", "condition"),
+        source="gamma",
+        alias_group="condition",
+    )
+    if condition is None:
+        _error("MARKET_IDENTITY_REPLAY_MISMATCH", "gamma condition id unavailable")
     _assert_eq(m["condition_id"], condition, "MARKET_IDENTITY_REPLAY_MISMATCH", "condition_id")
     for key, names in (("market_slug", ("slug", "market_slug")), ("event_id", ("eventId", "event_id", "id")), ("question", ("question", "title")), ("city", ("city",)), ("weather_date_local", ("weatherDateLocal", "weather_date_local")), ("weather_metric", ("weatherMetric", "weather_metric")), ("active", ("active",)), ("closed", ("closed",)), ("accepting_orders", ("acceptingOrders", "accepting_orders"))):
         raw = _payload_value(gamma, *names)
         if raw is None: _error("MARKET_IDENTITY_REPLAY_MISMATCH", f"gamma {key} unavailable")
         _assert_eq(m[key], raw if isinstance(raw, bool) else str(raw), "MARKET_IDENTITY_REPLAY_MISMATCH", key)
     pairs = _extract_exact_outcome_token_pairs(gamma, source="gamma")
-    _assert_eq(list(m["outcomes"]), [p[0] for p in pairs], "MARKET_IDENTITY_REPLAY_MISMATCH", "outcomes")
-    _assert_eq(list(m["clob_token_ids"]), [p[1] for p in pairs], "ORDERBOOK_TOKEN_BINDING_MISMATCH", "clob_token_ids")
+    manifest_outcomes = [
+        _require_evidence_string(item, source="market_manifest", field=f"outcomes[{index}]")
+        for index, item in enumerate(m["outcomes"])
+    ]
+    manifest_tokens = [
+        _require_evidence_string(item, source="market_manifest", field=f"clob_token_ids[{index}]")
+        for index, item in enumerate(m["clob_token_ids"])
+    ]
+    _assert_eq(manifest_outcomes, [p[0] for p in pairs], "MARKET_IDENTITY_REPLAY_MISMATCH", "outcomes")
+    _assert_eq(manifest_tokens, [p[1] for p in pairs], "ORDERBOOK_TOKEN_BINDING_MISMATCH", "clob_token_ids")
     # The selected public CLOB payload must corroborate the chosen condition.
-    clob_condition = _payload_value(clob, "condition_id", "conditionId", "market")
+    clob_condition = _strict_scalar_alias(
+        clob,
+        ("condition_id", "conditionId", "market"),
+        source="clob",
+        alias_group="condition",
+    )
     if clob_condition is None:
         _error(
             "CLOB_MARKET_CONDITION_REQUIRED",
             "CLOB market payload must contain a non-empty condition",
         )
-    ccond = str(clob_condition)
-    if ccond != condition or ccond != m["condition_id"]:
+    if clob_condition != condition or clob_condition != manifest_condition:
         _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "CLOB market condition conflicts with Gamma or manifest")
     cpairs = _extract_exact_outcome_token_pairs(clob, source="clob")
     if cpairs != pairs:
@@ -199,26 +299,50 @@ def _validate_orderbook_endpoint(endpoint: str, token_id: str, *, snapshot_id: s
 def _validate_orderbooks(value: dict[str, Any], market: dict[str, Any], as_of: datetime) -> dict[str, dict[str, Any]]:
     evidence: dict[str, dict[str, Any]] = {}
     for item in value["orderbook_evidence"]:
-        sid = item["orderbook_snapshot_id"]
+        sid = _require_evidence_string(
+            item["orderbook_snapshot_id"],
+            source="orderbook_evidence",
+            field="orderbook_snapshot_id",
+        )
+        evidence_condition = _require_evidence_string(
+            item["condition_id"],
+            source=f"orderbook_evidence:{sid}",
+            field="condition_id",
+        )
+        evidence_token = _require_evidence_string(
+            item["token_id"],
+            source=f"orderbook_evidence:{sid}",
+            field="token_id",
+        )
         if sid in evidence: _error("ORDERBOOK_EVIDENCE_REF_MISSING", "duplicate orderbook snapshot id", snapshot_id=sid)
         if item["method"] != "GET" or item["status_code"] != 200:
             _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "orderbook endpoint/status/method invalid", snapshot_id=sid)
-        _validate_orderbook_endpoint(item["endpoint"], item["token_id"], snapshot_id=sid)
+        _validate_orderbook_endpoint(item["endpoint"], evidence_token, snapshot_id=sid)
         captured = parse_iso_utc(item["captured_at_utc"])
         started = parse_iso_utc(item["request_started_at_utc"])
         if started > captured or captured > as_of or captured.astimezone(CST).time() > time(15, 0):
             _error("VALUE_V2_LEAKAGE_INVALID", "orderbook acquisition violates cutoff", snapshot_id=sid)
         if content_hash(item["raw_payload"]) != assert_sha256_hex(item["raw_payload_sha256"], field="raw_payload_sha256"):
             _error("ORDERBOOK_RAW_HASH_MISMATCH", "raw orderbook hash mismatch", snapshot_id=sid)
-        if item["condition_id"] != market["manifest"]["condition_id"] or item["token_id"] not in market["pairs"].values():
+        if evidence_condition != market["manifest"]["condition_id"] or evidence_token not in market["pairs"].values():
             _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "orderbook token not in market snapshot", snapshot_id=sid)
-        raw_token = _payload_value(item["raw_payload"], "asset_id", "token_id")
+        raw_token = _strict_scalar_alias(
+            item["raw_payload"],
+            ("asset_id", "token_id"),
+            source=f"raw_orderbook:{sid}",
+            alias_group="token",
+        )
         if raw_token is None:
             _error("ORDERBOOK_RAW_TOKEN_REQUIRED", "raw orderbook token field is required", snapshot_id=sid)
-        raw_condition = _payload_value(item["raw_payload"], "market", "condition_id", "conditionId")
+        raw_condition = _strict_scalar_alias(
+            item["raw_payload"],
+            ("market", "condition_id", "conditionId"),
+            source=f"raw_orderbook:{sid}",
+            alias_group="condition",
+        )
         if raw_condition is None:
             _error("ORDERBOOK_RAW_CONDITION_REQUIRED", "raw orderbook condition field is required", snapshot_id=sid)
-        if str(raw_token) != item["token_id"] or str(raw_condition) != item["condition_id"]:
+        if raw_token != evidence_token or raw_condition != evidence_condition:
             _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "raw orderbook identity does not match evidence", snapshot_id=sid)
         try:
             normalized = normalize_orderbook(item["raw_payload"], item["token_id"], item["condition_id"], market["manifest"]["gamma_market_payload"])
@@ -306,10 +430,34 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
     probabilities = {r["temperature_bucket"]: Decimal(r["forecast_probability"]) for r in weather_validation["normalized_probabilities"] if r["marketable"]}
     accepted, refs = [], set()
     for raw in value["candidates"]:
-        ref = raw["orderbook_evidence_ref"]
+        ref = _require_evidence_string(
+            raw["orderbook_evidence_ref"],
+            source="candidate",
+            field="orderbook_evidence_ref",
+        )
+        candidate_snapshot_id = _require_evidence_string(
+            raw["orderbook_snapshot_id"],
+            source=f"candidate:{ref}",
+            field="orderbook_snapshot_id",
+        )
+        candidate_condition = _require_evidence_string(
+            raw["condition_id"],
+            source=f"candidate:{ref}",
+            field="condition_id",
+        )
+        candidate_token = _require_evidence_string(
+            raw["token_id"],
+            source=f"candidate:{ref}",
+            field="token_id",
+        )
+        candidate_outcome = _require_evidence_string(
+            raw["outcome"],
+            source=f"candidate:{ref}",
+            field="outcome",
+        )
         if ref not in books: _error("ORDERBOOK_EVIDENCE_REF_MISSING", "candidate evidence reference missing", reference=ref)
         b = books[ref]["item"]
-        if raw["orderbook_snapshot_id"] != ref or raw["condition_id"] != b["condition_id"] or raw["token_id"] != b["token_id"]:
+        if candidate_snapshot_id != ref or candidate_condition != b["condition_id"] or candidate_token != b["token_id"]:
             _error("ORDERBOOK_TOKEN_BINDING_MISMATCH", "candidate/evidence identity mismatch", reference=ref)
         if raw["forecast_run_id"] != value["forecast_run_id"]:
             _error("FORECAST_RUN_ID_MISMATCH", "candidate forecast_run_id does not match value bundle")
@@ -327,7 +475,7 @@ def validate_value_signal_bundle_v2(weather: dict[str, Any], value: dict[str, An
             raw["data_status"],
             field="candidate.data_status",
         )
-        if raw["market_slug"] != market["manifest"]["market_slug"] or raw["outcome"] != {v:k for k,v in market["pairs"].items()}.get(raw["token_id"]):
+        if raw["market_slug"] != market["manifest"]["market_slug"] or candidate_outcome != {v:k for k,v in market["pairs"].items()}.get(candidate_token):
             _error("MARKET_IDENTITY_REPLAY_MISMATCH", "candidate market identity mismatch")
         bucket = normalize_temp_bucket_label(raw["temperature_bucket"])
         fp, ask = Decimal(str(raw["forecast_probability"])), Decimal(str(raw["market_ask_price"]))

@@ -324,10 +324,12 @@ def test_outcome_token_arrays_must_be_complete_and_equal(source, outcomes, token
     payload["outcomes"] = outcomes
     payload["clobTokenIds"] = tokens
     rehash_market(value)
-    with pytest.raises(
-        BridgeError,
-        match="MARKET_OUTCOME_TOKEN_CARDINALITY_MISMATCH",
-    ):
+    expected = (
+        "EVIDENCE_STRING_INVALID"
+        if any(item == "" for item in outcomes + tokens)
+        else "MARKET_OUTCOME_TOKEN_CARDINALITY_MISMATCH"
+    )
+    with pytest.raises(BridgeError, match=expected):
         validate_value_signal_bundle_v2(weather_bundle, value)
 
 
@@ -377,7 +379,7 @@ def test_clob_market_condition_is_required_and_exact(condition):
     else:
         clob["condition_id"] = condition
         expected = (
-            "CLOB_MARKET_CONDITION_REQUIRED"
+            "EVIDENCE_STRING_INVALID"
             if condition == ""
             else "ORDERBOOK_TOKEN_BINDING_MISMATCH"
         )
@@ -394,3 +396,163 @@ def test_coordinated_clob_condition_rehash_cannot_override_gamma_identity():
     rehash_market(value)
     with pytest.raises(BridgeError, match="MARKET_IDENTITY_REPLAY_MISMATCH"):
         validate_value_signal_bundle_v2(weather_bundle, value)
+
+
+@pytest.mark.parametrize(
+    "source,alias,value",
+    [
+        ("gamma", "condition_id", "cond-x"),
+        ("clob", "market", "cond-x"),
+        ("raw", "condition_id", "cond-x"),
+        ("raw", "token_id", "token-x"),
+    ],
+)
+def test_conflicting_scalar_aliases_are_rejected_after_rehash(source, alias, value):
+    value_bundle, weather_bundle = bundle()
+    if source == "raw":
+        value_bundle["orderbook_evidence"][0]["raw_payload"][alias] = value
+        rehash_raw_orderbook(value_bundle)
+    else:
+        value_bundle["market_snapshot_manifest"][f"{source}_market_payload"][alias] = value
+        rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_ALIAS_CONFLICT") as raised:
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+    assert raised.value.details["source"].startswith(source)
+    assert raised.value.details["alias_group"] in {"condition", "token"}
+    assert alias in raised.value.details["present_aliases"]
+    assert "raw_payload" not in raised.value.details
+
+
+@pytest.mark.parametrize(
+    "source,alias,value",
+    [
+        ("gamma", "outcome", ["No"]),
+        ("gamma", "tokens", ["token-x"]),
+        ("clob", "outcome", ["No"]),
+        ("clob", "tokens", ["token-x"]),
+    ],
+)
+def test_conflicting_array_aliases_are_rejected_after_rehash(source, alias, value):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["market_snapshot_manifest"][f"{source}_market_payload"][alias] = value
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_ALIAS_CONFLICT") as raised:
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+    assert raised.value.details["source"] == source
+    assert raised.value.details["alias_group"] in {"outcomes", "tokens"}
+    assert alias in raised.value.details["present_aliases"]
+
+
+def test_identical_scalar_aliases_are_accepted_without_mutating_payloads():
+    value_bundle, weather_bundle = bundle()
+    market = value_bundle["market_snapshot_manifest"]
+    market["gamma_market_payload"]["condition_id"] = "cond-1"
+    market["clob_market_payload"]["market"] = "cond-1"
+    raw = value_bundle["orderbook_evidence"][0]["raw_payload"]
+    raw["condition_id"] = "cond-1"
+    raw["token_id"] = "token-1"
+    before_gamma = deepcopy(market["gamma_market_payload"])
+    before_clob = deepcopy(market["clob_market_payload"])
+    before_raw = deepcopy(raw)
+    rehash_market(value_bundle)
+    rehash_raw_orderbook(value_bundle)
+    assert validate_value_signal_bundle_v2(weather_bundle, value_bundle)["accepted_count"] == 1
+    assert market["gamma_market_payload"] == before_gamma
+    assert market["clob_market_payload"] == before_clob
+    assert raw == before_raw
+
+
+def test_identical_array_aliases_accept_list_and_strict_json_array_forms():
+    value_bundle, weather_bundle = bundle()
+    market = value_bundle["market_snapshot_manifest"]
+    for source in ("gamma_market_payload", "clob_market_payload"):
+        market[source]["outcome"] = '["Yes"]'
+        market[source]["tokens"] = ["token-1"]
+    rehash_market(value_bundle)
+    assert validate_value_signal_bundle_v2(weather_bundle, value_bundle)["accepted_count"] == 1
+
+
+def test_same_array_elements_in_different_order_are_an_alias_conflict():
+    value_bundle, weather_bundle = bundle()
+    market = value_bundle["market_snapshot_manifest"]
+    outcomes = ["Yes", "No"]
+    tokens = ["token-1", "token-2"]
+    market["outcomes"] = outcomes
+    market["clob_token_ids"] = tokens
+    for source in ("gamma_market_payload", "clob_market_payload"):
+        market[source]["outcomes"] = outcomes
+        market[source]["clobTokenIds"] = tokens
+    market["gamma_market_payload"]["outcome"] = ["No", "Yes"]
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_ALIAS_CONFLICT"):
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+
+
+@pytest.mark.parametrize(
+    "field,bad_value",
+    [
+        ("condition", "   "),
+        ("outcome", "   "),
+        ("token", "\t"),
+    ],
+)
+def test_whitespace_only_evidence_identity_is_rejected(field, bad_value):
+    value_bundle, weather_bundle = bundle()
+    gamma = value_bundle["market_snapshot_manifest"]["gamma_market_payload"]
+    if field == "condition":
+        gamma["conditionId"] = bad_value
+    elif field == "outcome":
+        gamma["outcomes"] = [bad_value]
+    else:
+        gamma["clobTokenIds"] = [bad_value]
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_STRING_INVALID"):
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+
+
+@pytest.mark.parametrize("bad_token", [" token-1", "token-1 ", "\ttoken-1", "token-1\n"])
+def test_raw_token_leading_or_trailing_whitespace_is_rejected(bad_token):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["orderbook_evidence"][0]["raw_payload"]["asset_id"] = bad_token
+    rehash_raw_orderbook(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_STRING_INVALID"):
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+
+
+@pytest.mark.parametrize("bad_outcome", [" Yes", "Yes ", "\tYes", "Yes\n"])
+def test_outcome_leading_or_trailing_whitespace_is_rejected(bad_outcome):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["market_snapshot_manifest"]["gamma_market_payload"]["outcomes"] = [bad_outcome]
+    rehash_market(value_bundle)
+    with pytest.raises(BridgeError, match="EVIDENCE_STRING_INVALID"):
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+
+
+@pytest.mark.parametrize(
+    "field,bad_value",
+    [
+        ("condition_id", " cond-1"),
+        ("token_id", "token-1 "),
+        ("outcome", " Yes"),
+        ("orderbook_snapshot_id", " ob-1"),
+        ("orderbook_evidence_ref", "ob-1 "),
+    ],
+)
+def test_candidate_security_identity_strings_reject_padding(field, bad_value):
+    value_bundle, weather_bundle = bundle()
+    value_bundle["candidates"][0][field] = bad_value
+    with pytest.raises(BridgeError, match="EVIDENCE_STRING_INVALID"):
+        validate_value_signal_bundle_v2(weather_bundle, value_bundle)
+
+
+def test_legal_internal_whitespace_outcome_is_accepted():
+    value_bundle, weather_bundle = bundle()
+    market = value_bundle["market_snapshot_manifest"]
+    outcome = "Less than 32C"
+    market["outcomes"] = [outcome]
+    market["gamma_market_payload"]["outcomes"] = [outcome]
+    market["clob_market_payload"]["outcomes"] = [outcome]
+    value_bundle["candidates"][0]["outcome"] = outcome
+    rehash_market(value_bundle)
+    accepted = validate_value_signal_bundle_v2(weather_bundle, value_bundle)["accepted"][0]
+    assert accepted["outcome"] == outcome

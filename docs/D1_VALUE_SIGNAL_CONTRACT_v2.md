@@ -18,6 +18,15 @@ contain unique non-empty values. The CLOB market payload must also state its
 condition explicitly, matching the Gamma payload, manifest, and orderbook
 evidence.
 
+When multiple raw fields alias the same security-critical identity, every
+present alias must agree exactly. Conflicting aliases are never silently
+selected by priority; array aliases are parsed as JSON arrays and compared
+item-by-item in their original order. Security-critical condition, token,
+outcome, snapshot, and evidence-reference strings must be non-empty and must
+not contain leading or trailing whitespace. The validator rejects padded or
+ambiguous raw evidence instead of trimming, normalizing, deleting, or
+rewriting it.
+
 The bridge dispatches by the bridge manifest version.  Registration performs
 that replay before its SQLite transaction and persists
 `orderbook_hash_verification=self_contained_semantic_replay` in the D1
