@@ -13,26 +13,34 @@ from src.husky_beijing_full_trade_study_v1 import (
     activity_join_key,
     annotate_adds,
     archetype_labels,
+    attach_pnl,
     bucket_metrics,
     buckets_adjacent,
     candidate_rows,
     checkpoint_epoch,
     classify_average_cost_add,
     classify_entry,
+    classify_event_position,
     classify_exit,
+    classify_position_row,
     classify_price_add,
     deduplicate_records,
     event_key,
     event_summary,
     fetch_activity_window,
+    final_path_classification,
     half_hour_bin,
     is_beijing_highest_market,
     merge_public_fills,
     parse_bucket,
     parse_weather_date,
+    position_snapshot_pnl,
+    reconcile_resolved_pnl_formulas,
+    recorded_sell_realized_pnl,
     relative_phase,
     stable_trade_key,
     threshold_timestamp,
+    timing_comparison,
 )
 
 
@@ -394,7 +402,7 @@ def test_reentry_after_sell():
 
 def test_no_sell_is_not_held_to_settlement():
     labels = classify_exit([normalized_fill()], [], 10)
-    assert labels == ["NO_RECORDED_SELL", "FINAL_PATH_UNKNOWN"]
+    assert labels == ["NO_RECORDED_SELL"]
 
 
 def test_unmatched_sell_marks_partial_timeline():
@@ -425,6 +433,39 @@ def test_candidate_checkpoint_funds_before_and_after():
     assert selected["buy_usd_after"] == 6
 
 
+def test_candidate_continues_buying_excludes_first_entry_after_checkpoint():
+    before_and_after = [
+        normalized_fill(timestamp="2026-07-20T09:00:00+08:00", usd=4),
+        normalized_fill(timestamp="2026-07-20T11:00:00+08:00", usd=6),
+    ]
+    first_after = [
+        normalized_fill(
+            timestamp="2026-07-20T11:30:00+08:00",
+            asset="asset-late",
+            usd=5,
+        )
+    ]
+    first_event = event_summary(
+        before_and_after[0]["event_key"], before_and_after, {}
+    )
+    second_event = event_summary("late-event", first_after, {})
+    second_event["event_key"] = "late-event"
+    output = candidate_rows(
+        [first_event, second_event],
+        {
+            first_event["event_key"]: before_and_after,
+            second_event["event_key"]: first_after,
+        },
+    )
+    selected = next(
+        row for row in output
+        if row["scope"] == "ALL_OBSERVABLE_EVENTS"
+        and row["checkpoint"] == "D0_1000"
+    )
+    assert selected["continues_buying_after_event_count"] == 1
+    assert selected["first_entry_after_event_count"] == 1
+
+
 def test_candidate_has_complete_only_scope():
     rows = [normalized_fill()]
     event = event_summary(rows[0]["event_key"], rows, {})
@@ -440,7 +481,7 @@ def test_archetype_marks_final_unknown_without_sell():
     rows = [normalized_fill()]
     event = event_summary(rows[0]["event_key"], rows, {})
     event["pnl_status"] = "OBSERVABLE_BUT_INCOMPLETE"
-    assert "FINAL_PATH_UNKNOWN" in archetype_labels(event, rows)
+    assert "NO_RECORDED_SELL_FINAL_PATH_UNKNOWN" in archetype_labels(event, rows)
 
 
 def test_public_fill_vocabulary_does_not_use_order_count():
@@ -457,3 +498,269 @@ def test_safety_constants_are_false_for_trading_actions():
     assert module.SIGNING is False
     assert module.REAL_ORDER is False
     assert module.FORMAL_STARTED is False
+
+
+def position_row(
+    *,
+    asset: str = "asset-30",
+    end_date: str = "2026-07-20",
+    redeemable: bool | None = True,
+    cash_pnl: float = -2,
+    realized_pnl: float = 0.5,
+    current_value: float = 0,
+    initial_value: float = 2,
+) -> dict:
+    return {
+        "asset": asset,
+        "endDate": end_date,
+        "redeemable": redeemable,
+        "cashPnl": cash_pnl,
+        "realizedPnl": realized_pnl,
+        "currentValue": current_value,
+        "initialValue": initial_value,
+    }
+
+
+def test_redeemable_past_enddate_is_resolved_unredeemed():
+    status = classify_position_row(
+        position_row(),
+        "2026-07-29T00:00:00+00:00",
+    )
+    assert status == "RESOLVED_REDEEMABLE_UNREDEEMED"
+
+
+def test_future_enddate_is_active_open():
+    status = classify_position_row(
+        position_row(end_date="2026-07-30", redeemable=False),
+        "2026-07-29T00:00:00+00:00",
+    )
+    assert status == "ACTIVE_OPEN_CONFIRMED"
+
+
+def test_past_enddate_without_resolved_status_is_unknown():
+    status = classify_position_row(
+        position_row(redeemable=False),
+        "2026-07-29T00:00:00+00:00",
+    )
+    assert status == "PAST_ENDDATE_STATUS_UNKNOWN"
+
+
+def test_resolved_unredeemed_never_counts_as_active_open():
+    status, assets = classify_event_position(
+        {"asset-30"},
+        {"asset-30": position_row()},
+        "2026-07-29T00:00:00+00:00",
+        strict_closed=False,
+    )
+    assert status == "RESOLVED_REDEEMABLE_UNREDEEMED"
+    assert "ACTIVE_OPEN_CONFIRMED" not in set(assets.values())
+
+
+def test_active_and_resolved_snapshot_pnl_are_separate(monkeypatch):
+    from src import husky_beijing_full_trade_study_v1 as module
+
+    monkeypatch.setattr(module, "read_csv", lambda _: [])
+    rows = [normalized_fill()]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    active = attach_pnl(
+        [event], {event["event_key"]: rows}, Path("."),
+        {"asset-30": position_row(end_date="2026-07-30")},
+        {}, "2026-07-29T00:00:00+00:00",
+    )[0]
+    resolved = attach_pnl(
+        [event], {event["event_key"]: rows}, Path("."),
+        {"asset-30": position_row()},
+        {}, "2026-07-29T00:00:00+00:00",
+    )[0]
+    assert active["active_open_mark_to_market_pnl"] == -1.5
+    assert active["resolved_redeemable_snapshot_pnl"] is None
+    assert resolved["active_open_mark_to_market_pnl"] is None
+    assert resolved["resolved_redeemable_snapshot_pnl"] == -1.5
+
+
+def test_four_resolved_pnl_formulas_reconcile_against_authority():
+    row = position_row(
+        cash_pnl=5,
+        realized_pnl=2,
+        current_value=8,
+        initial_value=5,
+    )
+    result = reconcile_resolved_pnl_formulas(
+        [row],
+        {"asset-30": {"realizedPnl": 7}},
+    )
+    assert position_snapshot_pnl(row, "A_cashPnl") == 5
+    assert position_snapshot_pnl(row, "B_realizedPnl") == 2
+    assert position_snapshot_pnl(row, "C_cashPnl_plus_realizedPnl") == 7
+    assert position_snapshot_pnl(
+        row, "D_currentValue_minus_initialValue_plus_realizedPnl"
+    ) == 5
+    assert result["most_stable_formula"] == "C_cashPnl_plus_realizedPnl"
+    assert result["validation_result"] == "RESOLVED_UNREDEEMED_PNL_VALIDATED"
+
+
+def test_unvalidated_resolved_pnl_is_not_strict(monkeypatch):
+    from src import husky_beijing_full_trade_study_v1 as module
+
+    monkeypatch.setattr(module, "read_csv", lambda _: [])
+    rows = [normalized_fill()]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    attached = attach_pnl(
+        [event], {event["event_key"]: rows}, Path("."),
+        {"asset-30": position_row()}, {},
+        "2026-07-29T00:00:00+00:00",
+    )[0]
+    assert attached["resolved_redeemable_snapshot_pnl"] == -1.5
+    assert attached["strict_pnl"] is None
+    assert attached["pnl_status"] == "RESOLVED_REDEEMABLE_UNREDEEMED"
+
+
+def test_partial_exit_is_explicitly_labeled():
+    rows = [
+        normalized_fill(shares=10),
+        normalized_fill(
+            timestamp="2026-07-20T10:00:00+08:00",
+            side="SELL",
+            shares=5,
+        ),
+    ]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    assert "PARTIAL_EXIT_OBSERVED" in event["exit_classifications"]
+
+
+def test_profitable_partial_sell_uses_recorded_sell_pnl():
+    rows = [
+        normalized_fill(price=0.2, shares=10, usd=2),
+        normalized_fill(
+            timestamp="2026-07-20T10:00:00+08:00",
+            side="SELL", price=0.4, shares=5, usd=2,
+        ),
+    ]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    labels = archetype_labels(event, rows)
+    assert event["recorded_sell_realized_pnl_fifo"] == pytest.approx(1)
+    assert event["recorded_sell_realized_pnl_average_cost"] == pytest.approx(1)
+    assert "PROFITABLE_PARTIAL_SELL_OBSERVED" in labels
+
+
+def test_loss_realizing_partial_sell_uses_recorded_sell_pnl():
+    rows = [
+        normalized_fill(price=0.4, shares=10, usd=4),
+        normalized_fill(
+            timestamp="2026-07-20T10:00:00+08:00",
+            side="SELL", price=0.2, shares=5, usd=1,
+        ),
+    ]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    labels = archetype_labels(event, rows)
+    assert event["recorded_sell_realized_pnl_fifo"] == pytest.approx(-1)
+    assert event["recorded_sell_realized_pnl_average_cost"] == pytest.approx(-1)
+    assert "LOSS_REALIZING_PARTIAL_SELL_OBSERVED" in labels
+
+
+def test_final_event_profit_does_not_imply_profit_exit():
+    rows = [normalized_fill()]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    event["strict_pnl"] = 100
+    labels = archetype_labels(event, rows)
+    assert "PROFITABLE_PARTIAL_SELL_OBSERVED" not in labels
+
+
+def test_final_event_loss_does_not_imply_loss_cut():
+    rows = [normalized_fill()]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    event["strict_pnl"] = -100
+    labels = archetype_labels(event, rows)
+    assert "LOSS_REALIZING_PARTIAL_SELL_OBSERVED" not in labels
+
+
+def test_hold_to_settlement_and_unknown_path_are_mutually_exclusive():
+    rows = [normalized_fill()]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    event["held_to_settlement_observed"] = True
+    event["final_path_classification"] = final_path_classification(event)
+    labels = archetype_labels(event, rows)
+    assert "HOLD_TO_SETTLEMENT_OBSERVED" in labels
+    assert "NO_RECORDED_SELL_FINAL_PATH_UNKNOWN" not in labels
+
+
+def test_no_sell_with_authoritative_resolution_is_held():
+    event = {"sell_fill_count": 0, "held_to_settlement_observed": True}
+    assert final_path_classification(event) == "HOLD_TO_SETTLEMENT_OBSERVED"
+
+
+def test_no_sell_without_resolution_is_final_path_unknown():
+    event = {"sell_fill_count": 0, "held_to_settlement_observed": False}
+    assert (
+        final_path_classification(event)
+        == "NO_RECORDED_SELL_FINAL_PATH_UNKNOWN"
+    )
+
+
+def test_strict_pnl_complete_only_is_primary_timing_scope():
+    complete_rows = [normalized_fill()]
+    partial_rows = [
+        normalized_fill(asset="asset-partial", shares=5),
+        normalized_fill(
+            timestamp="2026-07-20T10:00:00+08:00",
+            asset="asset-partial", side="SELL", shares=10,
+        ),
+    ]
+    complete = event_summary(complete_rows[0]["event_key"], complete_rows, {})
+    partial = event_summary(partial_rows[0]["event_key"], partial_rows, {})
+    complete.update({"strict_pnl": 1, "price_up_add_count": 0, "price_down_add_count": 0, "price_flat_add_count": 0})
+    partial.update({"strict_pnl": 2, "price_up_add_count": 0, "price_down_add_count": 0, "price_flat_add_count": 0})
+    result = timing_comparison([complete, partial])
+    assert result["STRICT_PNL_ENTRY_COMPLETE_ONLY"]["profit_events"]["event_count"] == 1
+    assert result["STRICT_PNL_ALL"]["profit_events"]["event_count"] == 2
+
+
+def test_partial_entry_timeline_is_excluded_from_primary_timing():
+    rows = [
+        normalized_fill(shares=5),
+        normalized_fill(
+            timestamp="2026-07-20T10:00:00+08:00",
+            side="SELL", shares=10,
+        ),
+    ]
+    event = event_summary(rows[0]["event_key"], rows, {})
+    event.update({"strict_pnl": -1, "price_up_add_count": 0, "price_down_add_count": 0, "price_flat_add_count": 0})
+    result = timing_comparison([event])
+    assert result["STRICT_PNL_ENTRY_COMPLETE_ONLY"]["loss_events"]["event_count"] == 0
+    assert result["STRICT_PNL_ALL"]["loss_events"]["event_count"] == 1
+
+
+def test_candidate_report_uses_complete_only_scope():
+    from src.husky_beijing_full_trade_study_v1 import render_report
+    import inspect
+
+    source = inspect.getsource(render_report)
+    assert 'row["scope"] == "ENTRY_TIMELINE_COMPLETE_ONLY"' in source
+
+
+def test_core_beijing_counts_remain_50_events_and_537_fills():
+    report = json.loads(
+        Path("docs/HUSKY_BEIJING_FULL_TRADE_STUDY_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert report["beijing_event_count"] == 50
+    assert report["total_public_fill_count"] == 537
+
+
+def test_recorded_sell_pnl_reports_method_disagreement():
+    rows = [
+        normalized_fill(price=0.1, shares=10, usd=1),
+        normalized_fill(
+            timestamp="2026-07-20T09:10:00+08:00",
+            price=0.9, shares=10, usd=9,
+        ),
+        normalized_fill(
+            timestamp="2026-07-20T10:00:00+08:00",
+            side="SELL", price=0.6, shares=10, usd=6,
+        ),
+    ]
+    result = recorded_sell_realized_pnl(rows)
+    assert result["recorded_sell_realized_pnl_fifo"] == pytest.approx(5)
+    assert result["recorded_sell_realized_pnl_average_cost"] == pytest.approx(1)
+    assert result["sell_pnl_method_disagreement"] is True

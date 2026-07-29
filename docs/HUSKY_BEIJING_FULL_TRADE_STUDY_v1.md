@@ -2,177 +2,136 @@
 
 ## 技术摘要
 
-截至 `2026-07-29T03:30:01.944885+00:00`，合并仓库快照与本次公开 GET 后，观察到北京最高温市场 50 个天气事件、453 笔 BUY 与 84 笔 SELL 公开成交。总 BUY 金额 $1360.44。严格关闭/结算口径覆盖 14 个事件，PnL $99.20，ROI 29.04%。
+截至 `2026-07-29T03:30:01.944885+00:00`，北京最高温公开历史仍为 50 个天气事件、537 笔公开成交（453 BUY / 84 SELL）。严格已关闭/结算口径覆盖 14 个事件，总 PnL $99.20。
 
-**重要定义：上述均为 public trade fill count（公开成交笔数），不是 original order count（原始订单数）。**
+本轮最重要修正是：`ACTIVE_OPEN_CONFIRMED` 只有 0 个；原先混在“当前开放”里的 36 个事件实际是已过 endDate、`redeemable=true` 的待赎回仓位。其隔离快照为 $-570.78，但由于权威资产重叠数为 0，验证结果是 `RESOLVED_UNREDEEMED_PNL_NOT_VALIDATED`，不得并入严格 PnL。
 
-## 22 个核心问题的大白话答案
+**公开成交笔数不是原始订单数；公开接口不展示未成交挂单或撤单。**
 
-1. 最早观察到北京公开成交是 2026-03-21T15:57:53+08:00；这不是绝对第一张原始订单。
-2. 最新一笔是 2026-07-23T16:56:18+08:00。
-3. activity 请求成功覆盖到冻结截止时间 2026-07-29T03:30:01.944885+00:00；最后成交早于截止时间不等于抓取缺口。
-4. 北京共有 50 个最高温天气事件。
-5. BUY / SELL 分别有 453 / 84 笔公开成交。
-6. 可观察总投入为 $1360.44。
-7. 严格已关闭/结算总 PnL 为 $99.20，严格 ROI 29.04%。
-8. 未进入严格口径的事件 36 个、BUY 金额 $1018.90。
-9. 资金上以 D0 为主：D-1及更早 5.0%，D0 95.0%。
-10. 全部事件的 50% 建仓中位时点是 D0 13:15 CST；完整路径事件为 D0 12:49 CST。
-11. 多次 BUY 事件 43 个，单次 BUY 7 个，整体更常见分批建仓。
-12. 同档后续 BUY 中，上涨/下跌/持平为 21 / 37 / 272 笔。
-13. 单档/多档事件 10 / 40；多档更常见。
-14. 相邻档篮子 31 个；逐事件加入时间见 event summary。
-15. 首次 SELL 中位相对时点为 D0 14:02 CST。
-16. PARTIAL_PROFIT_EXIT / LOSS_CUT_EXIT 研究标签事件为 18 / 3。
-17. 明确观察到持有到结算的事件 14 个。
-18. 严格盈利事件中相邻篮子占 50.0%，初始投入中位占比 29.6%。
-19. 严格亏损事件中相邻篮子占 37.5%，初始投入中位占比 78.8%；只报告关联。
-20. 最值得继续验证 D0 10:00—16:00，尤其 14:00（此前投入 62.6%）和 15:00（72.9%）。
-21. 与中国正常工作时间最容易配合的是 D0 10:00、12:00、13:00、14:00、15:00、16:00；D-1 15:00/18:00 也可操作。
-22. 公开数据仍不能证明原始挂单/撤单、主观预测档、交易因果、无 SELL 必然持有结算，或北京结算站就是 ZBAA。
+## 16 个审核问题的大白话答案
 
-## 可观察历史从何时开始、覆盖到何时
+1. 当前可观察北京历史从 2026-03-21T15:57:53+08:00 开始；`ABSOLUTE_LIFETIME_FIRST_BEIJING_TRADE=NOT_PROVEN`。
+2. 最新可观察成交为 2026-07-23T16:56:18+08:00，冻结点为 2026-07-29T03:30:01.944885+00:00。
+3. 核心计数维持：50 个事件、537 笔公开成交。
+4. D0 BUY 金额占比为 95.0%；“约 95% 在 D0 买入”的描述性结论维持。
+5. 完整路径事件的首次/25%/50%/75%/最后建仓中位时点为 D0 05:20 CST / D0 11:18 CST / D0 12:49 CST / D0 13:41 CST / D0 14:34 CST。
+6. 真正 ACTIVE_OPEN 为 0 个，活动仓位 MTM $0.00。
+7. 已结算但未赎回为 36 个，隔离快照 $-570.78。
+8. 已过 endDate 但状态不足为 0 个；其他仓位状态不明为 0 个。
+9. 严格已结算总 PnL 为 $99.20，覆盖 14 个事件。
+10. resolved-unredeemed PnL 不能验证：`RESOLVED_UNREDEEMED_PNL_NOT_VALIDATED`，且不进入严格 PnL。
+11. 两种成本法都确认盈利的部分 SELL 有 8 个事件：2026-03-22, 2026-04-03, 2026-05-05, 2026-05-08, 2026-05-21, 2026-06-15, 2026-06-28, 2026-07-20。
+12. 两种成本法都确认亏损的部分 SELL 有 4 个事件：2026-04-28, 2026-05-06, 2026-05-11, 2026-05-12。
+13. 权威结算路径明确、归为持有到结算的事件有 14 个。
+14. 最终路径未知分为：无 SELL 22 个、部分 SELL 后余量未知 14 个。
+15. 盈亏完整路径事件的 50% 建仓中位时点分别为 D-1 23:24 CST / D0 14:39 CST；只表示观察性差异。
+16. 最值得后续验证的是完整路径口径下的 D-1 15:00 与 D0 10:00、12:00、13:00、14:00、15:00、16:00；当前仍为 `INSUFFICIENT_FOR_FINAL_MODEL_SELECTION`。
 
-- 第一笔可观察北京公开成交：2026-03-21T07:57:53+00:00 / 2026-03-21T15:57:53+08:00。
-- 最新一笔可观察北京公开成交：2026-07-23T08:56:18+00:00 / 2026-07-23T16:56:18+08:00。
-- 北京天气日范围：2026-03-21 至 2026-07-23。
-- 最早/最新历史信心：HIGH / HIGH。
-- OBSERVED：公开 profile 与仓库四类文件中的 proxyWallet 均一致。
-- NOT_SUPPORTED：公开成交无法证明 Husky 的绝对第一笔原始订单、未成交挂单或撤单。
+## 可观察历史有高请求覆盖，但绝对生命周期起点未被证明
 
-## 建仓通常发生在何时
+- `BEIJING_FIRST_OBSERVED_PUBLIC_TRADE=2026-03-21T15:57:53+08:00`
+- `EARLIEST_OBSERVED_CURRENT_API_HISTORY_CONFIDENCE=HIGH`
+- `ABSOLUTE_LIFETIME_FIRST_BEIJING_TRADE=NOT_PROVEN`
+- `PUBLIC_REQUEST_COVERAGE=PASS`
+- `OBSERVED_MONTH_COVERAGE=PASS`
+- `ABSENCE_OF_UNOBSERVED_HISTORY_GAPS=NOT_PROVEN`
 
-D-1 及更早占 BUY 金额 5.0%；D0 占 95.0%。D0 12:00 / 14:00 / 15:00 后分别占 57.9% / 37.4% / 27.1%。首次、25%、50%、75%和最后 BUY 的北京时间中位时钟分别为 D0 04:01 CST、D0 08:24 CST、D0 13:15 CST、D0 13:41 CST、D0 14:33 CST。
-仅保留完整路径事件后，对应中位时钟为 D0 05:20 CST、D0 11:18 CST、D0 12:49 CST、D0 13:41 CST、D0 14:34 CST。
+请求全部成功只证明本次公开接口请求完整返回，不能证明 API 从未遗漏、删除或截断过更早历史。
 
-这些是描述性关联，不证明某个时点导致盈利。
+## 当前仓位被拆成互斥状态
 
-## 盈利与亏损事件的可观察关联
+| 事件状态 | 事件数 | 隔离 PnL | 是否进入严格 PnL |
+|---|---:|---:|---|
+| ACTIVE_OPEN_CONFIRMED | 0 | $0.00 | 否 |
+| RESOLVED_REDEEMABLE_UNREDEEMED | 36 | $-570.78 | 否 |
+| PAST_ENDDATE_STATUS_UNKNOWN | 0 | $0.00 | 否 |
+| POSITION_STATUS_UNKNOWN | 0 | — | 否 |
+| CLOSED_POSITION_CONFIRMED | 14 | $99.20 | 是 |
 
-严格盈利事件 6 个：首次/50% 建仓中位相对时点 D0 01:22 CST / D0 07:44 CST，初始投入占比中位数 29.6%，投入中位数 $32.10，D-1 投入占比中位数 17.1%，相邻篮子事件占 50.0%。
+resolved 快照采用 `cashPnl + realizedPnl`，仅用于隔离观察。四个候选公式的权威重叠校验如下；没有重叠时“最稳定公式”必须保持未确定。
 
-严格亏损事件 8 个：首次/50% 建仓中位相对时点 D0 13:54 CST / D0 13:55 CST，初始投入占比中位数 78.8%，投入中位数 $10.35，D-1 投入占比中位数 0.0%，相邻篮子事件占 37.5%。
+| 公式 | 可比资产数 | 精确匹配率 | 误差<0.01比例 | 最大绝对误差 |
+|---|---:|---:|---:|---:|
+| A_cashPnl | 0 | — | — | — |
+| B_realizedPnl | 0 | — | — | — |
+| C_cashPnl_plus_realizedPnl | 0 | — | — | — |
+| D_currentValue_minus_initialValue_plus_realizedPnl | 0 | — | — | — |
 
-这些差异来自非随机的观察性数据，只能作为后续模型假设，不能写成“某时段买入所以赚钱”。
+`MOST_STABLE_FORMULA=UNDETERMINED_NO_AUTHORITATIVE_OVERLAP`；`SNAPSHOT_FORMULA_STATUS=UNVALIDATED_SNAPSHOT_ONLY`。
 
-## 分批、补仓与温度篮子
+## SELL 标签只依据已记录 SELL 的实现盈亏
 
-单次/多次 BUY 事件为 7 / 43；单档/多档为 10 / 40。价格上涨/下跌/持平后的同档补仓为 21 / 37 / 272 笔。相邻档篮子 31 个，投入主导档发生切换 11 个。
+观察到部分退出 21 个事件；盈利部分 SELL 8 个，亏损部分 SELL 4 个，成本法明显不一致 4 个，成本路径不足 6 个。
 
-dominant_bought_bucket 只表示投入金额最高档，不表示 Husky 主观预测主档。
+FIFO 与平均成本法都为正，才标记 `PROFITABLE_PARTIAL_SELL_OBSERVED`；都为负，才标记 `LOSS_REALIZING_PARTIAL_SELL_OBSERVED`。最终事件盈利或亏损本身不会生成部分止盈/止损标签。
 
-## 卖出、关闭与未解决路径
+最终路径只有一个标签：
 
-有记录 SELL 的事件 23 个，无记录 SELL 的事件 27 个。首次/最后 SELL 的北京时间中位时钟为 D0 14:02 CST / D0 15:14 CST。尚未进入严格口径的事件 36 个，对应可观察 BUY 金额 $1018.90。无 SELL 不自动等于持有到结算。
-具有明确结算路径且可标记 `HELD_TO_SETTLEMENT_OBSERVED` 的事件为 14 个。
+- `HOLD_TO_SETTLEMENT_OBSERVED`: 14
+- `NO_RECORDED_SELL_FINAL_PATH_UNKNOWN`: 22
+- `PARTIAL_EXIT_FINAL_PATH_UNKNOWN`: 14
+- `FULL_RECORDED_EXIT`: 0
+- `PATH_LABEL_MUTUAL_EXCLUSION=PASS`
 
-## 严格盈亏与集中度
+## 盈利/亏损时间比较以完整建仓路径为主
 
-严格总 PnL $99.20；严格投入 $341.54；ROI 29.04%。盈利/亏损/打平事件 6 / 8 / 0，胜率 42.9%。去掉最大 1/5 个赢家后 PnL 为 $12.49 / $-118.69；最大连续亏损 5 个事件，天气日序列最大回撤 $119.70。
+主口径 `STRICT_PNL_ENTRY_COMPLETE_ONLY`：
 
-### 最大盈利 5 个事件
+| 结果 | 事件数 | 总BUY | 首次 | 25% | 50% | 75% | 最后 | 初始占比 | D-1占比 | D0占比 | D0 12后 | D0 14后 | D0 15后 |
+|---|---:|---:|---|---|---|---|---|---:|---:|---:|---:|---:|---:|
+| 盈利 | 4 | $136.41 | D-1 23:23 CST | D-1 23:23 CST | D-1 23:24 CST | D0 07:43 CST | D0 07:45 CST | 44.0% | 31.5% | 68.5% | 18.5% | 0.0% | 0.0% |
+| 亏损 | 4 | $114.65 | D0 14:29 CST | D0 14:30 CST | D0 14:39 CST | D0 14:42 CST | D0 15:33 CST | 31.2% | 0.0% | 100.0% | 100.0% | 61.5% | 50.0% |
 
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-04-05 | 17.96 | 86.71 | 2/4 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL |
-| 2026-03-22 | 14.00 | 58.11 | 1/3 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-20 | 35.29 | 32.98 | 25/3 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL |
-| 2026-05-14 | 37.48 | 20.82 | 4/2 | ENTRY_TIMELINE_COMPLETE |
-| 2026-05-21 | 56.01 | 19.26 | 21/14 | ENTRY_TIMELINE_COMPLETE |
+完整盈利/亏损的建仓时长中位数为 0.5434722222222222 / 0.6975 小时；相邻篮子占比为 25.0% / 50.0%；涨/跌/平价加仓计数分别为 4/3/23 与 0/7/39；首次/最后 SELL 中位时点为 D0 08:19 CST / D0 13:00 CST（盈利）和 D0 15:40 CST / D0 15:55 CST（亏损）。
 
-### 最大亏损 5 个事件
+次要敏感性口径 `STRICT_PNL_ALL`：
 
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-04-17 | 90.52 | -81.94 | 41/5 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-06 | 20.82 | -20.01 | 1/0 | ENTRY_TIMELINE_PARTIAL_RECONCILIATION |
-| 2026-04-18 | 12.99 | -12.99 | 7/0 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-04 | 11.44 | -10.94 | 1/0 | ENTRY_TIMELINE_PARTIAL_RECONCILIATION |
-| 2026-03-21 | 9.27 | -5.27 | 4/3 | ENTRY_TIMELINE_COMPLETE |
+- 盈利事件 6 个，50% 建仓中位 D0 07:44 CST。
+- 亏损事件 8 个，50% 建仓中位 D0 13:55 CST。
 
-### 最早 5 个北京事件
+## 候选预测时点优先使用完整路径事件
 
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-03-21 | 9.27 | -5.27 | 4/3 | ENTRY_TIMELINE_COMPLETE |
-| 2026-03-22 | 14.00 | 58.11 | 1/3 | ENTRY_TIMELINE_COMPLETE |
-| 2026-03-23 | 17.32 | — | 10/0 | ENTRY_TIMELINE_COMPLETE |
-| 2026-03-24 | 28.41 | — | 12/1 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-01 | 25.15 | — | 2/5 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL |
+| 时点 | 完整事件数 | 截止前资金 | 截止后资金 | 50%建仓已完成 | 此后仍买入 | 此后才首次买入 |
+|---|---:|---:|---:|---:|---:|---:|
+| D1_1500 | 36 | 0.9% | 99.1% | 1 | 0 | 35 |
+| D0_1000 | 36 | 40.2% | 59.8% | 14 | 11 | 17 |
+| D0_1200 | 36 | 40.9% | 59.1% | 16 | 11 | 15 |
+| D0_1300 | 36 | 46.0% | 54.0% | 18 | 11 | 13 |
+| D0_1400 | 36 | 62.8% | 37.2% | 22 | 9 | 10 |
+| D0_1500 | 36 | 69.7% | 30.3% | 24 | 9 | 8 |
+| D0_1600 | 36 | 85.2% | 14.8% | 27 | 11 | 4 |
 
-### 最新 5 个北京事件
+`INSUFFICIENT_FOR_FINAL_MODEL_SELECTION`：这些时点只进入后续验证，本报告不冻结正式预测时点。
 
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-07-23 | 22.62 | — | 8/0 | ENTRY_TIMELINE_COMPLETE |
-| 2026-07-20 | 45.86 | — | 3/1 | ENTRY_TIMELINE_COMPLETE |
-| 2026-07-11 | 22.72 | — | 4/0 | ENTRY_TIMELINE_COMPLETE |
-| 2026-07-10 | 79.05 | — | 7/0 | ENTRY_TIMELINE_COMPLETE |
-| 2026-07-06 | 1.45 | — | 5/0 | ENTRY_TIMELINE_COMPLETE |
+## 严格 PnL 保持独立
 
-### 典型 D-1 建仓事件
+严格口径事件数 14，总 PnL $99.20，严格投入 $341.54，ROI 29.04%。resolved、active-open 和状态不明快照均没有并入该总数。
 
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-03-22 | 14.00 | 58.11 | 1/3 | ENTRY_TIMELINE_COMPLETE |
-| 2026-03-23 | 17.32 | — | 10/0 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-05 | 17.96 | 86.71 | 2/4 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL |
+| 天气日 | 严格PnL | BUY金额 | 建仓路径 | 最终路径 |
+|---|---:|---:|---|---|
+| 2026-04-05 | 86.71 | 17.96 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-03-22 | 58.11 | 14.00 | ENTRY_TIMELINE_COMPLETE | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-04-20 | 32.98 | 35.29 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-05-14 | 20.82 | 37.48 | ENTRY_TIMELINE_COMPLETE | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-05-21 | 19.26 | 56.01 | ENTRY_TIMELINE_COMPLETE | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-05-06 | 17.36 | 28.92 | ENTRY_TIMELINE_COMPLETE | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-05-12 | -0.13 | 1.87 | ENTRY_TIMELINE_COMPLETE | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-04-19 | -0.73 | 0.75 | ENTRY_TIMELINE_PARTIAL_RECONCILIATION | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-04-13 | -4.03 | 4.23 | ENTRY_TIMELINE_PARTIAL_RECONCILIATION | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-03-21 | -5.27 | 9.27 | ENTRY_TIMELINE_COMPLETE | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-04-04 | -10.94 | 11.44 | ENTRY_TIMELINE_PARTIAL_RECONCILIATION | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-04-18 | -12.99 | 12.99 | ENTRY_TIMELINE_COMPLETE | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-04-06 | -20.01 | 20.82 | ENTRY_TIMELINE_PARTIAL_RECONCILIATION | HOLD_TO_SETTLEMENT_OBSERVED |
+| 2026-04-17 | -81.94 | 90.52 | ENTRY_TIMELINE_COMPLETE | HOLD_TO_SETTLEMENT_OBSERVED |
 
-### 典型 D0 中午建仓事件
+## 口径、限制与下一步
 
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-03-23 | 17.32 | — | 10/0 | ENTRY_TIMELINE_COMPLETE |
-| 2026-03-24 | 28.41 | — | 12/1 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-03 | 15.57 | — | 9/5 | ENTRY_TIMELINE_COMPLETE |
+- 事件单位是北京天气日，温度档不是独立事件样本。
+- 当前仓位状态按冻结点与 `endDate`、`redeemable` 和权威关闭证据分类；只有 `ACTIVE_OPEN_CONFIRMED` 算开放。
+- recorded SELL PnL 只为行为标签服务，不重复加入事件最终 PnL。
+- SELL 两成本法方向不同，或绝对差异超过 `max($0.01, 两法较大绝对值的10%)`，即标记方法不一致。
+- 完整路径口径是盈利/亏损建仓时间比较与候选预测时点的主口径；全部严格 PnL 仅作为敏感性结果。
+- 公开请求成功不证明绝对历史完整；公开成交也不证明原始挂单、撤单、主观预测或因果策略。
+- 北京结算站仍为 `BEIJING_STATION_UNCONFIRMED`，本轮没有改动 ZBAA。
 
-### 典型 D0 下午建仓事件
-
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-03-21 | 9.27 | -5.27 | 4/3 | ENTRY_TIMELINE_COMPLETE |
-| 2026-03-24 | 28.41 | — | 12/1 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-07 | 21.48 | — | 9/0 | ENTRY_TIMELINE_PARTIAL_RECONCILIATION |
-
-### 典型相邻档篮子事件
-
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-03-21 | 9.27 | -5.27 | 4/3 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-01 | 25.15 | — | 2/5 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL |
-| 2026-04-05 | 17.96 | 86.71 | 2/4 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL |
-
-### 典型快速买卖事件
-
-| 天气日 | 投入USD | 严格PnL | BUY/SELL公开成交笔数 | 路径状态 |
-|---|---:|---:|---:|---|
-| 2026-03-21 | 9.27 | -5.27 | 4/3 | ENTRY_TIMELINE_COMPLETE |
-| 2026-04-12 | 16.61 | — | 14/4 | ENTRY_TIMELINE_PARTIAL_UNMATCHED_SELL |
-| 2026-04-17 | 90.52 | -81.94 | 41/5 | ENTRY_TIMELINE_COMPLETE |
-
-## 候选预测与检查时点
-
-候选时点必须同时看截止前资金、首次建仓覆盖、各累计阈值和之后继续加仓事件数；完整数值见 `beijing_candidate_checkpoints.csv`。当前优先继续验证中国正常工作时间内的 D0 10:00、12:00、13:00、14:00、15:00、16:00，以及可自动化采集的 D-1 15:00/18:00。
-可观察主导建仓标签为 [('D0_LATE_ENTRY', 29), ('GRADUAL_ACCUMULATION', 29), ('D0_WARMING_ENTRY', 19)]；主导退出/最终路径标签为 [('FINAL_PATH_UNKNOWN', 41), ('PARTIAL_PROFIT_EXIT', 18), ('HOLD_TO_SETTLEMENT_OBSERVED', 14)]。这些都是本研究标签，不是 Husky 公布的规则。
-
-## 数据、口径与方法
-
-- 纳入条件同时检查 city、title、eventSlug、slug 和 weather_metric；只保留 Beijing + highest temperature。
-- 事件单位为北京天气日；温度档不是独立事件样本。
-- 去重键为 timestamp + transactionHash + conditionId + asset + side + price + size。
-- trades 记录提供成交份额；activity 的 usdcSize 优先作为成交金额，并保留 EXACT/NEAREST/NO_ACTIVITY_MATCH。
-- 公开 activity 从 2020-01-01 起按 30 天窗口、ASC 顺序完整分页；饱和窗口递归拆分。
-- 盈亏优先使用验证的事件级 city_day_pnl 或公开 closed positions；逐笔 SELL 成本法不重复加入最终 PnL。
-- 所有显示时间使用 Asia/Shanghai，并保留 UTC。
-
-## 局限、不确定性与稳健性检查
-
-- OBSERVED：公开成交、公开仓位、公开 profile 与官方市场元数据字段。
-- INFERRED：建仓类型、补仓类型、篮子类型和策略 archetype 均为本研究确定性分类。
-- NOT_SUPPORTED：原始挂单/撤单、Husky 主观预测、因果盈利解释、北京结算站为 ZBAA。
-- UNKNOWN：部分无 SELL 或仍在 positions 中的仓位最终路径。
-- 完整建仓路径 36 个；部分/未知 14 个。完整路径口径与全部可观察口径在候选时点表中分开。
-
-## 下一步
-
-优先建立 D0 10:00—16:00 的逐小时预测快照，并保留 D-1 15:00/18:00 作为早期基线；后续验证应以事件级严格 PnL 为结果变量，同时控制路径完整性与最大赢家集中度。
+下一步只应验证候选快照时点与完整路径事件上的稳健性；在 resolved PnL 获得权威重叠前，不得将其用于总收益、胜率或模型标签。
