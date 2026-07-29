@@ -1,0 +1,23 @@
+{
+  "$schema": "https://gamma-api.polymarket.com/schemas/PublicProfileResponse.json",
+  "createdAt": "2025-11-05T16:22:29.392254Z",
+  "discordUsername": "huskyvs_71642",
+  "displayUsernamePublic": true,
+  "name": "huskyvs",
+  "profileImage": "https://polymarket-upload.s3.us-east-2.amazonaws.com/profile-image-3988560-0471a704-3a32-4cf3-bf21-7c358165f10a.png",
+  "proxyWallet": "0xaf17116ae2b1476032785a67bd5b7c8c05905c20",
+  "pseudonym": "Old-Sunshine",
+  "takerTier": 1,
+  "takerTierName": "Bronze",
+  "users": [
+    {
+      "communityMod": false,
+      "creator": false,
+      "id": "3988560",
+      "mod": false
+    }
+  ],
+  "verifiedBadge": false,
+  "weightedVolume": 15707.913539,
+  "xUsername": "husky_vs"
+}

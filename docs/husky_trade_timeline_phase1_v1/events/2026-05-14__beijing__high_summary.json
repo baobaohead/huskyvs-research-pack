@@ -1,0 +1,231 @@
+{
+  "add_action_buy_usd": {
+    "NEW_BUCKET_ADD": 34.50944,
+    "PRICE_FLAT_ADD": 0.99,
+    "PRICE_UP_ADD": 1.98
+  },
+  "add_action_count": {
+    "NEW_BUCKET_ADD": 2,
+    "PRICE_FLAT_ADD": 1,
+    "PRICE_UP_ADD": 1
+  },
+  "basket": {
+    "adjacent_bucket_pairs": [],
+    "basket_formation": "SINGLE_THEN_BASKET",
+    "bucket_buy_usd": {
+      "33°C or below": 23.621,
+      "35°C": 13.85844
+    },
+    "bucket_buy_usd_fraction": {
+      "33°C or below": 0.6302388722990525,
+      "35°C": 0.36976112770094755
+    },
+    "bucket_first_buy_times": {
+      "33°C or below": "2026-05-13T15:57:22+08:00",
+      "35°C": "2026-05-14T12:23:25+08:00"
+    },
+    "bucket_join_order": [
+      "33°C or below",
+      "35°C"
+    ],
+    "dominant_bought_bucket": "33°C or below",
+    "dominant_bought_bucket_first_buy_time": "2026-05-13T15:57:22+08:00",
+    "first_bought_bucket": "33°C or below",
+    "shifted_to_dominant_bucket": false,
+    "simultaneous_window_definition_seconds": 300
+  },
+  "buckets": {
+    "33°C or below": {
+      "build_25pct_time": "2026-05-13T15:57:22+08:00",
+      "build_50pct_time": "2026-05-13T15:57:22+08:00",
+      "build_75pct_time": "2026-05-13T15:57:22+08:00",
+      "buy_duration_seconds": 0,
+      "buy_trade_count": 1,
+      "first_buy_time": "2026-05-13T15:57:22+08:00",
+      "first_sell_time": "2026-05-13T16:28:54+08:00",
+      "holding_duration_to_first_sell_seconds": 1892,
+      "holding_duration_to_last_sell_seconds": 1892,
+      "last_buy_time": "2026-05-13T15:57:22+08:00",
+      "last_sell_time": "2026-05-13T16:28:54+08:00",
+      "phase_buy_usd": {
+        "D-1_AFTERNOON": 23.621,
+        "D-1_EARLY": 0.0,
+        "D-1_EVENING": 0.0,
+        "D0_LATE": 0.0,
+        "D0_MORNING": 0.0,
+        "D0_OVERNIGHT": 0.0,
+        "D0_WARMING_CORE": 0.0,
+        "D0_WARMING_EARLY": 0.0,
+        "OUTSIDE_RESEARCH_WINDOW": 0.0
+      },
+      "phase_buy_usd_fraction": {
+        "D-1_AFTERNOON": 1.0,
+        "D-1_EARLY": 0.0,
+        "D-1_EVENING": 0.0,
+        "D0_LATE": 0.0,
+        "D0_MORNING": 0.0,
+        "D0_OVERNIGHT": 0.0,
+        "D0_WARMING_CORE": 0.0,
+        "D0_WARMING_EARLY": 0.0,
+        "OUTSIDE_RESEARCH_WINDOW": 0.0
+      },
+      "remaining_recorded_shares": 0.0,
+      "sell_trade_count": 1,
+      "sold_25pct_status": "REACHED",
+      "sold_25pct_time": "2026-05-13T16:28:54+08:00",
+      "sold_50pct_status": "REACHED",
+      "sold_50pct_time": "2026-05-13T16:28:54+08:00",
+      "sold_75pct_status": "REACHED",
+      "sold_75pct_time": "2026-05-13T16:28:54+08:00",
+      "total_buy_shares": 50.0,
+      "total_buy_usd": 23.621,
+      "total_sell_shares": 50.0,
+      "total_sell_usd": 22.12648
+    },
+    "35°C": {
+      "build_25pct_time": "2026-05-14T12:23:25+08:00",
+      "build_50pct_time": "2026-05-14T12:23:25+08:00",
+      "build_75pct_time": "2026-05-14T12:23:25+08:00",
+      "buy_duration_seconds": 4,
+      "buy_trade_count": 3,
+      "first_buy_time": "2026-05-14T12:23:25+08:00",
+      "first_sell_time": "2026-05-14T12:23:48+08:00",
+      "holding_duration_to_first_sell_seconds": 23,
+      "holding_duration_to_last_sell_seconds": 23,
+      "last_buy_time": "2026-05-14T12:23:29+08:00",
+      "last_sell_time": "2026-05-14T12:23:48+08:00",
+      "phase_buy_usd": {
+        "D-1_AFTERNOON": 0.0,
+        "D-1_EARLY": 0.0,
+        "D-1_EVENING": 0.0,
+        "D0_LATE": 0.0,
+        "D0_MORNING": 0.0,
+        "D0_OVERNIGHT": 0.0,
+        "D0_WARMING_CORE": 13.85844,
+        "D0_WARMING_EARLY": 0.0,
+        "OUTSIDE_RESEARCH_WINDOW": 0.0
+      },
+      "phase_buy_usd_fraction": {
+        "D-1_AFTERNOON": 0.0,
+        "D-1_EARLY": 0.0,
+        "D-1_EVENING": 0.0,
+        "D0_LATE": 0.0,
+        "D0_MORNING": 0.0,
+        "D0_OVERNIGHT": 0.0,
+        "D0_WARMING_CORE": 1.0,
+        "D0_WARMING_EARLY": 0.0,
+        "OUTSIDE_RESEARCH_WINDOW": 0.0
+      },
+      "remaining_recorded_shares": 0.0,
+      "sell_trade_count": 1,
+      "sold_25pct_status": "REACHED",
+      "sold_25pct_time": "2026-05-14T12:23:48+08:00",
+      "sold_50pct_status": "REACHED",
+      "sold_50pct_time": "2026-05-14T12:23:48+08:00",
+      "sold_75pct_status": "REACHED",
+      "sold_75pct_time": "2026-05-14T12:23:48+08:00",
+      "total_buy_shares": 343.17,
+      "total_buy_usd": 13.85844,
+      "total_sell_shares": 343.17,
+      "total_sell_usd": 32.87689
+    }
+  },
+  "city": "Beijing",
+  "condition_ids": [
+    "0xcb855e159773d7a6a8ec2f41bbe40659107b32edc4c011d72f6fb88aaf9fbefe",
+    "0xe791ed3e2a939efb88dc0dfc24cf31c31bc2515a099822dc83ef47a50f2b5f10"
+  ],
+  "event_data_completeness": "COMPLETE",
+  "event_key": "2026-05-14__beijing__high",
+  "event_slugs": [
+    "highest-temperature-in-beijing-on-may-14-2026"
+  ],
+  "final_path_status": "RECORDED_SELL_PATH",
+  "inferred": [
+    "时间阶段是本研究按北京时间划分，不是 Husky 公布的规则。",
+    "篮子形成类别由各温度档首次公开成交时间的间隔推断。"
+  ],
+  "observed": [
+    "逐笔 BUY/SELL、价格、份额与 public_record_timestamp 来自公开记录。",
+    "温度档加入顺序、累计买入金额和记录内剩余份额由公开成交顺序直接计算。"
+  ],
+  "overall": {
+    "build_25pct_time": "2026-05-13T15:57:22+08:00",
+    "build_50pct_time": "2026-05-13T15:57:22+08:00",
+    "build_75pct_time": "2026-05-14T12:23:25+08:00",
+    "buy_duration_seconds": 73567,
+    "buy_trade_count": 4,
+    "first_buy_time": "2026-05-13T15:57:22+08:00",
+    "first_sell_time": "2026-05-13T16:28:54+08:00",
+    "holding_duration_to_first_sell_seconds": 1892,
+    "holding_duration_to_last_sell_seconds": 73586,
+    "last_buy_time": "2026-05-14T12:23:29+08:00",
+    "last_sell_time": "2026-05-14T12:23:48+08:00",
+    "phase_buy_usd": {
+      "D-1_AFTERNOON": 23.621,
+      "D-1_EARLY": 0.0,
+      "D-1_EVENING": 0.0,
+      "D0_LATE": 0.0,
+      "D0_MORNING": 0.0,
+      "D0_OVERNIGHT": 0.0,
+      "D0_WARMING_CORE": 13.85844,
+      "D0_WARMING_EARLY": 0.0,
+      "OUTSIDE_RESEARCH_WINDOW": 0.0
+    },
+    "phase_buy_usd_fraction": {
+      "D-1_AFTERNOON": 0.6302388722990525,
+      "D-1_EARLY": 0.0,
+      "D-1_EVENING": 0.0,
+      "D0_LATE": 0.0,
+      "D0_MORNING": 0.0,
+      "D0_OVERNIGHT": 0.0,
+      "D0_WARMING_CORE": 0.36976112770094755,
+      "D0_WARMING_EARLY": 0.0,
+      "OUTSIDE_RESEARCH_WINDOW": 0.0
+    },
+    "remaining_recorded_shares": 0.0,
+    "sell_trade_count": 2,
+    "sold_25pct_status": "REACHED",
+    "sold_25pct_time": "2026-05-14T12:23:48+08:00",
+    "sold_50pct_status": "REACHED",
+    "sold_50pct_time": "2026-05-14T12:23:48+08:00",
+    "sold_75pct_status": "REACHED",
+    "sold_75pct_time": "2026-05-14T12:23:48+08:00",
+    "total_buy_shares": 393.17,
+    "total_buy_usd": 37.47944,
+    "total_sell_shares": 393.17,
+    "total_sell_usd": 55.003370000000004
+  },
+  "pnl": {
+    "authoritative_pnl_asset_coverage": 1.0,
+    "event_asset_count": 2,
+    "phase_contribution_status": "RECORDED_SELLS_ONLY_NO_SETTLEMENT_PNL_ALLOCATION",
+    "profit_attribution_stability": "STABLE_WITHIN_THRESHOLD",
+    "realized_sell_pnl_average_cost": 17.523930000000007,
+    "realized_sell_pnl_average_cost_by_original_buy_phase": {
+      "D-1_AFTERNOON": -1.4945199999999965,
+      "D0_WARMING_CORE": 19.018450000000005
+    },
+    "realized_sell_pnl_average_cost_status": "COMPLETE_FOR_RECORDED_SELLS",
+    "realized_sell_pnl_fifo": 17.523930000000007,
+    "realized_sell_pnl_fifo_by_original_buy_phase": {
+      "D-1_AFTERNOON": -1.4945199999999965,
+      "D0_WARMING_CORE": 19.018450000000005
+    },
+    "realized_sell_pnl_fifo_status": "COMPLETE_FOR_RECORDED_SELLS",
+    "settlement_path_assets": 2,
+    "settlement_pnl": null,
+    "settlement_pnl_status": "NOT_SEPARATELY_IDENTIFIABLE_FROM_PUBLIC_POSITION_PNL",
+    "total_event_pnl": 20.815665000000003,
+    "total_event_pnl_status": "AUTHORITATIVE_POSITION_PNL_COMPLETE"
+  },
+  "station_status": "BEIJING_STATION_UNCONFIRMED",
+  "unit": "C",
+  "unknown": [
+    "原始挂单时间、订单提交时间和撮合引擎精确时间不可由这些公开记录确定。",
+    "没有独立公开证据证明北京市场对应 ZBAA 站。"
+  ],
+  "weather_date_local": "2026-05-14",
+  "weather_metric": "high",
+  "zbaa_confirmed": false
+}
