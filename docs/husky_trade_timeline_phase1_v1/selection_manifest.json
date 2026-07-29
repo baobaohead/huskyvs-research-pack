@@ -1,0 +1,196 @@
+{
+  "research_design": [
+    "EXPLORATORY_CASE_SELECTION",
+    "NOT_A_RANDOM_SAMPLE",
+    "NOT_A_PROFITABILITY_VALIDATION"
+  ],
+  "selected": [
+    {
+      "event_key": "2026-04-17__beijing__high",
+      "features": {
+        "beijing": true,
+        "d_minus_1_and_d0": false,
+        "has_sell": true,
+        "long_build": false,
+        "loss": true,
+        "multi_bucket": true,
+        "multi_buy": true,
+        "partial_sell": true,
+        "profit": false
+      },
+      "score_sort_key": [
+        -27,
+        -90.515734,
+        "2026-04-17__beijing__high"
+      ],
+      "selection_order": 1,
+      "selection_reasons": [
+        "beijing"
+      ]
+    },
+    {
+      "event_key": "2026-03-21__beijing__high",
+      "features": {
+        "beijing": true,
+        "d_minus_1_and_d0": false,
+        "has_sell": true,
+        "long_build": false,
+        "loss": true,
+        "multi_bucket": true,
+        "multi_buy": true,
+        "partial_sell": true,
+        "profit": false
+      },
+      "score_sort_key": [
+        -27,
+        -9.26788,
+        "2026-03-21__beijing__high"
+      ],
+      "selection_order": 2,
+      "selection_reasons": [
+        "partial_sell"
+      ]
+    },
+    {
+      "event_key": "2026-05-14__beijing__high",
+      "features": {
+        "beijing": true,
+        "d_minus_1_and_d0": true,
+        "has_sell": true,
+        "long_build": true,
+        "loss": false,
+        "multi_bucket": true,
+        "multi_buy": true,
+        "partial_sell": false,
+        "profit": true
+      },
+      "score_sort_key": [
+        -27,
+        -37.47944,
+        "2026-05-14__beijing__high"
+      ],
+      "selection_order": 3,
+      "selection_reasons": [
+        "multi_bucket"
+      ]
+    },
+    {
+      "event_key": "2026-02-11__ankara__high",
+      "features": {
+        "beijing": false,
+        "d_minus_1_and_d0": true,
+        "has_sell": true,
+        "long_build": true,
+        "loss": true,
+        "multi_bucket": true,
+        "multi_buy": true,
+        "partial_sell": true,
+        "profit": false
+      },
+      "score_sort_key": [
+        -26,
+        -174.2999,
+        "2026-02-11__ankara__high"
+      ],
+      "selection_order": 4,
+      "selection_reasons": [
+        "loss"
+      ]
+    },
+    {
+      "event_key": "2026-04-05__beijing__high",
+      "features": {
+        "beijing": true,
+        "d_minus_1_and_d0": true,
+        "has_sell": true,
+        "long_build": true,
+        "loss": false,
+        "multi_bucket": true,
+        "multi_buy": true,
+        "partial_sell": false,
+        "profit": true
+      },
+      "score_sort_key": [
+        -27,
+        -17.95754,
+        "2026-04-05__beijing__high"
+      ],
+      "selection_order": 5,
+      "selection_reasons": [
+        "profit"
+      ]
+    },
+    {
+      "event_key": "2026-04-22__seoul__high",
+      "features": {
+        "beijing": false,
+        "d_minus_1_and_d0": true,
+        "has_sell": true,
+        "long_build": true,
+        "loss": true,
+        "multi_bucket": true,
+        "multi_buy": true,
+        "partial_sell": true,
+        "profit": false
+      },
+      "score_sort_key": [
+        -26,
+        -163.495404,
+        "2026-04-22__seoul__high"
+      ],
+      "selection_order": 6,
+      "selection_reasons": [
+        "d_minus_1_and_d0"
+      ]
+    },
+    {
+      "event_key": "2026-04-03__taipei__high",
+      "features": {
+        "beijing": false,
+        "d_minus_1_and_d0": true,
+        "has_sell": true,
+        "long_build": true,
+        "loss": true,
+        "multi_bucket": true,
+        "multi_buy": true,
+        "partial_sell": true,
+        "profit": false
+      },
+      "score_sort_key": [
+        -26,
+        -81.43347,
+        "2026-04-03__taipei__high"
+      ],
+      "selection_order": 7,
+      "selection_reasons": [
+        "long_build"
+      ]
+    },
+    {
+      "event_key": "2026-03-05__london__high",
+      "features": {
+        "beijing": false,
+        "d_minus_1_and_d0": true,
+        "has_sell": true,
+        "long_build": true,
+        "loss": true,
+        "multi_bucket": true,
+        "multi_buy": true,
+        "partial_sell": true,
+        "profit": false
+      },
+      "score_sort_key": [
+        -26,
+        -66.087943,
+        "2026-03-05__london__high"
+      ],
+      "selection_order": 8,
+      "selection_reasons": [
+        "multi_buy"
+      ]
+    }
+  ],
+  "selected_event_count": 8,
+  "selection_method": "Deterministic category-first selection followed by weighted score and event_key tie-break.",
+  "target_event_count": 8
+}
