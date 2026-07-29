@@ -53,35 +53,11 @@
   },
   "all_requests_successful": true,
   "analysis_cutoff_utc": "2026-07-29T03:30:01.944885+00:00",
-  "analysis_outputs": {
-    "core_statistics_sha256": "6157d57e4de1b26b20f1e1998ce6d4bc6580b354d6cca95dcf06db5bfba2e89b",
-    "event_count": 50,
-    "fill_count": 537
-  },
   "analysis_started_at_utc": "2026-07-29T03:30:01.944885+00:00",
-  "evidence_relative_path_base": "portable_saved_evidence_manifest.parent",
   "generated_at_utc": "2026-07-29T03:36:17.052969+00:00",
-  "portable_saved_evidence_manifest": "saved_evidence_v1/manifest.json",
   "public_data_only": true,
   "public_get_only": true,
   "raw_storage_status": "EPHEMERAL_NOT_COMMITTED",
-  "repository_wallet_verification": {
-    "status": "PASS",
-    "wallets_by_file": {
-      "data/raw/activity.csv": [
-        "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
-      ],
-      "data/raw/closed_positions.csv": [
-        "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
-      ],
-      "data/raw/current_positions.csv": [
-        "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
-      ],
-      "data/raw/trades.csv": [
-        "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
-      ]
-    }
-  },
   "schema_version": "husky_beijing_portable_evidence_v1",
   "source_requests": [
     {

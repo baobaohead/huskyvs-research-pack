@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import csv
 import json
+import shutil
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -9,8 +11,10 @@ import pytest
 
 from src.husky_beijing_full_trade_study_v1 import (
     HUSKY_WALLET,
+    PORTABLE_EVIDENCE_SCHEMA,
     Window,
     activity_join_key,
+    analyze,
     annotate_adds,
     archetype_labels,
     attach_pnl,
@@ -32,6 +36,7 @@ from src.husky_beijing_full_trade_study_v1 import (
     half_hour_bin,
     is_beijing_highest_market,
     merge_public_fills,
+    load_saved_public_evidence,
     parse_bucket,
     parse_weather_date,
     position_snapshot_pnl,
@@ -764,3 +769,308 @@ def test_recorded_sell_pnl_reports_method_disagreement():
     assert result["recorded_sell_realized_pnl_fifo"] == pytest.approx(5)
     assert result["recorded_sell_realized_pnl_average_cost"] == pytest.approx(1)
     assert result["sell_pnl_method_disagreement"] is True
+
+
+PORTABLE_EVIDENCE_DIR = Path(
+    "docs/husky_beijing_full_trade_study_v1/saved_evidence_v1"
+)
+PORTABLE_TEST_TMP = Path("/tmp/husky_beijing_portable_evidence_fix/tests")
+
+
+@pytest.fixture
+def portable_package_copy():
+    PORTABLE_TEST_TMP.mkdir(parents=True, exist_ok=True)
+    parent = Path(tempfile.mkdtemp(prefix="package.", dir=PORTABLE_TEST_TMP))
+    target = parent / "saved_evidence_v1"
+    shutil.copytree(PORTABLE_EVIDENCE_DIR, target)
+    yield target
+    shutil.rmtree(parent)
+
+
+def rewrite_manifest(directory: Path, mutate) -> Path:
+    path = directory / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    mutate(manifest)
+    path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_portable_relative_paths_resolve_from_manifest_directory():
+    manifest, evidence = load_saved_public_evidence(
+        PORTABLE_EVIDENCE_DIR / "manifest.json"
+    )
+    assert manifest["schema_version"] == PORTABLE_EVIDENCE_SCHEMA
+    assert len(evidence["trades"]) == 537
+
+
+def test_portable_manifest_can_move_with_its_directory(portable_package_copy):
+    _, evidence = load_saved_public_evidence(
+        portable_package_copy / "manifest.json"
+    )
+    assert len(evidence["activity"]) == 537
+
+
+def test_absolute_evidence_path_is_rejected(portable_package_copy):
+    path = rewrite_manifest(
+        portable_package_copy,
+        lambda manifest: manifest["aggregates"]["trades"].update(
+            {"relative_path": "/tmp/not-portable.json"}
+        ),
+    )
+    with pytest.raises(RuntimeError, match="NON_PORTABLE_ABSOLUTE_EVIDENCE_PATH"):
+        load_saved_public_evidence(path)
+
+
+def test_legacy_absolute_evidence_manifest_is_rejected(portable_package_copy):
+    def mutate(manifest):
+        manifest["schema_version"] = "husky_beijing_public_evidence_v1"
+        manifest["aggregates"]["trades"]["path"] = "/tmp/legacy-trades.json"
+        manifest["aggregates"]["trades"].pop("relative_path")
+
+    path = rewrite_manifest(portable_package_copy, mutate)
+    with pytest.raises(RuntimeError, match="NON_PORTABLE_ABSOLUTE_EVIDENCE_PATH"):
+        load_saved_public_evidence(path)
+
+
+def test_parent_path_traversal_is_rejected(portable_package_copy):
+    path = rewrite_manifest(
+        portable_package_copy,
+        lambda manifest: manifest["aggregates"]["trades"].update(
+            {"relative_path": "../outside.json"}
+        ),
+    )
+    with pytest.raises(RuntimeError, match="EVIDENCE_PATH_TRAVERSAL_REJECTED"):
+        load_saved_public_evidence(path)
+
+
+def test_missing_portable_evidence_file_is_rejected(portable_package_copy):
+    (portable_package_copy / "beijing_trades.json").unlink()
+    with pytest.raises(RuntimeError, match="EVIDENCE_FILE_MISSING:trades"):
+        load_saved_public_evidence(portable_package_copy / "manifest.json")
+
+
+def test_portable_evidence_sha_mismatch_is_rejected(portable_package_copy):
+    path = portable_package_copy / "beijing_trades.json"
+    path.write_text("[]\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="EVIDENCE_SHA256_MISMATCH:trades"):
+        load_saved_public_evidence(portable_package_copy / "manifest.json")
+
+
+def test_portable_evidence_record_count_mismatch_is_rejected(
+    portable_package_copy,
+):
+    path = rewrite_manifest(
+        portable_package_copy,
+        lambda manifest: manifest["aggregates"]["trades"].update(
+            {"record_count": 536}
+        ),
+    )
+    with pytest.raises(RuntimeError, match="EVIDENCE_RECORD_COUNT_MISMATCH:trades"):
+        load_saved_public_evidence(path)
+
+
+def test_portable_manifest_wallet_conflict_is_rejected(portable_package_copy):
+    path = rewrite_manifest(
+        portable_package_copy,
+        lambda manifest: manifest.update({"wallet": "0x" + "1" * 40}),
+    )
+    with pytest.raises(RuntimeError, match="EVIDENCE_WALLET_MISMATCH:manifest"):
+        load_saved_public_evidence(path)
+
+
+def test_portable_manifest_cutoff_conflict_is_rejected():
+    with pytest.raises(RuntimeError, match="EVIDENCE_ANALYSIS_CUTOFF_MISMATCH"):
+        load_saved_public_evidence(
+            PORTABLE_EVIDENCE_DIR / "manifest.json",
+            expected_analysis_cutoff_utc="2026-07-30T00:00:00+00:00",
+        )
+
+
+def test_portable_trade_and_activity_are_only_beijing_highest():
+    _, evidence = load_saved_public_evidence(
+        PORTABLE_EVIDENCE_DIR / "manifest.json"
+    )
+    assert all(is_beijing_highest_market(row) for row in evidence["trades"])
+    assert all(
+        row.get("type") == "TRADE" and is_beijing_highest_market(row)
+        for row in evidence["activity"]
+    )
+
+
+def test_portable_evidence_contains_only_husky_wallet():
+    _, evidence = load_saved_public_evidence(
+        PORTABLE_EVIDENCE_DIR / "manifest.json"
+    )
+    for payload in evidence.values():
+        rows = payload if isinstance(payload, list) else [payload]
+        assert {
+            str(row.get("proxyWallet")).lower()
+            for row in rows
+            if row.get("proxyWallet")
+        } <= {HUSKY_WALLET}
+
+
+def test_portable_positions_only_use_observed_beijing_assets():
+    _, evidence = load_saved_public_evidence(
+        PORTABLE_EVIDENCE_DIR / "manifest.json"
+    )
+    observed = {
+        str(row["asset"])
+        for row in [*evidence["trades"], *evidence["activity"]]
+    }
+    assert {str(row["asset"]) for row in evidence["positions"]} <= observed
+
+
+def test_portable_closed_positions_only_use_observed_beijing_assets():
+    _, evidence = load_saved_public_evidence(
+        PORTABLE_EVIDENCE_DIR / "manifest.json"
+    )
+    observed = {
+        str(row["asset"])
+        for row in [*evidence["trades"], *evidence["activity"]]
+    }
+    assert {str(row["asset"]) for row in evidence["closed_positions"]} <= observed
+
+
+def run_portable_analysis(output_dir: Path):
+    manifest = json.loads(
+        (PORTABLE_EVIDENCE_DIR / "manifest.json").read_text(encoding="utf-8")
+    )
+    return analyze(
+        Path(".").resolve(),
+        output_dir / "output",
+        output_dir / "summary.md",
+        output_dir / "summary.json",
+        analysis_started_at_utc=manifest["analysis_started_at_utc"],
+        analysis_cutoff_utc=manifest["analysis_cutoff_utc"],
+        evidence_manifest=(PORTABLE_EVIDENCE_DIR / "manifest.json").resolve(),
+    )
+
+
+def test_portable_offline_analysis_makes_zero_network_calls(monkeypatch):
+    from src import husky_beijing_full_trade_study_v1 as module
+
+    calls = []
+
+    def fail_network(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("offline analysis attempted a network call")
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", fail_network)
+    PORTABLE_TEST_TMP.mkdir(parents=True, exist_ok=True)
+    parent = Path(tempfile.mkdtemp(prefix="offline.", dir=PORTABLE_TEST_TMP))
+    try:
+        summary = run_portable_analysis(parent)
+    finally:
+        shutil.rmtree(parent)
+    assert calls == []
+    assert summary["beijing_event_count"] == 50
+
+
+def test_portable_core_statistics_match_reviewed_full_evidence():
+    reviewed = json.loads(
+        Path("docs/HUSKY_BEIJING_FULL_TRADE_STUDY_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    PORTABLE_TEST_TMP.mkdir(parents=True, exist_ok=True)
+    parent = Path(tempfile.mkdtemp(prefix="equivalence.", dir=PORTABLE_TEST_TMP))
+    try:
+        replay = run_portable_analysis(parent)
+    finally:
+        shutil.rmtree(parent)
+    keys = (
+        "beijing_event_count",
+        "total_public_fill_count",
+        "public_buy_fill_count",
+        "public_sell_fill_count",
+        "entry_timeline_complete_event_count",
+        "resolved_redeemable_event_count",
+        "strict_closed_settled_event_count",
+        "beijing_total_pnl_strict",
+        "active_open_event_count",
+        "beijing_first_observed_public_trade_utc",
+        "beijing_last_observed_public_trade_utc",
+        "d_minus_1_buy_usd_share",
+        "d0_buy_usd_share",
+    )
+    assert {key: replay[key] for key in keys} == {
+        key: reviewed[key] for key in keys
+    }
+
+
+def test_portable_replay_keeps_50_events_and_537_fills():
+    reviewed = json.loads(
+        Path("docs/HUSKY_BEIJING_FULL_TRADE_STUDY_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert reviewed["beijing_event_count"] == 50
+    assert reviewed["total_public_fill_count"] == 537
+
+
+def test_portable_replay_keeps_14_strict_pnl_events():
+    reviewed = json.loads(
+        Path("docs/HUSKY_BEIJING_FULL_TRADE_STUDY_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert reviewed["strict_closed_settled_event_count"] == 14
+    assert reviewed["beijing_total_pnl_strict"] == pytest.approx(99.198968)
+
+
+def test_portable_replay_keeps_36_resolved_redeemable_events():
+    reviewed = json.loads(
+        Path("docs/HUSKY_BEIJING_FULL_TRADE_STUDY_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert reviewed["resolved_redeemable_event_count"] == 36
+    assert reviewed["active_open_event_count"] == 0
+
+
+def test_portable_candidate_checkpoints_match_reviewed_output():
+    reviewed = Path(
+        "docs/husky_beijing_full_trade_study_v1/"
+        "beijing_candidate_checkpoints.csv"
+    )
+    PORTABLE_TEST_TMP.mkdir(parents=True, exist_ok=True)
+    parent = Path(tempfile.mkdtemp(prefix="candidates.", dir=PORTABLE_TEST_TMP))
+    try:
+        run_portable_analysis(parent)
+        portable = parent / "output" / "beijing_candidate_checkpoints.csv"
+        assert portable.read_bytes() == reviewed.read_bytes()
+    finally:
+        shutil.rmtree(parent)
+
+
+def test_portable_event_statuses_and_exit_labels_match_reviewed_output():
+    reviewed = json.loads(
+        Path("docs/HUSKY_BEIJING_FULL_TRADE_STUDY_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    PORTABLE_TEST_TMP.mkdir(parents=True, exist_ok=True)
+    parent = Path(tempfile.mkdtemp(prefix="event-labels.", dir=PORTABLE_TEST_TMP))
+    try:
+        portable = run_portable_analysis(parent)
+    finally:
+        shutil.rmtree(parent)
+    fields = (
+        "position_status",
+        "final_path_classification",
+        "sell_pnl_status",
+        "strategy_archetypes",
+        "strict_pnl",
+    )
+    portable_events = {row["event_key"]: row for row in portable["events"]}
+    reviewed_events = {row["event_key"]: row for row in reviewed["events"]}
+    assert portable_events.keys() == reviewed_events.keys()
+    assert all(
+        tuple(portable_events[key].get(field) for field in fields)
+        == tuple(reviewed_events[key].get(field) for field in fields)
+        for key in reviewed_events
+    )

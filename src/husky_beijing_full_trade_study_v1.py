@@ -14,6 +14,7 @@ import csv
 import hashlib
 import json
 import math
+import os
 import re
 import statistics
 import time
@@ -42,6 +43,8 @@ FORMAL_STARTED = False
 STATION_LABEL = "BEIJING_STATION_UNCONFIRMED"
 API_HISTORY_START = int(datetime(2020, 1, 1, tzinfo=timezone.utc).timestamp())
 RAW_EVIDENCE_ROOT = Path("/tmp/husky_beijing_full_trade_study_v1/raw_public_evidence")
+PORTABLE_EVIDENCE_SCHEMA = "husky_beijing_portable_evidence_v1"
+NO_NETWORK_ENV = "HUSKY_BEIJING_NO_NETWORK"
 ADD_THRESHOLD = Decimal("0.01")
 AVERAGE_COST_NEAR = Decimal("0.01")
 SIMULTANEOUS_SECONDS = 5 * 60
@@ -574,6 +577,8 @@ class PublicGetClient:
         self.counter = 0
 
     def get_json(self, url: str, params: dict[str, Any]) -> Any:
+        if os.environ.get(NO_NETWORK_ENV) == "1":
+            raise RuntimeError("NETWORK_DISABLED_BY_HUSKY_BEIJING_NO_NETWORK")
         if not url.startswith(("https://data-api.polymarket.com/", "https://gamma-api.polymarket.com/")):
             raise ValueError("only official Polymarket public GET endpoints are allowed")
         encoded = urllib.parse.urlencode(params, doseq=True)
@@ -790,19 +795,222 @@ def refresh_public_evidence(
     return manifest
 
 
-def load_saved_public_evidence(manifest_path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+def evidence_record_count(payload: Any) -> int:
+    return len(payload) if isinstance(payload, list) else 1
+
+
+def _validate_evidence_wallet(name: str, payload: Any, wallet: str) -> None:
+    rows = payload if isinstance(payload, list) else [payload]
+    conflicts = {
+        str(row.get("proxyWallet") or "").lower()
+        for row in rows
+        if isinstance(row, dict)
+        and row.get("proxyWallet")
+        and str(row.get("proxyWallet")).lower() != wallet
+    }
+    if conflicts:
+        raise RuntimeError(f"EVIDENCE_WALLET_MISMATCH:{name}")
+
+
+def load_saved_public_evidence(
+    manifest_path: Path,
+    *,
+    expected_analysis_cutoff_utc: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load a portable evidence package without making network requests."""
+    manifest_path = manifest_path.resolve()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("wallet", "").lower() != HUSKY_WALLET:
-        raise RuntimeError("saved evidence wallet conflicts with Husky wallet")
-    if not manifest.get("all_requests_successful"):
-        raise RuntimeError("saved evidence contains failed request windows")
+    wallet = str(manifest.get("wallet") or "").lower()
+    if wallet != HUSKY_WALLET:
+        raise RuntimeError("EVIDENCE_WALLET_MISMATCH:manifest")
+    if manifest.get("schema_version") != PORTABLE_EVIDENCE_SCHEMA:
+        for meta in manifest.get("aggregates", {}).values():
+            legacy_path = meta.get("path")
+            if legacy_path and Path(legacy_path).is_absolute():
+                raise RuntimeError("NON_PORTABLE_ABSOLUTE_EVIDENCE_PATH")
+        raise RuntimeError("UNSUPPORTED_EVIDENCE_MANIFEST_SCHEMA")
+    cutoff = parse_iso(str(manifest.get("analysis_cutoff_utc") or "")).isoformat()
+    if (
+        expected_analysis_cutoff_utc is not None
+        and cutoff != parse_iso(expected_analysis_cutoff_utc).isoformat()
+    ):
+        raise RuntimeError("EVIDENCE_ANALYSIS_CUTOFF_MISMATCH")
+    if manifest.get("public_data_only") is not True or manifest.get("public_get_only") is not True:
+        raise RuntimeError("EVIDENCE_PUBLIC_SAFETY_FLAGS_MISMATCH")
+    base = manifest_path.parent.resolve()
     loaded: dict[str, Any] = {}
-    for name, meta in manifest["aggregates"].items():
-        path = Path(meta["path"])
-        if sha256_file(path) != meta["sha256"]:
-            raise RuntimeError(f"saved evidence hash mismatch: {name}")
-        loaded[name] = json.loads(path.read_text(encoding="utf-8"))
+    required = ("profile", "activity", "trades", "positions", "closed_positions")
+    if set(manifest.get("aggregates", {})) != set(required):
+        raise RuntimeError("EVIDENCE_AGGREGATE_SET_MISMATCH")
+    for name in required:
+        meta = manifest["aggregates"][name]
+        relative_value = meta.get("relative_path")
+        if not relative_value:
+            legacy_path = meta.get("path")
+            if legacy_path and Path(legacy_path).is_absolute():
+                raise RuntimeError("NON_PORTABLE_ABSOLUTE_EVIDENCE_PATH")
+            raise RuntimeError(f"EVIDENCE_RELATIVE_PATH_MISSING:{name}")
+        relative_path = Path(str(relative_value))
+        if relative_path.is_absolute():
+            raise RuntimeError("NON_PORTABLE_ABSOLUTE_EVIDENCE_PATH")
+        path = (base / relative_path).resolve()
+        try:
+            path.relative_to(base)
+        except ValueError as exc:
+            raise RuntimeError("EVIDENCE_PATH_TRAVERSAL_REJECTED") from exc
+        if not path.is_file():
+            raise RuntimeError(f"EVIDENCE_FILE_MISSING:{name}")
+        if sha256_file(path) != meta.get("sha256"):
+            raise RuntimeError(f"EVIDENCE_SHA256_MISMATCH:{name}")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if evidence_record_count(payload) != meta.get("record_count"):
+            raise RuntimeError(f"EVIDENCE_RECORD_COUNT_MISMATCH:{name}")
+        _validate_evidence_wallet(name, payload, wallet)
+        loaded[name] = payload
     return manifest, loaded
+
+
+def load_legacy_full_evidence_for_packaging(
+    manifest_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Read the reviewed ephemeral snapshot only to create the portable subset."""
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if str(manifest.get("wallet") or "").lower() != HUSKY_WALLET:
+        raise RuntimeError("EVIDENCE_WALLET_MISMATCH:manifest")
+    if parse_iso(manifest["analysis_cutoff_utc"]).isoformat() != parse_iso(
+        "2026-07-29T03:30:01.944885+00:00"
+    ).isoformat():
+        raise RuntimeError("EVIDENCE_ANALYSIS_CUTOFF_MISMATCH")
+    if not manifest.get("all_requests_successful"):
+        raise RuntimeError("LEGACY_EVIDENCE_REQUEST_FAILURE")
+    loaded: dict[str, Any] = {}
+    for name in ("profile", "activity", "trades", "positions", "closed_positions"):
+        meta = manifest["aggregates"][name]
+        path = Path(meta["path"])
+        if not path.is_file():
+            raise RuntimeError(f"EVIDENCE_FILE_MISSING:{name}")
+        if sha256_file(path) != meta["sha256"]:
+            raise RuntimeError(f"EVIDENCE_SHA256_MISMATCH:{name}")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if evidence_record_count(payload) != meta["record_count"]:
+            raise RuntimeError(f"EVIDENCE_RECORD_COUNT_MISMATCH:{name}")
+        _validate_evidence_wallet(name, payload, HUSKY_WALLET)
+        loaded[name] = payload
+    return manifest, loaded
+
+
+def _request_rows_for_endpoint(
+    requests: list[dict[str, Any]], endpoint: str
+) -> list[dict[str, Any]]:
+    return [
+        row for row in requests
+        if str(row.get("url") or "").rstrip("/").endswith(endpoint)
+    ]
+
+
+def build_portable_evidence_package(
+    repo_root: Path,
+    legacy_manifest_path: Path,
+    output_dir: Path,
+) -> dict[str, Any]:
+    legacy, full = load_legacy_full_evidence_for_packaging(legacy_manifest_path)
+    beijing_trades = [row for row in full["trades"] if is_beijing_highest_market(row)]
+    beijing_activity = [
+        row for row in full["activity"]
+        if str(row.get("type") or "").upper() == "TRADE"
+        and is_beijing_highest_market(row)
+    ]
+    repository_trades, repository_activity = load_repository_beijing(repo_root)
+    observed_assets = {
+        str(row.get("asset") or "")
+        for row in [
+            *beijing_trades,
+            *beijing_activity,
+            *repository_trades,
+            *repository_activity,
+        ]
+        if row.get("asset")
+    }
+    beijing_positions = [
+        row for row in full["positions"]
+        if str(row.get("asset") or "") in observed_assets
+    ]
+    beijing_closed = [
+        row for row in full["closed_positions"]
+        if str(row.get("asset") or "") in observed_assets
+    ]
+    payloads = {
+        "profile": full["profile"],
+        "trades": beijing_trades,
+        "activity": beijing_activity,
+        "positions": beijing_positions,
+        "closed_positions": beijing_closed,
+    }
+    filenames = {
+        "profile": "profile.json",
+        "trades": "beijing_trades.json",
+        "activity": "beijing_activity.json",
+        "positions": "beijing_positions.json",
+        "closed_positions": "beijing_closed_positions.json",
+    }
+    endpoints = {
+        "profile": "/public-profile",
+        "trades": "/trades",
+        "activity": "/activity",
+        "positions": "/positions",
+        "closed_positions": "/closed-positions",
+    }
+    source_urls = {
+        "profile": f"{GAMMA_API}/public-profile",
+        "trades": f"{DATA_API}/trades",
+        "activity": f"{DATA_API}/activity",
+        "positions": f"{DATA_API}/positions",
+        "closed_positions": f"{DATA_API}/closed-positions",
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    aggregates: dict[str, dict[str, Any]] = {}
+    for name, payload in payloads.items():
+        path = output_dir / filenames[name]
+        write_json(path, payload)
+        received = sorted(
+            str(row.get("received_at_utc"))
+            for row in _request_rows_for_endpoint(legacy["requests"], endpoints[name])
+            if row.get("received_at_utc")
+        )
+        original = legacy["aggregates"][name]
+        aggregates[name] = {
+            "relative_path": filenames[name],
+            "sha256": sha256_file(path),
+            "record_count": evidence_record_count(payload),
+            "source_endpoint": source_urls[name],
+            "original_full_snapshot_sha256": original["sha256"],
+            "original_full_snapshot_record_count": original["record_count"],
+            "source_received_at_utc_min": received[0] if received else None,
+            "source_received_at_utc_max": received[-1] if received else None,
+        }
+    sanitized_requests = [
+        {
+            key: value
+            for key, value in row.items()
+            if key != "path"
+        }
+        for row in legacy["requests"]
+    ]
+    manifest = {
+        "schema_version": PORTABLE_EVIDENCE_SCHEMA,
+        "wallet": HUSKY_WALLET,
+        "analysis_started_at_utc": legacy["analysis_started_at_utc"],
+        "analysis_cutoff_utc": legacy["analysis_cutoff_utc"],
+        "generated_at_utc": legacy["generated_at_utc"],
+        "public_data_only": True,
+        "public_get_only": True,
+        "all_requests_successful": True,
+        "raw_storage_status": "EPHEMERAL_NOT_COMMITTED",
+        "aggregates": aggregates,
+        "source_requests": sanitized_requests,
+    }
+    write_json(output_dir / "manifest.json", manifest)
+    return manifest
 
 
 def repository_wallet_verification(repo_root: Path) -> dict[str, Any]:
@@ -2732,7 +2940,10 @@ def analyze(
     evidence_manifest: Path,
 ) -> dict[str, Any]:
     repository_verification = repository_wallet_verification(repo_root)
-    manifest, evidence = load_saved_public_evidence(evidence_manifest)
+    manifest, evidence = load_saved_public_evidence(
+        evidence_manifest,
+        expected_analysis_cutoff_utc=analysis_cutoff_utc,
+    )
     wallet_verification = profile_wallet_verification(evidence["profile"])
     if wallet_verification != "PASS":
         wallet_verification = repository_verification["status"] if evidence["profile"] else "REPOSITORY_EVIDENCE_ONLY"
@@ -2827,6 +3038,19 @@ def analyze(
     committed_manifest = dict(manifest)
     committed_manifest["analysis_started_at_utc"] = analysis_started_at_utc
     committed_manifest["analysis_cutoff_utc"] = analysis_cutoff_utc
+    committed_manifest["raw_storage_status"] = "EPHEMERAL_NOT_COMMITTED"
+    try:
+        portable_manifest_relative = evidence_manifest.resolve().relative_to(
+            output_root.resolve()
+        )
+    except ValueError:
+        portable_manifest_relative = Path("saved_evidence_v1/manifest.json")
+    committed_manifest["portable_saved_evidence_manifest"] = (
+        portable_manifest_relative.as_posix()
+    )
+    committed_manifest["evidence_relative_path_base"] = (
+        "portable_saved_evidence_manifest.parent"
+    )
     committed_manifest["repository_wallet_verification"] = repository_verification
     committed_manifest["analysis_outputs"] = {
         "fill_count": len(fills),
@@ -2876,7 +3100,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.refresh_public_data:
         manifest = refresh_public_evidence(analysis_cutoff)
-        manifest_path = Path(manifest["manifest_path"])
+        portable_dir = (
+            RAW_EVIDENCE_ROOT / "portable_saved_evidence_v1"
+        )
+        build_portable_evidence_package(
+            Path(args.repo_root).resolve(),
+            Path(manifest["manifest_path"]),
+            portable_dir,
+        )
+        manifest_path = portable_dir / "manifest.json"
     else:
         manifest_path = Path(args.saved_public_evidence_manifest)
         saved = json.loads(manifest_path.read_text(encoding="utf-8"))
