@@ -1,0 +1,7 @@
+finding,legacy_value,corrected_value,corrected_definition
+multi_temperature_bucket_event_count,40,29,BUY YES only; multiple temperature buckets
+adjacent_temperature_bucket_event_count,31,21,BUY YES only; at least one adjacent exact pair
+no_exclusion_multi_bucket_event_count,,1,BUY NO only; multi-bucket exclusion set
+mixed_yes_no_event_count,,19,event contains BUY YES and BUY NO
+yes_only_event_count,,30,event contains BUY YES and no BUY NO
+no_only_event_count,,1,event contains BUY NO and no BUY YES

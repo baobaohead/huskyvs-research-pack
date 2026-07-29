@@ -1,0 +1,20 @@
+event_key,weather_date,event_buy_structure,mixed_yes_no_subtype,yes_bucket_count,no_bucket_count,yes_buckets,no_buckets,same_bucket_both_sides,cross_bucket_yes_no,yes_buy_usd,no_buy_usd
+2026-03-21__beijing__high,2026-03-21,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""16°C""]","[""15°C""]",false,true,8.20288,1.065
+2026-03-23__beijing__high,2026-03-23,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""20°C""]","[""18°C""]",false,true,13.232,4.0905
+2026-04-10__beijing__high,2026-04-10,MIXED_YES_AND_NO,BOTH,4,1,"[""27°C"", ""28°C"", ""29°C"", ""30°C or higher""]","[""29°C""]",true,true,37.255545,11.4064
+2026-04-17__beijing__high,2026-04-17,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,2,1,"[""23°C"", ""24°C""]","[""22°C""]",false,true,52.056088,38.459646
+2026-04-19__beijing__high,2026-04-19,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""24°C""]","[""23°C""]",false,true,0.43465,0.319272
+2026-04-20__beijing__high,2026-04-20,MIXED_YES_AND_NO,BOTH,3,2,"[""24°C"", ""25°C"", ""26°C""]","[""23°C"", ""24°C""]",true,true,15.78222,19.504078
+2026-04-28__beijing__high,2026-04-28,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""22°C""]","[""21°C""]",false,true,1.07712,19.527
+2026-04-30__beijing__high,2026-04-30,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""29°C""]","[""28°C""]",false,true,0.3251,1.92579
+2026-05-04__beijing__high,2026-05-04,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""27°C""]","[""26°C""]",false,true,15.644491,2.78369
+2026-05-06__beijing__high,2026-05-06,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,3,1,"[""27°C"", ""28°C"", ""29°C""]","[""25°C""]",false,true,2.37979,26.53675
+2026-05-07__beijing__high,2026-05-07,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""26°C""]","[""25°C""]",false,true,20.87014,5.77197
+2026-05-08__beijing__high,2026-05-08,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""29°C""]","[""28°C""]",false,true,1.82106,3.25078
+2026-05-11__beijing__high,2026-05-11,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,2,1,"[""28°C or below"", ""29°C""]","[""31°C""]",false,true,11.52155,55.43471
+2026-05-22__beijing__high,2026-05-22,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""23°C""]","[""22°C""]",false,true,6.56057,5.62081
+2026-05-23__beijing__high,2026-05-23,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""27°C""]","[""26°C or below""]",false,true,12.990265,11.008834
+2026-06-03__beijing__high,2026-06-03,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,1,1,"[""31°C""]","[""30°C or below""]",false,true,3.4551,2.81001
+2026-06-28__beijing__high,2026-06-28,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,3,1,"[""27°C or below"", ""28°C"", ""35°C""]","[""34°C""]",false,true,16.96679,24.86703
+2026-07-04__beijing__high,2026-07-04,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,3,1,"[""31°C or below"", ""32°C"", ""34°C""]","[""33°C""]",false,true,15.615026,1.55137
+2026-07-11__beijing__high,2026-07-11,MIXED_YES_AND_NO,CROSS_BUCKET_YES_NO,2,1,"[""30°C"", ""31°C""]","[""29°C""]",false,true,19.73207,2.99171
