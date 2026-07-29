@@ -88,9 +88,28 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def normalize_numbers(value: Any) -> Any:
+    """Make saved artifacts stable across supported CPython float repr details."""
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError(f"non-finite output value: {value!r}")
+        return round(value, 10)
+    if isinstance(value, dict):
+        return {key: normalize_numbers(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [normalize_numbers(item) for item in value]
+    if isinstance(value, tuple):
+        return [normalize_numbers(item) for item in value]
+    return value
+
+
 def stable_json(value: Any) -> str:
     return json.dumps(
-        value, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False
+        normalize_numbers(value),
+        ensure_ascii=False,
+        sort_keys=True,
+        indent=2,
+        allow_nan=False,
     ) + "\n"
 
 
@@ -101,7 +120,11 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 def csv_value(value: Any) -> Any:
     if isinstance(value, (list, dict, tuple)):
-        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+        return json.dumps(
+            normalize_numbers(value), ensure_ascii=False, sort_keys=True
+        )
+    if isinstance(value, float):
+        return normalize_numbers(value)
     if isinstance(value, bool):
         return "true" if value else "false"
     if value is None:
@@ -1843,6 +1866,7 @@ def analyze(
     (output_root / "source_manifest.json").write_text(
         stable_json(source_manifest), encoding="utf-8"
     )
+    summary = normalize_numbers(summary)
     summary_json.parent.mkdir(parents=True, exist_ok=True)
     summary_json.write_text(stable_json(summary), encoding="utf-8")
     summary_md.parent.mkdir(parents=True, exist_ok=True)

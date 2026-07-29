@@ -1,21 +1,21 @@
 event_key,weather_date,no_buckets,no_buy_fill_count,no_buy_usd,minimum_no_price,maximum_no_price,usd_weighted_average_no_price,no_multi_bucket_exclusion_set,no_adjacent_exclusion_set,no_tail_usage,implied_yes_equivalent_at_or_above_80_fill_count,implied_yes_equivalent_at_or_above_90_fill_count,implied_yes_equivalent_at_or_above_95_fill_count,also_bought_yes_other_bucket,same_bucket_yes_and_no
 2026-03-21__beijing__high,2026-03-21,"[""15°C""]",1,1.065,0.0426,0.0426,0.0426,false,false,false,1,1,1,true,false
-2026-03-23__beijing__high,2026-03-23,"[""18°C""]",1,4.0905,0.45,0.45,0.44999999999999996,false,false,false,0,0,0,true,false
-2026-04-10__beijing__high,2026-04-10,"[""29°C""]",5,11.4064,0.02,0.074,0.046033827986585035,false,false,false,5,5,3,true,true
-2026-04-13__beijing__high,2026-04-13,"[""18°C""]",1,4.22646,0.058,0.058,0.06403178151691839,false,false,false,1,1,0,false,false
-2026-04-17__beijing__high,2026-04-17,"[""22°C""]",8,38.459646,0.0170000006,0.468,0.10371809632263133,false,false,false,7,7,2,true,false
+2026-03-23__beijing__high,2026-03-23,"[""18°C""]",1,4.0905,0.45,0.45,0.45,false,false,false,0,0,0,true,false
+2026-04-10__beijing__high,2026-04-10,"[""29°C""]",5,11.4064,0.02,0.074,0.046033828,false,false,false,5,5,3,true,true
+2026-04-13__beijing__high,2026-04-13,"[""18°C""]",1,4.22646,0.058,0.058,0.0640317815,false,false,false,1,1,0,false,false
+2026-04-17__beijing__high,2026-04-17,"[""22°C""]",8,38.459646,0.0170000006,0.468,0.1037180963,false,false,false,7,7,2,true,false
 2026-04-19__beijing__high,2026-04-19,"[""23°C""]",4,0.319272,0.002,0.002,0.002,false,false,false,4,4,4,true,false
-2026-04-20__beijing__high,2026-04-20,"[""23°C"", ""24°C""]",8,19.504078,0.003,0.31,0.05243879382255089,true,true,false,6,6,6,true,true
-2026-04-28__beijing__high,2026-04-28,"[""21°C""]",4,19.527,0.0588380556,0.15,0.11506864813931987,false,false,false,4,1,0,true,false
-2026-04-30__beijing__high,2026-04-30,"[""28°C""]",3,1.92579,0.004,0.0073,0.007049785847640663,false,false,false,3,3,3,true,false
+2026-04-20__beijing__high,2026-04-20,"[""23°C"", ""24°C""]",8,19.504078,0.003,0.31,0.0524387938,true,true,false,6,6,6,true,true
+2026-04-28__beijing__high,2026-04-28,"[""21°C""]",4,19.527,0.0588380556,0.15,0.1150686481,false,false,false,4,1,0,true,false
+2026-04-30__beijing__high,2026-04-30,"[""28°C""]",3,1.92579,0.004,0.0073,0.0070497858,false,false,false,3,3,3,true,false
 2026-05-04__beijing__high,2026-05-04,"[""26°C""]",1,2.78369,0.07,0.07,0.073255,false,false,false,1,1,0,true,false
-2026-05-06__beijing__high,2026-05-06,"[""25°C""]",1,26.53675,0.5959037801,0.5959037801,0.6079438717067583,false,false,false,0,0,0,true,false
-2026-05-07__beijing__high,2026-05-07,"[""25°C""]",1,5.77197,0.011,0.011,0.011543939999999999,false,false,false,1,1,1,true,false
-2026-05-08__beijing__high,2026-05-08,"[""28°C""]",1,3.25078,0.013,0.013,0.013641544271926142,false,false,false,1,1,1,true,false
-2026-05-11__beijing__high,2026-05-11,"[""31°C""]",1,55.43471,0.445785124,0.445785124,0.45813809917355375,false,false,false,0,0,0,true,false
+2026-05-06__beijing__high,2026-05-06,"[""25°C""]",1,26.53675,0.5959037801,0.5959037801,0.6079438717,false,false,false,0,0,0,true,false
+2026-05-07__beijing__high,2026-05-07,"[""25°C""]",1,5.77197,0.011,0.011,0.01154394,false,false,false,1,1,1,true,false
+2026-05-08__beijing__high,2026-05-08,"[""28°C""]",1,3.25078,0.013,0.013,0.0136415443,false,false,false,1,1,1,true,false
+2026-05-11__beijing__high,2026-05-11,"[""31°C""]",1,55.43471,0.445785124,0.445785124,0.4581380992,false,false,false,0,0,0,true,false
 2026-05-22__beijing__high,2026-05-22,"[""22°C""]",1,5.62081,0.0268,0.0268,0.02810405,false,false,false,1,1,1,true,false
-2026-05-23__beijing__high,2026-05-23,"[""26°C or below""]",5,11.008834,0.01,0.0700000112,0.022840077902499933,false,false,true,5,5,1,true,false
-2026-06-03__beijing__high,2026-06-03,"[""30°C or below""]",1,2.81001,0.061,0.061,0.06386386363636364,false,false,true,1,1,0,true,false
-2026-06-28__beijing__high,2026-06-28,"[""34°C""]",4,24.86703,0.014,0.1473636364,0.025835338486473007,false,false,false,4,3,3,true,false
-2026-07-04__beijing__high,2026-07-04,"[""33°C""]",1,1.55137,0.01,0.01,0.010494993911514004,false,false,false,1,1,1,true,false
-2026-07-11__beijing__high,2026-07-11,"[""29°C""]",1,2.99171,0.0158244076,0.0158244076,0.016603085631833065,false,false,false,1,1,1,true,false
+2026-05-23__beijing__high,2026-05-23,"[""26°C or below""]",5,11.008834,0.01,0.0700000112,0.0228400779,false,false,true,5,5,1,true,false
+2026-06-03__beijing__high,2026-06-03,"[""30°C or below""]",1,2.81001,0.061,0.061,0.0638638636,false,false,true,1,1,0,true,false
+2026-06-28__beijing__high,2026-06-28,"[""34°C""]",4,24.86703,0.014,0.1473636364,0.0258353385,false,false,false,4,3,3,true,false
+2026-07-04__beijing__high,2026-07-04,"[""33°C""]",1,1.55137,0.01,0.01,0.0104949939,false,false,false,1,1,1,true,false
+2026-07-11__beijing__high,2026-07-11,"[""29°C""]",1,2.99171,0.0158244076,0.0158244076,0.0166030856,false,false,false,1,1,1,true,false

@@ -1,12 +1,12 @@
 yes_average_buy_price_band,strict_aligned_asset_count,buy_usd,strict_realized_pnl,roi,profitable_asset_count,loss_asset_count,break_even_asset_count,largest_winner_share_of_positive_pnl,pnl_excluding_largest_winner,scope_note
-0—1美分,4,6.43399,-6.020959,-0.9358048427181268,0,4,0,,-6.020959,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
+0—1美分,4,6.43399,-6.020959,-0.9358048427,0,4,0,,-6.020959,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
 1—2美分,0,0,0,,0,0,0,,0,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
-2—5美分,2,3.364,78.789178,23.42127764565993,2,0,0,0.9958663612406261,0.3256860000000046,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
-5—10美分,1,12.991077,-12.990847,-0.9999822955402389,0,1,0,,-12.990847,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
-10—15美分,3,37.231333,34.88347400000001,0.936938626398362,1,2,0,1.0,-23.230849999999997,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
-15—20美分,2,58.786997,-40.897769,-0.6956941345379489,1,1,0,1.0,-41.086569,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
+2—5美分,2,3.364,78.789178,23.4212776457,2,0,0,0.9958663612,0.325686,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
+5—10美分,1,12.991077,-12.990847,-0.9999822955,0,1,0,,-12.990847,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
+10—15美分,3,37.231333,34.883474,0.9369386264,1,2,0,1.0,-23.23085,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
+15—20美分,2,58.786997,-40.897769,-0.6956941345,1,1,0,1.0,-41.086569,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
 20—30美分,0,0,0,,0,0,0,,0,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
-30—40美分,1,9.128,16.952,1.8571428571428572,1,0,0,1.0,0.0,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
+30—40美分,1,9.128,16.952,1.8571428571,1,0,0,1.0,0.0,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
 40—50美分,0,0,0,,0,0,0,,0,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
 50—60美分,0,0,0,,0,0,0,,0,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
 60—70美分,0,0,0,,0,0,0,,0,Only assets whose public BUY shares and weighted average price match authoritative closed-position cost within strict tolerances.
