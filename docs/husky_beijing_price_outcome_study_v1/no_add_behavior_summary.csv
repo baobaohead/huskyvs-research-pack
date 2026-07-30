@@ -1,0 +1,7 @@
+outcome,price_band,buy_fill_count,subsequent_buy_fill_count,no_price_up_add_count,no_price_down_add_count,no_price_flat_add_count,no_above_average_cost_add_count,no_below_average_cost_add_count,no_near_average_cost_add_count
+NO,<5美分,28,18,0,5,13,0,8,10
+NO,5—10美分,10,5,0,2,3,0,2,3
+NO,10—20美分,9,8,1,1,6,1,5,2
+NO,20—30美分,0,0,0,0,0,0,0,0
+NO,30—50美分,5,1,0,0,1,0,0,1
+NO,>=50美分,1,0,0,0,0,0,0,0

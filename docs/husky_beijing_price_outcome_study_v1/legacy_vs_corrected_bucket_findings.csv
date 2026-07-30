@@ -1,7 +1,2 @@
-finding,legacy_value,corrected_value,corrected_definition
-multi_temperature_bucket_event_count,40,29,BUY YES only; multiple temperature buckets
-adjacent_temperature_bucket_event_count,31,21,BUY YES only; at least one adjacent exact pair
-no_exclusion_multi_bucket_event_count,,1,BUY NO only; multi-bucket exclusion set
-mixed_yes_no_event_count,,19,event contains BUY YES and BUY NO
-yes_only_event_count,,30,event contains BUY YES and no BUY NO
-no_only_event_count,,1,event contains BUY NO and no BUY YES
+legacy_total_event_count,legacy_single_bucket_event_count,legacy_multi_bucket_event_count,legacy_adjacent_bucket_event_count,legacy_bucket_rotation_event_count,corrected_yes_buy_event_count,corrected_yes_multi_bucket_event_count,corrected_yes_adjacent_basket_event_count,corrected_yes_bucket_rotation_event_count,no_buy_event_count,no_multi_bucket_exclusion_event_count,yes_only_event_count,no_only_event_count,mixed_yes_no_event_count,same_bucket_both_sides_event_count,cross_bucket_yes_no_event_count,correction_note
+50,10,40,31,11,49,29,21,10,20,1,30,1,19,2,19,Legacy counts group temperature_bucket across BUY YES and BUY NO; corrected YES baskets use BUY YES only.

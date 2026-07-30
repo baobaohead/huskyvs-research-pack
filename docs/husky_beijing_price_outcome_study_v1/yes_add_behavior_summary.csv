@@ -1,0 +1,7 @@
+outcome,price_band,buy_fill_count,subsequent_buy_fill_count,yes_price_up_add_count,yes_price_down_add_count,yes_price_flat_add_count,yes_above_average_cost_add_count,yes_below_average_cost_add_count,yes_near_average_cost_add_count
+YES,<5美分,234,181,3,19,159,3,50,128
+YES,5—10美分,38,24,6,3,15,7,7,10
+YES,10—20美分,81,59,6,4,49,18,10,31
+YES,20—30美分,22,11,4,2,5,5,2,4
+YES,30—50美分,25,21,0,0,21,0,0,21
+YES,>=50美分,0,0,0,0,0,0,0,0

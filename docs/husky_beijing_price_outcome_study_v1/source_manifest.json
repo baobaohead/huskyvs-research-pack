@@ -1,5 +1,6 @@
 {
   "analysis_cutoff_utc": "2026-07-29T03:30:01.944885+00:00",
+  "manifest_sha256": "133b1ecbd34f73a48983a68e538b0e530031b321e299df43500b5d8640c8d12b",
   "network_call_count": 0,
   "offline_only": true,
   "prior_reviewed_core_counts": {
@@ -9,64 +10,14 @@
     "total_public_fill_count": 537
   },
   "raw_evidence_copied_to_output": false,
+  "relative_path": "docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/manifest.json",
   "schema_version": "husky_beijing_price_outcome_study_v1",
-  "sources": [
-    {
-      "relative_path": "docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/manifest.json",
-      "role": "portable_evidence_manifest",
-      "sha256": "133b1ecbd34f73a48983a68e538b0e530031b321e299df43500b5d8640c8d12b"
-    },
-    {
-      "record_count": 537,
-      "relative_path": "docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/beijing_activity.json",
-      "role": "portable_activity",
-      "sha256": "8d4781462bf7d7d6e47b4608bd3283be553ace4d529eb63bc4ca9854c6f89b7d"
-    },
-    {
-      "record_count": 54,
-      "relative_path": "docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/beijing_closed_positions.json",
-      "role": "portable_closed_positions",
-      "sha256": "22955a2f7864aa3568ac73e4e8f37e88bf3490e4bb1465a0ef8e9c020c788a8d"
-    },
-    {
-      "record_count": 71,
-      "relative_path": "docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/beijing_positions.json",
-      "role": "portable_positions",
-      "sha256": "27bd5b2a899f828cb920b8ab46d91c7b80c0b108450a2d21667310e03bcea473"
-    },
-    {
-      "record_count": 1,
-      "relative_path": "docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/profile.json",
-      "role": "portable_profile",
-      "sha256": "08b5f5f09368d09817569de57321f2fd49c2c88cb9c9b41d689874c876775beb"
-    },
-    {
-      "record_count": 537,
-      "relative_path": "docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/beijing_trades.json",
-      "role": "portable_trades",
-      "sha256": "52d49e7b9a0d47f6d0b24566f5591430aa196b57851efae5d7014e466cae6db7"
-    },
-    {
-      "relative_path": "docs/husky_beijing_full_trade_study_v1/beijing_all_public_fills.csv",
-      "role": "reviewed_derived_fill_input",
-      "sha256": "73225c6bdefb76352cf70486bc5df008cdfe35b1d5266ba46016aa741f440038"
-    },
-    {
-      "relative_path": "docs/husky_beijing_full_trade_study_v1/beijing_event_summary.csv",
-      "role": "reviewed_derived_event_input",
-      "sha256": "dfcb2302bff2c7d481d277b179499efc5ddbe7579d20329d27632f1dc1587525"
-    },
-    {
-      "relative_path": "docs/HUSKY_BEIJING_FULL_TRADE_STUDY_v1.json",
-      "role": "reviewed_prior_summary_input",
-      "sha256": "b2822ec2a5db18a4e8fddc83ec09f800538b65b1c4f699eac4655e9401f180bb"
-    },
-    {
-      "relative_path": "docs/HUSKY_BEIJING_FULL_TRADE_STUDY_v1.md",
-      "role": "reviewed_prior_narrative_input",
-      "sha256": "dcca27e9cc0a16ead9df128cb114b0794aeb137fc9ab5bc856ff367fc16085ef"
-    }
-  ],
-  "visual_omission_reason": "The requested deliverables prioritize exact audit tables, threshold rules, and machine-readable cases; charts would not replace these.",
+  "source_record_counts": {
+    "activity": 537,
+    "closed_positions": 54,
+    "positions": 71,
+    "profile": 1,
+    "trades": 537
+  },
   "wallet": "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
 }

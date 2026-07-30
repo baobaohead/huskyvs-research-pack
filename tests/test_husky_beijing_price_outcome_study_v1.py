@@ -19,6 +19,7 @@ from src.husky_beijing_price_outcome_study_v1 import (
     REAL_ORDER,
     SIGNING,
     analyze,
+    add_behavior_rows,
     annotate_outcome_adds,
     basically_no_buy_above,
     bucket_details,
@@ -28,8 +29,11 @@ from src.husky_beijing_price_outcome_study_v1 import (
     event_yes_summary,
     example_rows,
     meaningful_max_price,
+    mixed_event_row,
     multi_yes_event_summary,
     nearest_rank,
+    no_implied_threshold_summary,
+    normalize_trade_rows,
     price_band,
     price_band_summary,
     strict_pnl_by_yes_price_band,
@@ -100,6 +104,14 @@ def test_buy_yes_and_buy_no_are_strictly_separate():
     assert result["event_buy_structure"] == "MIXED_YES_AND_NO"
     assert result["yes_bucket_count"] == 1
     assert result["no_bucket_count"] == 1
+
+
+def test_outcome_and_side_case_are_normalized():
+    row = normalize_trade_rows([
+        fill(outcome=" yes ", side=" buy ")
+    ])[0]
+    assert row["outcome"] == "YES"
+    assert row["side"] == "BUY"
 
 
 def test_sell_does_not_enter_buy_structure():
@@ -358,6 +370,23 @@ def test_scenario_selector_does_not_fabricate_when_no_candidate():
     assert examples == []
 
 
+def test_scenario_selector_uses_relaxed_adjacent_rule():
+    rows = [
+        fill(
+            bucket="35°C", asset="h", price=0.55, timestamp=1,
+            bucket_low=35,
+        ),
+        fill(
+            bucket="36°C", asset="l", price=0.05, timestamp=2,
+            bucket_low=36,
+        ),
+    ]
+    multi = multi_yes_event_summary(rows[0]["event_key"], rows)
+    examples, exact = closest_scenario_examples([multi])
+    assert exact == 0
+    assert examples[0]["relaxed_style_match"]
+
+
 def test_yes_and_no_adds_are_separate():
     rows = [
         fill(outcome="YES", asset="yes", price=0.10, timestamp=1),
@@ -376,6 +405,30 @@ def test_yes_and_no_adds_are_separate():
     )
     assert yes_add["outcome_price_add_class"] == "PRICE_UP_ADD"
     assert no_add["outcome_price_add_class"] == "PRICE_DOWN_ADD"
+
+
+def test_add_behavior_rows_use_six_requested_price_bands():
+    rows = annotate_outcome_adds([
+        fill(price=0.01, timestamp=1),
+        fill(price=0.02, timestamp=2),
+    ])
+    result = add_behavior_rows(rows, "YES")
+    assert [row["price_band"] for row in result] == [
+        "<5美分", "5—10美分", "10—20美分",
+        "20—30美分", "30—50美分", ">=50美分",
+    ]
+
+
+def test_mixed_event_summary_records_order_and_ratios():
+    rows = [
+        fill(outcome="NO", asset="n", timestamp=1, usd=2),
+        fill(outcome="YES", asset="y", timestamp=2, usd=1),
+    ]
+    classification = classify_event_buys(rows)
+    result = mixed_event_row(rows[0]["event_key"], rows, classification)
+    assert result["first_outcome_order"] == "NO_THEN_YES"
+    assert result["no_buy_usd_share"] == pytest.approx(2 / 3)
+    assert result["buy_sequence"][0]["implied_yes_equivalent_price"] == 0.8
 
 
 def test_strict_pnl_excludes_unaligned_assets():
@@ -452,11 +505,18 @@ def test_source_manifest_uses_relative_paths(real_analysis):
         (root / "output/source_manifest.json").read_text()
     )
     assert manifest["raw_evidence_copied_to_output"] is False
-    assert all(
-        not Path(row["relative_path"]).is_absolute()
-        and ".." not in Path(row["relative_path"]).parts
-        for row in manifest["sources"]
-    )
+    assert not Path(manifest["relative_path"]).is_absolute()
+    assert ".." not in Path(manifest["relative_path"]).parts
+    assert "manifest_sha256" in manifest
+    assert "sources" not in manifest
+    assert manifest["offline_only"] is True
+    assert manifest["source_record_counts"] == {
+        "activity": 537,
+        "closed_positions": 54,
+        "positions": 71,
+        "profile": 1,
+        "trades": 537,
+    }
 
 
 def test_required_output_files_exist(real_analysis):
@@ -476,6 +536,8 @@ def test_required_output_files_exist(real_analysis):
         "scenario_35_36_37_style_examples.csv",
         "legacy_vs_corrected_bucket_findings.csv",
         "strict_pnl_by_yes_price_band.csv",
+        "yes_add_behavior_summary.csv",
+        "no_add_behavior_summary.csv",
         "source_manifest.json",
     }
     assert required == {
@@ -509,7 +571,7 @@ def test_old_event_pnl_is_not_assigned_to_fill():
     assert "not attributed to this fill" in examples[0]["strict_pnl_note"]
 
 
-def test_event_summary_weighted_average_uses_usd_over_shares():
+def test_event_summary_weighted_average_uses_trade_usd_as_weight():
     rows = [
         fill(price=0.01, shares=100, usd=1),
         fill(price=0.50, shares=10, usd=5, timestamp=2),
@@ -519,7 +581,9 @@ def test_event_summary_weighted_average_uses_usd_over_shares():
         rows,
         {"weather_date": "2026-07-20"},
     )
-    assert event["usd_weighted_average_yes_buy_price"] == pytest.approx(6 / 110)
+    assert event["usd_weighted_average_yes_buy_price"] == pytest.approx(
+        (0.01 * 1 + 0.50 * 5) / 6
+    )
 
 
 def test_bucket_adjacency_rejects_tail():
@@ -544,3 +608,83 @@ def test_threshold_summary_uses_actual_usd():
     )
     assert at_20["buy_yes_usd"] == 2
     assert at_20["yes_buy_usd_share"] == pytest.approx(2 / 102)
+
+
+def test_threshold_summary_includes_90_cents_and_dominant_count():
+    rows = [
+        fill(price=0.90, usd=10, bucket="30°C", asset="a"),
+        fill(price=0.10, usd=1, bucket="31°C", asset="b", timestamp=2),
+    ]
+    at_90 = next(
+        row for row in yes_threshold_summary(rows)
+        if row["threshold_decimal_inclusive"] == 0.90
+    )
+    assert at_90["buy_yes_fill_count"] == 1
+    assert at_90["dominant_yes_bucket_event_count"] == 1
+
+
+def test_no_implied_threshold_summary_has_usd_and_events():
+    rows = [
+        fill(outcome="NO", price=0.01, usd=2),
+        fill(
+            event="2026-07-21__beijing__high",
+            outcome="NO", price=0.02, usd=3,
+        ),
+    ]
+    at_99 = next(
+        row for row in no_implied_threshold_summary(rows)
+        if row["implied_yes_equivalent_threshold_inclusive"] == 0.99
+    )
+    assert at_99["buy_no_fill_count"] == 1
+    assert at_99["buy_no_usd"] == 2
+    assert at_99["weather_event_count"] == 1
+
+
+def test_event_summary_includes_median_and_asset_count():
+    rows = [
+        fill(price=0.10, asset="a"),
+        fill(price=0.30, asset="b", timestamp=2),
+    ]
+    event = event_yes_summary(
+        rows[0]["event_key"], rows, {"weather_date": "2026-07-20"}
+    )
+    assert event["median_yes_buy_price"] == pytest.approx(0.20)
+    assert event["yes_asset_count"] == 2
+
+
+def test_report_answers_all_36_questions(real_analysis):
+    _, root = real_analysis
+    report = (root / "summary.md").read_text()
+    assert "## 36 个核心问题" in report
+    for index in range(1, 37):
+        assert f"{index}. **[" in report
+
+
+def test_high_price_examples_include_required_audit_fields(real_analysis):
+    _, root = real_analysis
+    rows = list(csv.DictReader(
+        (root / "output/high_price_yes_examples.csv").open()
+    ))
+    required = {
+        "transaction_hash",
+        "bucket_share_of_event_yes_buy_usd",
+        "is_event_dominant_yes_bucket",
+        "other_yes_buckets_in_event",
+        "no_buys_present_in_event",
+        "entry_timeline_status",
+        "strict_pnl_status",
+        "strict_event_pnl",
+    }
+    assert required <= set(rows[0])
+
+
+def test_scenario_result_is_none_when_no_real_match(real_analysis):
+    summary, root = real_analysis
+    scenario = summary["scenario_35_36_37_style"]
+    assert scenario["strict_style_event_count"] == 0
+    assert scenario["relaxed_style_event_count"] == 0
+    assert scenario["result"] == "NONE_OBSERVED"
+    rows = list(csv.DictReader(
+        (root / "output/scenario_35_36_37_style_examples.csv").open()
+    ))
+    assert rows == []
