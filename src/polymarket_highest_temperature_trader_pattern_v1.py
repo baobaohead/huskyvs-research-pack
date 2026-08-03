@@ -22,10 +22,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime, time as datetime_time, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from threading import Lock
 from typing import Any, Iterable, Iterator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -44,6 +46,10 @@ REAL_ORDER = False
 FORMAL_STARTED = False
 NETWORK_CALL_COUNT = 0
 HUSKY_WALLET = "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
+TARGET_ACTIVITY_OFFSET_CAP = 5_000
+TARGET_TRADES_OFFSET_CAP = 10_000
+TARGET_FETCH_WORKERS = 32
+NON_BUY_ACQUISITION_TYPES = {"SPLIT", "CONVERSION", "MERGE", "TRANSFER"}
 
 
 def _default_timezone_registry_path() -> Path:
@@ -227,6 +233,26 @@ def deduplicate_records(rows: Iterable[dict[str, Any]]) -> tuple[list[dict[str, 
 class Window:
     start: int
     end: int
+
+
+@dataclass
+class TargetFetchResult:
+    rows: list[dict[str, Any]]
+    status: str = "COMPLETE"
+    zero_response_count: int = 0
+    nonzero_response_count: int = 0
+
+
+def _worst_status(*statuses: str) -> str:
+    order = {
+        "COMPLETE": 0,
+        "PARTIAL": 1,
+        "UNKNOWN": 2,
+        "SOURCE_CONFLICT": 3,
+        "PAGINATION_INCOMPLETE": 4,
+        "REQUEST_FAILED": 5,
+    }
+    return max(statuses or ("UNKNOWN",), key=lambda value: order.get(value, 2))
 
 
 def thirty_day_windows(start: int, end: int) -> Iterator[Window]:
@@ -1067,6 +1093,8 @@ def _summary(
         "same_bucket_both_sides_event_count": subtype["SAME_BUCKET_BOTH_SIDES"] + subtype["BOTH"],
         "cross_bucket_yes_no_event_count": subtype["CROSS_BUCKET_YES_NO"] + subtype["BOTH"],
         "adjacent_yes_event_count": sum(bool(row["adjacent_yes_pairs"]) for row in structures),
+        "pattern_report_status": quality.get("pattern_report_status", "READY"),
+        "pattern_report_block_reason": quality.get("pattern_report_block_reason", ""),
         "data_quality": quality,
         "public_record_semantics": "public fills, not original orders",
         "conclusion_labels": ["OBSERVED", "INFERRED", "NOT_SUPPORTED", "UNKNOWN"],
@@ -1196,7 +1224,78 @@ def _direction_sentence(summary: dict[str, Any]) -> str:
     return "本次没有解析到可用于模式判断的公开成交。"
 
 
+def _render_blocked_summary(summary: dict[str, Any]) -> str:
+    q = summary["data_quality"]
+    discovered = summary.get("discovered_cities") or summary.get("requested_cities") or []
+    cities = "、".join(_zh_city(city) for city in discovered) or "未识别城市"
+    reason_codes = set(filter(None, str(q.get("pattern_report_block_reason") or "").split(";")))
+    reasons: list[str] = []
+    if any("DISCOVERY" in reason for reason in reason_codes):
+        reasons.append("目标最高温市场清单没有完整发现。")
+    if any("QUERY" in reason or "EVIDENCE" in reason for reason in reason_codes):
+        reasons.append("至少一个目标温度合同没有完成双来源查询或核对。")
+    if q.get("api_request_failure_count"):
+        reasons.append(f"有{q['api_request_failure_count']}个官方公开接口请求失败。")
+    if q.get("targeted_market_fetch_saturated") or q.get("pagination_saturation_status") == "PAGINATION_INCOMPLETE":
+        reasons.append("至少一个目标市场达到公开接口分页上限。")
+    if q.get("source_conflict_market_count"):
+        reasons.append("activity与trades返回的成交存在尚未解释的来源差异。")
+    if q.get("orphan_sell_asset_count"):
+        reasons.append(
+            f"有{q['orphan_sell_asset_count']}个资产出现卖出，但当前没有观察到直接买入或可识别的公开取得活动。"
+        )
+    if not reasons:
+        reasons.append("当前证据未达到完整交易模式报告所需的质量门槛。")
+    return "\n".join([
+        "# Polymarket最高温市场交易模式报告",
+        "",
+        "## 一、先说结论",
+        "",
+        "> **重要提醒：本次数据不完整，交易模式分析暂停。**",
+        "",
+        "下列数字只用于展示已经抓到的公开成交，不能当作完整交易历史，也不能据此判断交易员没有买入或概括其交易策略。",
+        "",
+        "## 二、本次研究范围",
+        "",
+        "| 项目 | 本次结果 |",
+        "|---|---|",
+        f"| 交易员钱包 | `{summary['wallet']}` |",
+        f"| 天气日期 | {summary['weather_date_from']} 至 {summary['weather_date_to']} |",
+        f"| 城市 | {cities} |",
+        f"| 目标天气日 | {q.get('target_event_count') or '尚未完整确认'} |",
+        f"| 目标温度合同 | {q.get('target_condition_count') or '尚未完整确认'} |",
+        f"| 当前抓到的公开成交 | {summary['total_public_fill_count']}笔 |",
+        "| 模式报告状态 | 暂停：证据不完整 |",
+        "",
+        "## 三、为什么暂停分析",
+        "",
+        *[f"- 【数据提醒】{reason}" for reason in reasons],
+        "- 【数据提醒】没有观察到的成交不能解释为没有发生；卖出成交额也不等于利润。",
+        "",
+        "## 四、当前抓到的部分成交",
+        "",
+        "| 成交类型 | 笔数 | 总份数 | 成交金额 |",
+        "|---|---:|---:|---:|",
+        f"| 买入YES | {summary['buy_yes_fill_count'] or '未观察到'} | {_fmt_shares(summary['buy_yes_shares'])} | {_fmt_amount(summary['buy_yes_trade_usd'], '美元')} |",
+        f"| 买入NO | {summary['buy_no_fill_count'] or '未观察到'} | {_fmt_shares(summary['buy_no_shares'])} | {_fmt_amount(summary['buy_no_trade_usd'], '美元')} |",
+        f"| 卖出YES | {summary['sell_yes_fill_count'] or '未观察到'} | {_fmt_shares(summary['sell_yes_shares'])} | {_fmt_amount(summary['sell_yes_trade_usd'], '美元')} |",
+        f"| 卖出NO | {summary['sell_no_fill_count'] or '未观察到'} | {_fmt_shares(summary['sell_no_shares'])} | {_fmt_amount(summary['sell_no_trade_usd'], '美元')} |",
+        "",
+        "这些是经过当前证据去重后的部分公开fill。报告不会继续输出交易时间偏好、价格偏好、累计仓位特点或温度组合结论。",
+        "",
+        "## 五、当前不能下的结论",
+        "",
+        "- 不能判断完整的买入、卖出或建仓策略。",
+        "- 不能计算完整PnL、ROI、胜率，也不能判断是否赚钱。",
+        "- 不能看到未成交挂单、撤单或交易员的主观预测意图。",
+        "- 不能把当前抓到的卖出成交额当作利润。",
+        "",
+    ])
+
+
 def render_summary(summary: dict[str, Any]) -> str:
+    if summary.get("pattern_report_status") == "BLOCKED_INCOMPLETE_EVIDENCE":
+        return _render_blocked_summary(summary)
     q = summary["data_quality"]
     discovered = summary.get("discovered_cities") or summary.get("requested_cities") or []
     cities = "、".join(_zh_city(city) for city in discovered) or "未识别城市"
@@ -1204,10 +1303,17 @@ def render_summary(summary: dict[str, Any]) -> str:
     sell_count = summary["sell_fill_count"]
     day = _zh_day(summary["main_relative_weather_day_by_usd"])
     d0_time = _zh_time(summary["main_d0_bucket_by_usd"])
+    complete_targeted_evidence = bool(
+        q.get("pattern_report_status") == "READY"
+        and q.get("target_condition_count")
+        and q.get("pagination_saturation_status") == "COMPLETE"
+    )
     if buy_count == 0:
         conclusion = (
-            f"{_direction_sentence(summary)}由于数据完整性为{('可能不完整' if q.get('pagination_saturation_status') == 'PAGINATION_INCOMPLETE' else '公开成交证据')}，"
-            "不能据此认定交易员没有买入，也不能还原完整建仓方式。"
+            f"{_direction_sentence(summary)}当前完整公开证据未观察到直接BUY；"
+            "这仍不能排除通过拆分、转换或转入取得仓位，也不能单凭卖出记录还原建仓方式。"
+            if complete_targeted_evidence else
+            f"{_direction_sentence(summary)}由于数据完整性可能不足，不能据此认定交易员没有买入，也不能还原完整建仓方式。"
         )
     else:
         conclusion = f"{_direction_sentence(summary)}已观察到的成交金额主要集中在{day}，其中{d0_time}是天气当天的主要时段。"
@@ -1266,7 +1372,11 @@ def render_summary(summary: dict[str, Any]) -> str:
     if buy_count == 0:
         rows.extend([
             "【当前无法判断】当前证据中没有观察到买入成交，因此无法判断这个交易员如何建仓、主要买哪个价格、是否分批买入，以及是否同时购买多个温度。",
-            "这不等于交易员没有买入；尤其在数据分页未完整时，部分买入记录可能没有进入当前证据。",
+            (
+                "当前完整公开证据未观察到直接BUY，但仍不能排除通过拆分、转换或转入取得仓位。"
+                if complete_targeted_evidence else
+                "这不等于交易员没有买入；证据不完整时，部分买入记录可能没有进入当前证据。"
+            ),
         ])
     else:
         rows.extend([
@@ -1356,6 +1466,7 @@ class PublicGetClient:
         self.attempts = attempts
         self.requests: list[dict[str, Any]] = []
         self.counter = 0
+        self._evidence_lock = Lock()
 
     def get_json(self, url: str, params: dict[str, Any]) -> Any:
         global NETWORK_CALL_COUNT
@@ -1374,31 +1485,559 @@ class PublicGetClient:
                 with urllib.request.urlopen(request, timeout=60) as response:
                     raw = response.read()
                 payload = json.loads(raw)
-                self.counter += 1
-                relative = Path("requests") / f"{self.counter:05d}.json"
-                path = self.raw_root / relative
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(raw)
-                count = len(payload) if isinstance(payload, list) else 1
-                self.requests.append({
-                    "method": "GET", "url": url, "params": dict(params),
-                    "requested_at_utc": received, "record_count": count,
-                    "sha256": hashlib.sha256(raw).hexdigest(),
-                    "relative_path": relative.as_posix(), "success": True,
-                    "retries": retry,
-                })
+                with self._evidence_lock:
+                    self.counter += 1
+                    relative = Path("requests") / f"{self.counter:05d}.json"
+                    path = self.raw_root / relative
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(raw)
+                    count = len(payload) if isinstance(payload, list) else 1
+                    self.requests.append({
+                        "method": "GET", "url": url, "params": dict(params),
+                        "requested_at_utc": received, "record_count": count,
+                        "sha256": hashlib.sha256(raw).hexdigest(),
+                        "relative_path": relative.as_posix(), "success": True,
+                        "retries": retry,
+                    })
                 return payload
             except (OSError, ValueError, json.JSONDecodeError, urllib.error.HTTPError) as exc:
                 last_error = repr(exc)
                 if retry + 1 < self.attempts:
                     time.sleep(0.5 * (2 ** retry))
-        self.requests.append({
-            "method": "GET", "url": url, "params": dict(params),
-            "requested_at_utc": datetime.now(timezone.utc).isoformat(),
-            "record_count": 0, "success": False, "retries": self.attempts - 1,
-            "error": last_error,
-        })
+        with self._evidence_lock:
+            self.requests.append({
+                "method": "GET", "url": url, "params": dict(params),
+                "requested_at_utc": datetime.now(timezone.utc).isoformat(),
+                "record_count": 0, "success": False, "retries": self.attempts - 1,
+                "error": last_error,
+            })
         raise RuntimeError(f"public GET failed after retries: {full_url}: {last_error}")
+
+
+def _json_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+        return parsed if isinstance(parsed, list) else []
+    return []
+
+
+def discover_target_markets(
+    client: PublicGetClient,
+    date_from: date,
+    date_to: date,
+    cities: Iterable[str],
+    *,
+    limit: int = 100,
+) -> tuple[list[dict[str, Any]], str]:
+    """Discover the complete target universe independently of wallet activity."""
+    requested_cities = set(cities)
+    result: list[dict[str, Any]] = []
+    discovery_status = "COMPLETE"
+    events_to_process: list[dict[str, Any]] = []
+
+    def fetch_events(tag_slug: str) -> str:
+        offset = 0
+        while True:
+            try:
+                events = client.get_json(f"{GAMMA_API}/events", {
+                    "tag_slug": tag_slug,
+                    "end_date_min": f"{date_from.isoformat()}T00:00:00Z",
+                    "end_date_max": f"{(date_to + timedelta(days=2)).isoformat()}T23:59:59Z",
+                    "limit": limit,
+                    "offset": offset,
+                })
+            except RuntimeError:
+                return "REQUEST_FAILED"
+            if not isinstance(events, list):
+                return "UNKNOWN"
+            events_to_process.extend(events)
+            if len(events) < limit:
+                return "COMPLETE"
+            offset += limit
+
+    # City tags substantially reduce irrelevant Gamma pagination. If a city tag
+    # yields no matching event, fall back to the global highest-temperature tag.
+    tags = sorted(requested_cities) if requested_cities else ["highest-temperature"]
+    for tag in tags:
+        discovery_status = _worst_status(discovery_status, fetch_events(tag))
+
+    def append_markets(events: Iterable[dict[str, Any]]) -> None:
+        for event in events:
+            event_slug = str(event.get("slug") or "")
+            event_title = str(event.get("title") or "")
+            event_identity = parse_highest_temperature_market({
+                "eventSlug": event_slug,
+                "slug": event_slug,
+                "title": event_title,
+                "endDate": event.get("endDate"),
+            })
+            if not event_identity:
+                continue
+            weather_day = date.fromisoformat(event_identity["weather_date_local"])
+            if not date_from <= weather_day <= date_to:
+                continue
+            if requested_cities and event_identity["canonical_city"] not in requested_cities:
+                continue
+            for market in event.get("markets") or []:
+                condition_id = str(market.get("conditionId") or "").lower()
+                if not condition_id:
+                    continue
+                market_probe = {
+                    **market,
+                    "eventSlug": event_slug,
+                    "event_slug": event_slug,
+                    "title": market.get("question") or market.get("title") or event_title,
+                }
+                identity = parse_highest_temperature_market(market_probe)
+                if not identity:
+                    continue
+                tokens = [str(value) for value in _json_list(market.get("clobTokenIds"))]
+                outcomes = [str(value).upper() for value in _json_list(market.get("outcomes"))]
+                if len(tokens) != len(outcomes) or not tokens:
+                    tokens = tokens or [""]
+                    outcomes = outcomes or ["UNKNOWN"] * len(tokens)
+                market_status = (
+                    "CLOSED" if market.get("closed") is True else
+                    "ACTIVE" if market.get("active") is True else
+                    "UNKNOWN"
+                )
+                for token, outcome in zip(tokens, outcomes):
+                    result.append({
+                        "canonical_city": identity["canonical_city"],
+                        "weather_date_local": identity["weather_date_local"],
+                        "event_id": str(event.get("id") or ""),
+                        "event_slug": event_slug,
+                        "condition_id": condition_id,
+                        "asset": token,
+                        "token_id": token,
+                        "temperature_bucket": identity["temperature_bucket"],
+                        "bucket_kind": identity["bucket_kind"],
+                        "bucket_low": identity["bucket_low"],
+                        "bucket_high": identity["bucket_high"],
+                        "unit": identity["unit"],
+                        "outcome": outcome,
+                        "market_status": market_status,
+                        "slug": str(market.get("slug") or ""),
+                        "title": str(market_probe["title"]),
+                    })
+
+    append_markets(events_to_process)
+    discovered_cities = {row["canonical_city"] for row in result}
+    if requested_cities - discovered_cities and discovery_status == "COMPLETE":
+        fallback_events: list[dict[str, Any]] = []
+        original_target = events_to_process
+        events_to_process = fallback_events
+        discovery_status = _worst_status(discovery_status, fetch_events("highest-temperature"))
+        append_markets(fallback_events)
+        events_to_process = original_target
+    unique: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in result:
+        unique.setdefault((row["condition_id"], row["asset"]), row)
+    rows = sorted(
+        unique.values(),
+        key=lambda row: (
+            row["weather_date_local"], row["canonical_city"],
+            row["temperature_bucket"], row["outcome"], row["condition_id"],
+        ),
+    )
+    if not rows and discovery_status == "COMPLETE":
+        discovery_status = "UNKNOWN"
+    return rows, discovery_status
+
+
+def _target_activity_page(
+    client: PublicGetClient,
+    wallet: str,
+    condition_id: str,
+    window: Window,
+    *,
+    side: str | None = None,
+    activity_type: str | None = "TRADE",
+    limit: int = 500,
+    depth: int = 0,
+) -> TargetFetchResult:
+    if depth > 40:
+        return TargetFetchResult([], "PAGINATION_INCOMPLETE")
+    rows: list[dict[str, Any]] = []
+    zero = nonzero = 0
+    offset = 0
+    while True:
+        params: dict[str, Any] = {
+            "user": wallet,
+            "market": condition_id,
+            "start": window.start,
+            "end": window.end,
+            "limit": limit,
+            "offset": offset,
+            "sortBy": "TIMESTAMP",
+            "sortDirection": "ASC",
+        }
+        if side:
+            params["side"] = side
+        if activity_type:
+            params["type"] = activity_type
+        try:
+            page = client.get_json(f"{DATA_API}/activity", params)
+        except RuntimeError:
+            return TargetFetchResult(rows, "REQUEST_FAILED", zero, nonzero)
+        if not isinstance(page, list):
+            return TargetFetchResult(rows, "UNKNOWN", zero, nonzero)
+        if page:
+            nonzero += 1
+        else:
+            zero += 1
+        rows.extend(page)
+        if len(page) < limit:
+            deduped, _ = deduplicate_records(rows)
+            return TargetFetchResult(deduped, "COMPLETE", zero, nonzero)
+        next_offset = offset + limit
+        if next_offset > TARGET_ACTIVITY_OFFSET_CAP:
+            if window.start < window.end:
+                middle = (window.start + window.end) // 2
+                left = _target_activity_page(
+                    client, wallet, condition_id, Window(window.start, middle),
+                    side=side, activity_type=activity_type, limit=limit, depth=depth + 1,
+                )
+                right = _target_activity_page(
+                    client, wallet, condition_id, Window(middle + 1, window.end),
+                    side=side, activity_type=activity_type, limit=limit, depth=depth + 1,
+                )
+                combined, _ = deduplicate_records(left.rows + right.rows)
+                return TargetFetchResult(
+                    combined, _worst_status(left.status, right.status),
+                    zero + left.zero_response_count + right.zero_response_count,
+                    nonzero + left.nonzero_response_count + right.nonzero_response_count,
+                )
+            if side is None:
+                buy = _target_activity_page(
+                    client, wallet, condition_id, window, side="BUY",
+                    activity_type=activity_type, limit=limit, depth=depth + 1,
+                )
+                sell = _target_activity_page(
+                    client, wallet, condition_id, window, side="SELL",
+                    activity_type=activity_type, limit=limit, depth=depth + 1,
+                )
+                combined, _ = deduplicate_records(buy.rows + sell.rows)
+                return TargetFetchResult(
+                    combined, _worst_status(buy.status, sell.status),
+                    zero + buy.zero_response_count + sell.zero_response_count,
+                    nonzero + buy.nonzero_response_count + sell.nonzero_response_count,
+                )
+            return TargetFetchResult(rows, "PAGINATION_INCOMPLETE", zero, nonzero)
+        offset = next_offset
+
+
+def fetch_target_activity(
+    client: PublicGetClient,
+    wallet: str,
+    condition_id: str,
+    start: int,
+    end: int,
+    *,
+    activity_type: str | None = "TRADE",
+) -> TargetFetchResult:
+    return _target_activity_page(
+        client, wallet, condition_id, Window(start, end), activity_type=activity_type,
+    )
+
+
+def _target_trades_side(
+    client: PublicGetClient,
+    wallet: str,
+    condition_id: str,
+    *,
+    side: str | None = None,
+    limit: int = 10_000,
+) -> TargetFetchResult:
+    rows: list[dict[str, Any]] = []
+    zero = nonzero = 0
+    offset = 0
+    while True:
+        params: dict[str, Any] = {
+            "user": wallet,
+            "market": condition_id,
+            "limit": limit,
+            "offset": offset,
+            "takerOnly": "false",
+        }
+        if side:
+            params["side"] = side
+        try:
+            page = client.get_json(f"{DATA_API}/trades", params)
+        except RuntimeError:
+            return TargetFetchResult(rows, "REQUEST_FAILED", zero, nonzero)
+        if not isinstance(page, list):
+            return TargetFetchResult(rows, "UNKNOWN", zero, nonzero)
+        if page:
+            nonzero += 1
+        else:
+            zero += 1
+        rows.extend(page)
+        if len(page) < limit:
+            deduped, _ = deduplicate_records(rows)
+            return TargetFetchResult(deduped, "COMPLETE", zero, nonzero)
+        next_offset = offset + limit
+        if next_offset > TARGET_TRADES_OFFSET_CAP:
+            if side is None:
+                buy = _target_trades_side(client, wallet, condition_id, side="BUY", limit=limit)
+                sell = _target_trades_side(client, wallet, condition_id, side="SELL", limit=limit)
+                combined, _ = deduplicate_records(buy.rows + sell.rows)
+                return TargetFetchResult(
+                    combined, _worst_status(buy.status, sell.status),
+                    zero + buy.zero_response_count + sell.zero_response_count,
+                    nonzero + buy.nonzero_response_count + sell.nonzero_response_count,
+                )
+            return TargetFetchResult(rows, "PAGINATION_INCOMPLETE", zero, nonzero)
+        offset = next_offset
+
+
+def fetch_target_trades(
+    client: PublicGetClient,
+    wallet: str,
+    condition_id: str,
+) -> TargetFetchResult:
+    return _target_trades_side(client, wallet, condition_id)
+
+
+def _reconciliation_key(row: dict[str, Any], wallet: str) -> tuple[str, ...]:
+    return (
+        _source_wallet(row) or wallet,
+        str(row.get("transactionHash") or row.get("transaction_hash") or "").lower(),
+        str(row.get("conditionId") or row.get("condition_id") or "").lower(),
+        str(row.get("asset") or ""),
+        str(row.get("side") or "").upper(),
+        str(row.get("outcome") or "").upper(),
+        _key_decimal(row.get("price")),
+        str(row.get("timestamp") or row.get("timestamp_epoch") or ""),
+    )
+
+
+def _sizes_match(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    left_size = _decimal(left.get("size") if "size" in left else left.get("shares"))
+    right_size = _decimal(right.get("size") if "size" in right else right.get("shares"))
+    if left_size is None or right_size is None:
+        return left_size == right_size
+    tolerance = max(Decimal("0.000001"), max(abs(left_size), abs(right_size)) * Decimal("0.00000001"))
+    return abs(left_size - right_size) <= tolerance
+
+
+def reconcile_fill_sources(
+    wallet: str,
+    activity: Iterable[dict[str, Any]],
+    trades: Iterable[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Build a one-to-one audited union while tolerating tiny size rounding differences."""
+    activity_rows, _ = deduplicate_records(
+        row for row in activity if str(row.get("type") or "TRADE").upper() == "TRADE"
+    )
+    trade_rows, _ = deduplicate_records(trades)
+    activity_groups: dict[tuple[str, ...], list[tuple[int, dict[str, Any]]]] = defaultdict(list)
+    for index, row in enumerate(activity_rows):
+        activity_groups[_reconciliation_key(row, wallet)].append((index, row))
+    used_activity: set[int] = set()
+    union: list[dict[str, Any]] = []
+    intersection = 0
+    trades_only = 0
+    for trade in trade_rows:
+        candidates = [
+            (index, row) for index, row in activity_groups.get(_reconciliation_key(trade, wallet), [])
+            if index not in used_activity and _sizes_match(row, trade)
+        ]
+        if candidates:
+            trade_size = _decimal(trade.get("size") if "size" in trade else trade.get("shares")) or Decimal(0)
+            index, activity_row = min(
+                candidates,
+                key=lambda item: abs(
+                    (_decimal(item[1].get("size") if "size" in item[1] else item[1].get("shares")) or Decimal(0))
+                    - trade_size
+                ),
+            )
+            used_activity.add(index)
+            union.append({**activity_row, **trade, "_source_types": "source_both"})
+            intersection += 1
+        else:
+            union.append({**trade, "_source_types": "source_trades"})
+            trades_only += 1
+    for index, row in enumerate(activity_rows):
+        if index not in used_activity:
+            union.append({**row, "_source_types": "source_activity"})
+    return union, {
+        "activity_unique_fill_count": len(activity_rows),
+        "trades_unique_fill_count": len(trade_rows),
+        "union_fill_count": len(union),
+        "intersection_fill_count": intersection,
+        "activity_only_count": len(activity_rows) - intersection,
+        "trades_only_count": trades_only,
+    }
+
+
+def _source_difference_explanation(union: Iterable[dict[str, Any]]) -> str:
+    activity_only = [row for row in union if row.get("_source_types") == "source_activity"]
+    trades_only = [row for row in union if row.get("_source_types") == "source_trades"]
+    if not activity_only and not trades_only:
+        return "NONE"
+    # The activity endpoint can expose sub-cent dust fills that /trades omits.
+    # They remain valid official fills and are retained in the audited union.
+    dust_amounts = [_decimal(row.get("usdcSize")) for row in activity_only]
+    if (
+        activity_only
+        and not trades_only
+        and all(amount is not None and Decimal(0) <= amount < Decimal("0.01") for amount in dust_amounts)
+    ):
+        return "ACTIVITY_DUST_FILL_BELOW_TRADES_VISIBILITY"
+    return "UNEXPLAINED_SOURCE_DIFFERENCE"
+
+
+def _condition_metadata(target_markets: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    conditions: dict[str, dict[str, Any]] = {}
+    for row in target_markets:
+        conditions.setdefault(row["condition_id"], row)
+    return conditions
+
+
+def _enrich_target_rows(rows: Iterable[dict[str, Any]], target: dict[str, Any]) -> list[dict[str, Any]]:
+    return [{
+        "eventSlug": target["event_slug"],
+        "event_slug": target["event_slug"],
+        "slug": target["slug"],
+        "title": target["title"],
+        "conditionId": target["condition_id"],
+        **row,
+    } for row in rows]
+
+
+def collect_target_market_fills(
+    client: PublicGetClient,
+    wallet: str,
+    target_markets: list[dict[str, Any]],
+    start: int,
+    end: int,
+    *,
+    max_workers: int = TARGET_FETCH_WORKERS,
+) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+    conditions = _condition_metadata(target_markets)
+
+    def collect_one(item: tuple[str, dict[str, Any]]) -> tuple[str, dict[str, Any], TargetFetchResult, TargetFetchResult]:
+        condition_id, target = item
+        activity_result = fetch_target_activity(client, wallet, condition_id, start, end)
+        trades_result = fetch_target_trades(client, wallet, condition_id)
+        return condition_id, target, activity_result, trades_result
+
+    collected: list[tuple[str, dict[str, Any], TargetFetchResult, TargetFetchResult]] = []
+    if max_workers <= 1:
+        collected = [collect_one(item) for item in conditions.items()]
+    else:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(collect_one, item): item[0] for item in conditions.items()}
+            for future in as_completed(futures):
+                condition_id = futures[future]
+                try:
+                    collected.append(future.result())
+                except Exception:
+                    target = conditions[condition_id]
+                    collected.append((
+                        condition_id, target,
+                        TargetFetchResult([], "REQUEST_FAILED"),
+                        TargetFetchResult([], "REQUEST_FAILED"),
+                    ))
+    activity_rows: list[dict[str, Any]] = []
+    trade_rows: list[dict[str, Any]] = []
+    union_rows: list[dict[str, Any]] = []
+    market_audit: list[dict[str, Any]] = []
+    orphan_candidate_conditions: set[str] = set()
+    for condition_id, target, activity_result, trades_result in sorted(collected):
+        activity = _enrich_target_rows(activity_result.rows, target)
+        trades = _enrich_target_rows(trades_result.rows, target)
+        union, metrics = reconcile_fill_sources(wallet, activity, trades)
+        activity_rows.extend(activity)
+        trade_rows.extend(trades)
+        union_rows.extend(union)
+        source_status = _worst_status(activity_result.status, trades_result.status)
+        source_difference_explanation = _source_difference_explanation(union)
+        if source_status == "COMPLETE" and (metrics["activity_only_count"] or metrics["trades_only_count"]):
+            if source_difference_explanation == "UNEXPLAINED_SOURCE_DIFFERENCE":
+                source_status = "SOURCE_CONFLICT"
+        sides_activity = Counter(str(row.get("side") or "").upper() for row in activity)
+        sides_trades = Counter(str(row.get("side") or "").upper() for row in trades)
+        buy_assets = {str(row.get("asset") or "") for row in union if str(row.get("side") or "").upper() == "BUY"}
+        sell_assets = {str(row.get("asset") or "") for row in union if str(row.get("side") or "").upper() == "SELL"}
+        if sell_assets - buy_assets:
+            orphan_candidate_conditions.add(condition_id)
+        market_audit.append({
+            "canonical_city": target["canonical_city"],
+            "weather_date_local": target["weather_date_local"],
+            "event_id": target["event_id"],
+            "event_slug": target["event_slug"],
+            "condition_id": condition_id,
+            "market_status": target["market_status"],
+            "activity_status": activity_result.status,
+            "trades_status": trades_result.status,
+            "completeness_status": source_status,
+            "source_difference_explanation": source_difference_explanation,
+            "activity_buy_count": sides_activity["BUY"],
+            "activity_sell_count": sides_activity["SELL"],
+            "trades_buy_count": sides_trades["BUY"],
+            "trades_sell_count": sides_trades["SELL"],
+            **metrics,
+            "activity_zero_response_count": activity_result.zero_response_count,
+            "activity_nonzero_response_count": activity_result.nonzero_response_count,
+        })
+    non_trade_rows: list[dict[str, Any]] = []
+    for condition_id in sorted(orphan_candidate_conditions):
+        target = conditions[condition_id]
+        result = fetch_target_activity(
+            client, wallet, condition_id, start, end, activity_type=None,
+        )
+        rows = _enrich_target_rows(result.rows, target)
+        non_trade_rows.extend(
+            row for row in rows
+            if str(row.get("type") or "").upper() in NON_BUY_ACQUISITION_TYPES
+        )
+        if result.status != "COMPLETE":
+            for audit in market_audit:
+                if audit["condition_id"] == condition_id:
+                    audit["completeness_status"] = _worst_status(
+                        audit["completeness_status"], result.status,
+                    )
+                    audit["non_trade_activity_status"] = result.status
+                    break
+    return {
+        "activity": activity_rows,
+        "trades": trade_rows,
+        "reconciled_fills": union_rows,
+        "non_trade_activity": non_trade_rows,
+    }, market_audit
+
+
+def build_target_event_audit(market_audit: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for row in market_audit:
+        grouped[(
+            str(row.get("canonical_city") or ""),
+            str(row.get("weather_date_local") or ""),
+            str(row.get("event_id") or ""),
+            str(row.get("event_slug") or ""),
+        )].append(row)
+    result: list[dict[str, Any]] = []
+    for key, rows in sorted(grouped.items()):
+        statuses = [str(row.get("completeness_status") or "UNKNOWN") for row in rows]
+        result.append({
+            "canonical_city": key[0],
+            "weather_date_local": key[1],
+            "event_id": key[2],
+            "event_slug": key[3],
+            "condition_count": len(rows),
+            "complete_condition_count": sum(status == "COMPLETE" for status in statuses),
+            "partial_condition_count": sum(status not in {"COMPLETE", "UNKNOWN"} for status in statuses),
+            "unknown_condition_count": sum(status == "UNKNOWN" for status in statuses),
+            "completeness_status": _worst_status(*statuses),
+        })
+    return result
 
 
 def fetch_activity_window(
@@ -1479,13 +2118,19 @@ def refresh_wallet_evidence(
     date_from: date,
     date_to: date,
     root: Path,
+    cities: Iterable[str] = (),
 ) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
     start, end = _collection_bounds(date_from, date_to)
     client = PublicGetClient(root)
-    activity = fetch_all_activity(client, wallet, start, end)
-    trades, saturated = fetch_trades_by_side(client, wallet)
-    trade_rows = [row for row in trades if start <= epoch_seconds(row.get("timestamp")) <= end]
-    payloads = {"activity": activity, "trades": trade_rows}
+    target_markets, discovery_status = discover_target_markets(
+        client, date_from, date_to, cities,
+    )
+    payloads, market_audit = collect_target_market_fills(
+        client, wallet, target_markets, start, end,
+    )
+    payloads["target_markets"] = target_markets
+    payloads["market_audit"] = market_audit
+    payloads["event_audit"] = build_target_event_audit(market_audit)
     aggregates: dict[str, Any] = {}
     for name, payload in payloads.items():
         relative = Path(f"{name}.json")
@@ -1494,6 +2139,27 @@ def refresh_wallet_evidence(
             "relative_path": relative.as_posix(), "record_count": len(payload),
             "sha256": sha256_file(root / relative),
         }
+    status_counts = Counter(row["completeness_status"] for row in market_audit)
+    event_status_counts = Counter(row["completeness_status"] for row in payloads["event_audit"])
+    target_events = {
+        (row["canonical_city"], row["weather_date_local"], row["event_id"])
+        for row in target_markets
+    }
+    target_conditions = {row["condition_id"] for row in target_markets}
+    targeted_saturated = any(
+        row["completeness_status"] == "PAGINATION_INCOMPLETE"
+        for row in market_audit
+    )
+    incomplete_reasons: list[str] = []
+    if discovery_status != "COMPLETE":
+        incomplete_reasons.append(f"TARGET_MARKET_DISCOVERY_{discovery_status}")
+    if len(market_audit) != len(target_conditions):
+        incomplete_reasons.append("TARGET_MARKET_QUERY_MISSING")
+    if any(row["completeness_status"] != "COMPLETE" for row in market_audit):
+        incomplete_reasons.append("TARGET_MARKET_EVIDENCE_INCOMPLETE")
+    if not target_conditions:
+        incomplete_reasons.append("NO_TARGET_CONDITIONS_DISCOVERED")
+    pattern_report_status = "READY" if not incomplete_reasons else "BLOCKED_INCOMPLETE_EVIDENCE"
     manifest = {
         "schema_version": EVIDENCE_SCHEMA,
         "wallet": wallet,
@@ -1503,8 +2169,29 @@ def refresh_wallet_evidence(
         "collection_end_utc": iso_utc(end),
         "public_data_only": True, "public_get_only": True,
         "account_connection": False, "signing": False, "real_order": False,
+        "collection_strategy": "target_market_condition_dual_source_v1",
+        "target_market_discovery_status": discovery_status,
+        "target_event_count": len(target_events),
+        "target_condition_count": len(target_conditions),
+        "target_market_query_count": len(market_audit),
+        "market_complete_count": status_counts["COMPLETE"],
+        "market_partial_count": sum(
+            count for status, count in status_counts.items()
+            if status in {"PARTIAL", "PAGINATION_INCOMPLETE", "REQUEST_FAILED", "SOURCE_CONFLICT"}
+        ),
+        "market_unknown_count": status_counts["UNKNOWN"] + max(0, len(target_conditions) - len(market_audit)),
+        "event_complete_count": event_status_counts["COMPLETE"],
+        "event_partial_count": sum(
+            count for status, count in event_status_counts.items()
+            if status not in {"COMPLETE", "UNKNOWN"}
+        ),
+        "event_unknown_count": event_status_counts["UNKNOWN"] + max(0, len(target_events) - len(payloads["event_audit"])),
+        "global_trade_fetch_saturated": False,
+        "targeted_market_fetch_saturated": targeted_saturated,
+        "pattern_report_status": pattern_report_status,
+        "pattern_report_block_reason": ";".join(incomplete_reasons),
         "all_requests_successful": all(row["success"] for row in client.requests),
-        "pagination_saturation_status": "PAGINATION_INCOMPLETE" if saturated else "COMPLETE",
+        "pagination_saturation_status": "PAGINATION_INCOMPLETE" if targeted_saturated else "COMPLETE",
         "requests": client.requests, "aggregates": aggregates,
     }
     write_json(root / "manifest.json", manifest)
@@ -1595,7 +2282,13 @@ def load_saved_evidence(
         if child.get("weather_date_from") != date_from.isoformat() or child.get("weather_date_to") != date_to.isoformat():
             raise RuntimeError("EVIDENCE_ANALYSIS_RANGE_MISMATCH")
         payloads = {}
-        for name in ("activity", "trades"):
+        aggregate_names = ["activity", "trades"] + [
+            name for name in (
+                "reconciled_fills", "non_trade_activity", "target_markets", "market_audit", "event_audit",
+            )
+            if child.get("aggregates", {}).get(name)
+        ]
+        for name in aggregate_names:
             meta = child.get("aggregates", {}).get(name)
             if not meta:
                 raise RuntimeError(f"EVIDENCE_AGGREGATE_MISSING:{name}")
@@ -1605,7 +2298,9 @@ def load_saved_evidence(
             payload = json.loads(source.read_text(encoding="utf-8"))
             if len(payload) != meta.get("record_count"):
                 raise RuntimeError(f"EVIDENCE_RECORD_COUNT_MISMATCH:{name}")
-            if any(_source_wallet(row) != wallet for row in payload):
+            if name in {"activity", "trades", "reconciled_fills", "non_trade_activity"} and any(
+                _source_wallet(row) != wallet for row in payload
+            ):
                 raise RuntimeError(f"EVIDENCE_WALLET_MISMATCH:{name}")
             payloads[name] = payload
         loaded[wallet] = (child, payloads)
@@ -1630,6 +2325,31 @@ def _combined_source_rows(trades: list[dict[str, Any]], activity: list[dict[str,
     return rows
 
 
+def _orphan_sell_metrics(
+    fills: list[dict[str, Any]],
+    non_trade_activity: Iterable[dict[str, Any]],
+) -> tuple[int, float, int]:
+    buy_assets = {row["asset"] for row in fills if row["side"] == "BUY"}
+    sell_shares: Counter[str] = Counter()
+    for row in fills:
+        if row["side"] == "SELL":
+            sell_shares[row["asset"]] += float(row["shares"])
+    non_trade_rows = [
+        row for row in non_trade_activity
+        if str(row.get("type") or "").upper() in NON_BUY_ACQUISITION_TYPES
+    ]
+    acquired_assets = {str(row.get("asset") or "") for row in non_trade_rows}
+    orphan_assets = {
+        asset for asset in sell_shares
+        if asset not in buy_assets and asset not in acquired_assets
+    }
+    return (
+        len(orphan_assets),
+        sum(sell_shares[asset] for asset in orphan_assets),
+        len(non_trade_rows),
+    )
+
+
 def _quality_payload(
     requested_wallet_count: int,
     requested_city_count: int,
@@ -1639,8 +2359,40 @@ def _quality_payload(
     discovery: list[dict[str, Any]],
     counters: Counter[str],
     manifest: dict[str, Any],
+    payloads: dict[str, list[dict[str, Any]]],
 ) -> dict[str, Any]:
     requests = manifest.get("requests") or manifest.get("source_requests") or []
+    activity_trade_rows = [
+        row for row in payloads.get("activity", [])
+        if str(row.get("type") or "TRADE").upper() == "TRADE"
+    ]
+    trade_rows = payloads.get("trades", [])
+    market_audit = payloads.get("market_audit", [])
+    source_counts = Counter(row.get("source_types") for row in fills)
+    orphan_count, orphan_shares, non_buy_count = _orphan_sell_metrics(
+        fills, payloads.get("non_trade_activity", []),
+    )
+    if manifest.get("schema_version") == LEGACY_HUSKY_EVIDENCE_SCHEMA:
+        pattern_status = "READY"
+        block_reasons: list[str] = []
+    else:
+        pattern_status = str(manifest.get("pattern_report_status") or (
+            "BLOCKED_INCOMPLETE_EVIDENCE"
+            if manifest.get("pagination_saturation_status") == "PAGINATION_INCOMPLETE"
+            else "READY"
+        ))
+        block_reasons = [
+            value for value in str(manifest.get("pattern_report_block_reason") or "").split(";")
+            if value
+        ]
+    if any(row.get("success") is not True for row in requests):
+        pattern_status = "BLOCKED_INCOMPLETE_EVIDENCE"
+        block_reasons.append("API_REQUEST_FAILED")
+    if orphan_count:
+        pattern_status = "BLOCKED_INCOMPLETE_EVIDENCE"
+        block_reasons.append("ORPHAN_SELL_WITHOUT_OBSERVED_ACQUISITION")
+    activity_sides = Counter(str(row.get("side") or "").upper() for row in activity_trade_rows)
+    trade_sides = Counter(str(row.get("side") or "").upper() for row in trade_rows)
     return {
         "requested_wallet_count": requested_wallet_count,
         "valid_wallet_count": requested_wallet_count,
@@ -1677,6 +2429,34 @@ def _quality_payload(
             else "PUBLIC_FILL_EVIDENCE_ONLY"
         ),
         "market_discovery_row_count": len(discovery),
+        "target_event_count": manifest.get("target_event_count", 0),
+        "target_condition_count": manifest.get("target_condition_count", 0),
+        "target_market_query_count": manifest.get("target_market_query_count", 0),
+        "activity_buy_count": activity_sides["BUY"],
+        "activity_sell_count": activity_sides["SELL"],
+        "trades_buy_count": trade_sides["BUY"],
+        "trades_sell_count": trade_sides["SELL"],
+        "activity_zero_response_count": sum(int(row.get("activity_zero_response_count") or 0) for row in market_audit),
+        "activity_nonzero_response_count": sum(int(row.get("activity_nonzero_response_count") or 0) for row in market_audit),
+        "activity_only_fill_count": source_counts["source_activity"],
+        "trades_only_fill_count": source_counts["source_trades"],
+        "both_source_fill_count": source_counts["source_both"],
+        "source_conflict_market_count": sum(
+            row.get("completeness_status") == "SOURCE_CONFLICT" for row in market_audit
+        ),
+        "market_complete_count": manifest.get("market_complete_count", 0),
+        "market_partial_count": manifest.get("market_partial_count", 0),
+        "market_unknown_count": manifest.get("market_unknown_count", 0),
+        "event_complete_count": manifest.get("event_complete_count", 0),
+        "event_partial_count": manifest.get("event_partial_count", 0),
+        "event_unknown_count": manifest.get("event_unknown_count", 0),
+        "orphan_sell_asset_count": orphan_count,
+        "orphan_sell_shares": orphan_shares,
+        "observed_non_buy_acquisition_activity_count": non_buy_count,
+        "global_trade_fetch_saturated": bool(manifest.get("global_trade_fetch_saturated", False)),
+        "targeted_market_fetch_saturated": bool(manifest.get("targeted_market_fetch_saturated", False)),
+        "pattern_report_status": pattern_status,
+        "pattern_report_block_reason": ";".join(dict.fromkeys(block_reasons)),
     }
 
 
@@ -1742,7 +2522,9 @@ def analyze(
         wallet_manifest_paths = []
         for wallet in normalized_wallets:
             evidence_root = output_root / "_public_evidence" / wallet
-            loaded[wallet] = refresh_wallet_evidence(wallet, start_date, end_date, evidence_root)
+            loaded[wallet] = refresh_wallet_evidence(
+                wallet, start_date, end_date, evidence_root, requested_cities,
+            )
             wallet_manifest_paths.append((Path(wallet) / "manifest.json").as_posix())
         if len(normalized_wallets) > 1:
             write_json(output_root / "_public_evidence/manifest.json", {
@@ -1758,7 +2540,11 @@ def analyze(
     summaries: list[dict[str, Any]] = []
     for wallet in normalized_wallets:
         manifest, payloads = loaded[wallet]
-        combined = _combined_source_rows(payloads["trades"], payloads["activity"])
+        combined = (
+            payloads["reconciled_fills"]
+            if "reconciled_fills" in payloads
+            else _combined_source_rows(payloads["trades"], payloads["activity"])
+        )
         fills, discovery, counters = normalize_fill_rows(
             wallet, combined, activity_rows=payloads["activity"],
             date_from=start_date, date_to=end_date, cities=requested_cities,
@@ -1769,7 +2555,7 @@ def analyze(
         quality = _quality_payload(
             len(normalized_wallets), len(requested_cities), fills,
             len(payloads["activity"]), len(payloads["trades"]), discovery,
-            counters, manifest,
+            counters, manifest, payloads,
         )
         collection_start = str(manifest.get("collection_start_utc") or manifest.get("analysis_started_at_utc") or "UNKNOWN")
         collection_end = str(manifest.get("collection_end_utc") or manifest.get("analysis_cutoff_utc") or "UNKNOWN")
@@ -1794,6 +2580,11 @@ def analyze(
             "api_request_count": quality["api_request_count"],
             "api_request_failure_count": quality["api_request_failure_count"],
             "pagination_saturation_status": quality["pagination_saturation_status"],
+            "target_event_count": quality["target_event_count"],
+            "target_condition_count": quality["target_condition_count"],
+            "target_market_query_count": quality["target_market_query_count"],
+            "pattern_report_status": quality["pattern_report_status"],
+            "pattern_report_block_reason": quality["pattern_report_block_reason"],
         }
         _write_wallet_outputs(
             output_root / wallet, summary, fills, groups, structures, discovery,
@@ -1809,8 +2600,14 @@ def analyze(
         "sell_no_fill_count": row["sell_no_fill_count"],
         "buy_yes_trade_usd": row["buy_yes_trade_usd"],
         "buy_no_trade_usd": row["buy_no_trade_usd"],
-        "main_relative_weather_day_by_usd": row["main_relative_weather_day_by_usd"],
-        "main_d0_bucket_by_usd": row["main_d0_bucket_by_usd"],
+        "main_relative_weather_day_by_usd": (
+            row["main_relative_weather_day_by_usd"]
+            if row["pattern_report_status"] == "READY" else "BLOCKED_INCOMPLETE_EVIDENCE"
+        ),
+        "main_d0_bucket_by_usd": (
+            row["main_d0_bucket_by_usd"]
+            if row["pattern_report_status"] == "READY" else "BLOCKED_INCOMPLETE_EVIDENCE"
+        ),
         "multi_yes_event_count": row["multi_yes_event_count"],
         "mixed_yes_no_event_count": row["mixed_yes_no_event_count"],
     } for row in summaries]

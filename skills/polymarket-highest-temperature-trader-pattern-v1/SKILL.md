@@ -27,18 +27,19 @@ python skills/polymarket-highest-temperature-trader-pattern-v1/scripts/run_analy
 
 Use JSON-compatible YAML for the bundled input file; this keeps the runner dependency-free. Use the module CLI directly when a `python` launcher or general YAML parser is unavailable.
 
-For a new wallet, replace the saved-manifest argument with `--refresh-public-data`. The run saves a wallet-specific manifest beneath `OUTPUT_DIRECTORY/_public_evidence/`; use that generated manifest for later offline replays of the same wallet set and weather-date range.
+For a new wallet, replace the saved-manifest argument with `--refresh-public-data`. The refresh first discovers the target highest-temperature events and condition IDs from the official Gamma API, then queries the wallet by each target condition through both official `/activity` and `/trades` GET endpoints. It keeps an audited, deduplicated union with `source_activity`, `source_trades`, or `source_both` provenance. The run saves a wallet-specific manifest beneath `OUTPUT_DIRECTORY/_public_evidence/`; use that generated manifest for later offline replays of the same wallet set and weather-date range.
 
 ## City scope
 
-- Omit `cities` or pass an empty list to analyze every recognizable Polymarket daily highest-temperature city found in the wallets' public fills. This is not limited to Beijing or Shanghai.
+- Omit `cities` or pass an empty list to discover and analyze every recognizable Polymarket daily highest-temperature city in the requested weather-date range. Target-market discovery is independent of whether the wallet has a fill. This is not limited to Beijing or Shanghai.
 - Pass one or more canonical market city slugs, such as `beijing`, `nyc`, `hong-kong`, or `cape-town`, to restrict the report to those cities.
 - Use the bundled IANA registry for the verified Polymarket city set. Retain a future unregistered city but mark its market-local time and relative day `UNKNOWN`; use `city_timezones` overrides only with a verified `city=IANA/Zone` value.
 - Accept current year-qualified event slugs and legacy yearless daily event slugs. Keep exact, range, `or below`, and `or higher` temperature contracts distinct.
 
-5. Check each wallet's `data_quality.csv`. Call out `PAGINATION_INCOMPLETE`, request failures, unknown timezones, unknown relative days, identity conflicts, and invalid fills.
-6. Read each wallet's `summary.json` and the root `trader_comparison.csv`/`.md`.
-7. Return plain-language findings, the output directory, and the evidence limitations.
+5. Check each wallet's `data_quality.csv`. Call out target event/condition coverage, per-market completeness, source-only fills, orphan sells, `PAGINATION_INCOMPLETE`, request failures, unknown timezones, unknown relative days, identity conflicts, and invalid fills.
+6. Read `pattern_report_status` before reporting any pattern. If it is `BLOCKED_INCOMPLETE_EVIDENCE`, report that the evidence is incomplete and the pattern analysis is paused; do not state main times, price preferences, or temperature-combination conclusions from the partial data.
+7. If `pattern_report_status` is `READY`, read each wallet's `summary.json` and the root `trader_comparison.csv`/`.md`.
+8. Return plain-language findings, the output directory, and the evidence limitations.
 
 ## Guardrails
 

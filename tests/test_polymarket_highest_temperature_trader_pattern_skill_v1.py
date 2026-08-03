@@ -98,6 +98,19 @@ def test_skill_routes_new_wallets_to_public_refresh_and_limits_bundled_evidence(
     assert "do not create a `blocked.md`" in text
 
 
+def test_skill_documents_targeted_dual_source_collection_and_fail_closed_gate():
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8").lower()
+    for phrase in (
+        "discovers the target highest-temperature events and condition ids",
+        "each target condition",
+        "both official `/activity` and `/trades`",
+        "source_activity", "source_trades", "source_both",
+        "pattern_report_status", "blocked_incomplete_evidence",
+        "pattern analysis is paused",
+    ):
+        assert phrase in text
+
+
 def test_skill_documents_all_city_default_and_specific_city_filter():
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8").lower()
     assert "omit `cities` or pass an empty list" in text

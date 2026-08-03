@@ -3,7 +3,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-from datetime import datetime, timezone
+from collections import Counter
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -28,7 +29,7 @@ VERIFIED_POLYMARKET_CITIES = {
 }
 
 
-def summary_fixture(*, with_buy: bool = False) -> dict:
+def summary_fixture(*, with_buy: bool = False, blocked: bool = False) -> dict:
     return {
         "wallet": HUSKY,
         "weather_date_from": "2026-03-21",
@@ -65,6 +66,8 @@ def summary_fixture(*, with_buy: bool = False) -> dict:
         "mixed_yes_no_event_count": 1 if with_buy else 0,
         "collection_start_utc": "2026-03-18T00:00:00+00:00",
         "collection_end_utc": "2026-07-26T23:59:59+00:00",
+        "pattern_report_status": "BLOCKED_INCOMPLETE_EVIDENCE" if blocked else "READY",
+        "pattern_report_block_reason": "TARGET_MARKET_EVIDENCE_INCOMPLETE" if blocked else "",
         "data_quality": {
             "pagination_saturation_status": "PAGINATION_INCOMPLETE",
             "api_request_failure_count": 0,
@@ -75,6 +78,14 @@ def summary_fixture(*, with_buy: bool = False) -> dict:
             "unknown_outcome_count": 0,
             "trade_usd_missing_count": 69,
             "unparseable_market_count": 0,
+            "target_event_count": 125,
+            "target_condition_count": 1375,
+            "activity_only_fill_count": 0,
+            "trades_only_fill_count": 0,
+            "orphan_sell_asset_count": 0,
+            "targeted_market_fetch_saturated": blocked,
+            "pattern_report_status": "BLOCKED_INCOMPLETE_EVIDENCE" if blocked else "READY",
+            "pattern_report_block_reason": "TARGET_MARKET_EVIDENCE_INCOMPLETE" if blocked else "",
         },
     }
 
@@ -113,6 +124,51 @@ def raw_fill(
         "timestamp": timestamp,
         "transactionHash": tx,
     }
+
+
+class RoutingClient:
+    def __init__(self, responder):
+        self.responder = responder
+        self.calls = []
+        self.requests = []
+
+    def get_json(self, url, params):
+        self.calls.append((url, dict(params)))
+        return self.responder(url, dict(params))
+
+
+def gamma_event(*, city="beijing", weather_date="2026-07-20", conditions=("condition-1",)):
+    day = date.fromisoformat(weather_date)
+    event_slug = f"highest-temperature-in-{city}-on-{day.strftime('%B').lower()}-{day.day}-{day.year}"
+    markets = []
+    for index, condition_id in enumerate(conditions):
+        temperature = 30 + index
+        markets.append({
+            "id": f"market-{index}",
+            "conditionId": condition_id,
+            "slug": f"{event_slug}-{temperature}c",
+            "question": f"Will the highest temperature in Beijing be {temperature}°C on July 20?",
+            "outcomes": '["Yes", "No"]',
+            "clobTokenIds": json.dumps([f"yes-{condition_id}", f"no-{condition_id}"]),
+            "active": True,
+            "closed": False,
+        })
+    return {
+        "id": f"event-{city}-{weather_date}",
+        "slug": event_slug,
+        "title": f"Highest temperature in Beijing on July 20?",
+        "endDate": "2026-07-21T12:00:00Z",
+        "markets": markets,
+    }
+
+
+def target_market_rows(conditions=("condition-1",)):
+    client = RoutingClient(lambda url, params: [gamma_event(conditions=conditions)] if params.get("offset") == 0 else [])
+    rows, status = study.discover_target_markets(
+        client, date(2026, 7, 20), date(2026, 7, 20), ["beijing"],
+    )
+    assert status == "COMPLETE"
+    return rows
 
 
 def normalized_fill(**changes) -> dict:
@@ -593,8 +649,10 @@ def test_husky_regression_counts_and_fill_set_match():
     assert {key(row) for row in old} == {key(row) for row in new}
 
 
-def test_summary_is_readable_chinese_for_incomplete_no_buy_fixture():
-    text = study.render_summary(summary_fixture())
+def test_summary_is_readable_chinese_for_complete_no_buy_fixture():
+    summary = summary_fixture()
+    summary["data_quality"]["pagination_saturation_status"] = "COMPLETE"
+    text = study.render_summary(summary)
     assert text.startswith("# Polymarket最高温市场交易模式报告")
     for heading in (
         "## 一、先说结论", "## 二、本次研究范围", "## 三、先看数据完整性",
@@ -611,7 +669,7 @@ def test_summary_is_readable_chinese_for_incomplete_no_buy_fixture():
     assert "当天16:00—24:00" in text
     assert "90—100美分" in text
     assert "累计100—500份" in text
-    assert "重要提醒" in text and "可能只包含部分历史成交" in text
+    assert "当前公开接口抓取未发现分页截断" in text
     assert "卖出成交额不是利润" in text
     assert "PnL" in text and "ROI" in text
     assert "OBSERVED" not in text and "INFERRED" not in text and "UNKNOWN" not in text
@@ -619,7 +677,9 @@ def test_summary_is_readable_chinese_for_incomplete_no_buy_fixture():
 
 
 def test_summary_chinese_rendering_keeps_buy_and_temperature_sections():
-    text = study.render_summary(summary_fixture(with_buy=True))
+    summary = summary_fixture(with_buy=True)
+    summary["data_quality"]["pagination_saturation_status"] = "COMPLETE"
+    text = study.render_summary(summary)
     assert "当前观察到2笔买入成交" in text
     assert "买入YES主要在30—70美分" in text
     assert "买入NO主要在10—30美分" in text
@@ -647,3 +707,250 @@ def test_output_tree_city_all_cities_quality_and_no_pnl_fields():
     assert not any("pnl" in key.lower() or "roi" in key.lower() for key in summary)
     assert summary["public_data_only"] and summary["public_get_only"]
     assert not summary["account_connection"] and not summary["signing"] and not summary["real_order"]
+
+
+def test_global_trades_high_volume_marks_saturation():
+    def responder(url, params):
+        if params["side"] == "BUY":
+            return [raw_fill(tx=f"0x{params['offset']}-{index}", asset=f"b-{params['offset']}-{index}") for index in range(2)]
+        return []
+    rows, saturated = study.fetch_trades_by_side(
+        RoutingClient(responder), HUSKY, limit=2, offset_cap=2,
+    )
+    assert saturated is True
+    assert len(rows) == 4
+
+
+def test_target_market_query_recovers_buy_outside_global_slice():
+    buy = raw_fill(tx="0xtarget", asset="yes-condition-1")
+    buy["conditionId"] = "condition-1"
+    def responder(url, params):
+        if params.get("market") == "condition-1":
+            return [buy]
+        return []
+    result = study.fetch_target_trades(RoutingClient(responder), HUSKY, "condition-1")
+    assert result.status == "COMPLETE"
+    assert [row["side"] for row in result.rows] == ["BUY"]
+
+
+def test_activity_wide_empty_but_single_market_returns_buy():
+    buy = {**raw_fill(), "type": "TRADE"}
+    client = RoutingClient(lambda url, params: [buy] if params.get("market") else [])
+    assert client.get_json(f"{study.DATA_API}/activity", {"user": HUSKY}) == []
+    result = study.fetch_target_activity(client, HUSKY, buy["conditionId"], 1, 2)
+    assert result.status == "COMPLETE" and len(result.rows) == 1
+    assert result.rows[0]["side"] == "BUY"
+
+
+def test_target_activity_supports_explicit_buy_and_sell_queries():
+    client = RoutingClient(lambda url, params: [] if params.get("side") == "SELL" else [raw_fill()])
+    buy = study._target_activity_page(client, HUSKY, "condition", study.Window(1, 1), side="BUY")
+    sell = study._target_activity_page(client, HUSKY, "condition", study.Window(1, 1), side="SELL")
+    assert len(buy.rows) == 1 and sell.rows == []
+    assert {params.get("side") for _, params in client.calls} == {"BUY", "SELL"}
+
+
+def test_target_markets_are_discovered_independently_of_wallet_fills():
+    event = gamma_event(conditions=("condition-a", "condition-b"))
+    client = RoutingClient(lambda url, params: [event])
+    rows, status = study.discover_target_markets(
+        client, date(2026, 7, 20), date(2026, 7, 20), ["beijing"],
+    )
+    assert status == "COMPLETE"
+    assert {row["condition_id"] for row in rows} == {"condition-a", "condition-b"}
+    assert len(rows) == 4
+
+
+def test_target_market_discovery_filters_city_and_weather_date():
+    events = [
+        gamma_event(city="beijing", weather_date="2026-07-20"),
+        gamma_event(city="shanghai", weather_date="2026-07-20", conditions=("shanghai",)),
+        gamma_event(city="beijing", weather_date="2026-07-21", conditions=("tomorrow",)),
+    ]
+    client = RoutingClient(lambda url, params: events)
+    rows, _ = study.discover_target_markets(
+        client, date(2026, 7, 20), date(2026, 7, 20), ["beijing"],
+    )
+    assert {row["condition_id"] for row in rows} == {"condition-1"}
+
+
+def test_multiple_condition_queries_are_not_mixed():
+    targets = target_market_rows(("condition-a", "condition-b"))
+    def responder(url, params):
+        condition = params["market"]
+        row = raw_fill(tx=f"0x{condition}", asset=f"yes-{condition}")
+        row["conditionId"] = condition
+        return [{**row, "type": "TRADE", "usdcSize": 2}] if url.endswith("/activity") else [row]
+    payloads, audit = study.collect_target_market_fills(
+        RoutingClient(responder), HUSKY, targets, 1, 2, max_workers=1,
+    )
+    assert {row["condition_id"] for row in audit} == {"condition-a", "condition-b"}
+    assert all(row["union_fill_count"] == 1 for row in audit)
+    assert {row["conditionId"] for row in payloads["reconciled_fills"]} == {"condition-a", "condition-b"}
+
+
+def test_reconciliation_keeps_activity_only_fill():
+    row = {**raw_fill(), "type": "TRADE"}
+    union, metrics = study.reconcile_fill_sources(HUSKY, [row], [])
+    assert len(union) == metrics["activity_only_count"] == 1
+    assert union[0]["_source_types"] == "source_activity"
+
+
+def test_reconciliation_keeps_trades_only_fill():
+    row = raw_fill()
+    union, metrics = study.reconcile_fill_sources(HUSKY, [], [row])
+    assert len(union) == metrics["trades_only_count"] == 1
+    assert union[0]["_source_types"] == "source_trades"
+
+
+def test_reconciliation_same_fill_is_not_double_counted():
+    trade = raw_fill(size=100)
+    activity = {**trade, "type": "TRADE", "usdcSize": 20}
+    union, metrics = study.reconcile_fill_sources(HUSKY, [activity], [trade])
+    assert len(union) == metrics["intersection_fill_count"] == 1
+    assert union[0]["_source_types"] == "source_both"
+
+
+def test_reconciliation_tolerates_tiny_size_rounding_difference():
+    trade = raw_fill(size=100)
+    activity = {**trade, "size": 100.0000005, "type": "TRADE", "usdcSize": 20}
+    union, metrics = study.reconcile_fill_sources(HUSKY, [activity], [trade])
+    assert len(union) == 1
+    assert metrics["intersection_fill_count"] == 1
+
+
+def test_reconciliation_does_not_collapse_distinct_same_transaction_fills():
+    first = raw_fill(size=10)
+    second = raw_fill(size=20)
+    union, metrics = study.reconcile_fill_sources(HUSKY, [{**first, "type": "TRADE"}], [first, second])
+    assert len(union) == 2
+    assert metrics["intersection_fill_count"] == 1
+    assert metrics["trades_only_count"] == 1
+
+
+def test_pagination_incomplete_blocks_pattern_summary():
+    text = study.render_summary(summary_fixture(blocked=True))
+    assert "本次数据不完整，交易模式分析暂停" in text
+    assert "交易时间集中在哪里" not in text
+    assert "主要在什么价格成交" not in text
+    assert "他通常买几个温度" not in text
+
+
+def test_blocked_zero_buy_does_not_claim_wallet_has_no_buy():
+    text = study.render_summary(summary_fixture(blocked=True))
+    assert "该交易员没有买入" not in text
+    assert "没有观察到的成交不能解释为没有发生" in text
+
+
+def test_complete_targeted_zero_buy_uses_direct_buy_caveat():
+    summary = summary_fixture()
+    summary["data_quality"]["pagination_saturation_status"] = "COMPLETE"
+    text = study.render_summary(summary)
+    assert "当前完整公开证据未观察到直接BUY" in text
+    assert "拆分、转换或转入" in text
+
+
+def test_api_request_failure_blocks_quality_status():
+    row = normalized_fill()
+    manifest = {
+        "schema_version": study.EVIDENCE_SCHEMA,
+        "pagination_saturation_status": "COMPLETE",
+        "requests": [{"success": False}],
+    }
+    payloads = {"activity": [], "trades": [raw_fill()], "non_trade_activity": []}
+    quality = study._quality_payload(1, 1, [row], 0, 1, [], Counter(), manifest, payloads)
+    assert quality["pattern_report_status"] == "BLOCKED_INCOMPLETE_EVIDENCE"
+    assert "API_REQUEST_FAILED" in quality["pattern_report_block_reason"]
+
+
+def test_orphan_sell_without_acquisition_is_detected():
+    sell = normalized_fill(side="SELL", size=12)
+    count, shares, activities = study._orphan_sell_metrics([sell], [])
+    assert (count, shares, activities) == (1, 12, 0)
+
+
+@pytest.mark.parametrize("activity_type", ["SPLIT", "CONVERSION", "MERGE", "TRANSFER"])
+def test_non_buy_acquisition_explains_orphan_without_entering_buy_stats(activity_type):
+    sell = normalized_fill(side="SELL", size=12)
+    acquisition = {"type": activity_type, "asset": sell["asset"]}
+    count, shares, activities = study._orphan_sell_metrics([sell], [acquisition])
+    assert (count, shares, activities) == (0, 0, 1)
+    assert sell["side"] == "SELL"
+
+
+def test_current_wallet_forensic_fixture_reconciles_buy_and_sell():
+    wallet = "0x8fbd7cf5f806f563080864694415829f7229a959"
+    activity = []
+    trades = []
+    for index in range(38):
+        row = raw_fill(wallet=wallet, side="BUY", tx=f"0xb{index}", asset=f"a{index}")
+        activity.append({**row, "type": "TRADE"})
+        trades.append(dict(row))
+    for index in range(3):
+        row = raw_fill(wallet=wallet, side="SELL", tx=f"0xs{index}", asset=f"s{index}")
+        activity.append({**row, "type": "TRADE"})
+        trades.append(dict(row))
+    union, metrics = study.reconcile_fill_sources(wallet, activity, trades)
+    assert Counter(row["side"] for row in union) == {"BUY": 38, "SELL": 3}
+    assert metrics["union_fill_count"] == metrics["intersection_fill_count"] == 41
+
+
+def test_target_market_request_failure_is_fail_closed():
+    targets = target_market_rows()
+    class FailedClient(RoutingClient):
+        def get_json(self, url, params):
+            raise RuntimeError("request failed")
+    _, audit = study.collect_target_market_fills(
+        FailedClient(lambda *_: []), HUSKY, targets, 1, 2, max_workers=1,
+    )
+    assert audit[0]["completeness_status"] == "REQUEST_FAILED"
+
+
+def test_target_market_source_conflict_is_not_silently_accepted():
+    targets = target_market_rows()
+    def responder(url, params):
+        return [{**raw_fill(), "conditionId": "condition-1", "type": "TRADE"}] if url.endswith("/activity") else []
+    _, audit = study.collect_target_market_fills(
+        RoutingClient(responder), HUSKY, targets, 1, 2, max_workers=1,
+    )
+    assert audit[0]["completeness_status"] == "SOURCE_CONFLICT"
+
+
+def test_activity_only_sub_cent_dust_fill_is_explained_and_retained():
+    targets = target_market_rows()
+    dust = {
+        **raw_fill(size=0.004817, price=0.1700228358),
+        "conditionId": "condition-1",
+        "type": "TRADE",
+        "usdcSize": 0.000819,
+    }
+    client = RoutingClient(lambda url, params: [dust] if url.endswith("/activity") else [])
+    payloads, audit = study.collect_target_market_fills(
+        client, HUSKY, targets, 1, 2, max_workers=1,
+    )
+    assert audit[0]["completeness_status"] == "COMPLETE"
+    assert audit[0]["source_difference_explanation"] == "ACTIVITY_DUST_FILL_BELOW_TRADES_VISIBILITY"
+    assert payloads["reconciled_fills"][0]["_source_types"] == "source_activity"
+
+
+def test_event_completeness_rolls_up_all_target_conditions():
+    rows = [
+        {
+            "canonical_city": "beijing", "weather_date_local": "2026-07-20",
+            "event_id": "event-1", "event_slug": "event-slug",
+            "condition_id": "condition-a", "completeness_status": "COMPLETE",
+        },
+        {
+            "canonical_city": "beijing", "weather_date_local": "2026-07-20",
+            "event_id": "event-1", "event_slug": "event-slug",
+            "condition_id": "condition-b", "completeness_status": "REQUEST_FAILED",
+        },
+    ]
+    audit = study.build_target_event_audit(rows)
+    assert audit == [{
+        "canonical_city": "beijing", "weather_date_local": "2026-07-20",
+        "event_id": "event-1", "event_slug": "event-slug",
+        "condition_count": 2, "complete_condition_count": 1,
+        "partial_condition_count": 1, "unknown_condition_count": 0,
+        "completeness_status": "REQUEST_FAILED",
+    }]
