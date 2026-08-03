@@ -230,3 +230,46 @@ BUY YES、BUY NO、SELL YES、SELL NO 永远分开统计。NO 的 `1 - price` �
 ```
 
 Husky 北京便携证据回归应保持：50 个事件、537 笔 fill、453 BUY、84 SELL、400 BUY YES、53 BUY NO、29 个多 YES 事件、21 个相邻 YES 事件。完整程序仍应通过仓库全量测试。
+
+## 11. 在 Codex 对话框中直接调用
+
+Codex 的显式调用格式是 `$技能名`。要让这个仓库里的 Skill 出现在 Codex 的 Skill 选择器中，建议在仓库根目录建立一个仓库范围的链接（Codex 会跟随 Skill 目录的符号链接）：
+
+```bash
+cd /Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack
+mkdir -p .agents/skills
+ln -s ../../skills/polymarket-highest-temperature-trader-pattern-v1 \
+  .agents/skills/polymarket-highest-temperature-trader-pattern-v1
+```
+
+如果链接已经存在，不要重复创建。然后重新打开 Codex 对话或重启 Codex，让 Skill 列表刷新。
+
+在对话框中输入下面这种请求即可：
+
+```text
+$polymarket-highest-temperature-trader-pattern-v1
+
+分析交易员 0xaf17116ae2b1476032785a67bd5b7c8c05905c20 在 2026-03-21 至 2026-07-23 的北京每日最高温市场公开成交模式。
+使用仓库中的便携公开证据离线重放，不联网。输出结果写到 /tmp/polymarket_highest_temperature_trader_pattern_v1/chat_run_001，并总结：
+1. BUY YES / BUY NO / SELL YES / SELL NO；
+2. D-2 / D-1 / D0 和 D0 小时桶；
+3. 五档价格带；
+4. 同价累计 shares 档位；
+5. 温度组合结构；
+6. data_quality 中的异常和公开成交的局限。
+不要计算 PnL、ROI、胜率，也不要下单。
+```
+
+多钱包示例：
+
+```text
+$polymarket-highest-temperature-trader-pattern-v1
+
+比较以下两个钱包：
+- 0xaf17116ae2b1476032785a67bd5b7c8c05905c20
+- 0x1111111111111111111111111111111111111111
+
+天气日期 2026-06-01 至 2026-07-31，城市 beijing 和 shanghai。每个钱包单独分析，并生成 trader_comparison；不要混合钱包数据。
+```
+
+如果 `$polymarket-highest-temperature-trader-pattern-v1` 没有出现在选择器中，通常是当前对话没有在该仓库中启动、`.agents/skills` 链接未建立，或 Codex 尚未刷新 Skill 列表。先确认当前工作区是上述仓库根目录，再重启 Codex；也可以暂时直接运行本指南第 3 节的固定 runner。
