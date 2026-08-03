@@ -4,6 +4,8 @@
 
 This package analyzes only observable public fills made by one or more wallet addresses in Polymarket daily highest-temperature markets. It filters on the market's local weather date and optional canonical cities, then reports each wallet independently plus a cross-wallet comparison.
 
+City omission is the all-city mode: the analyzer accepts every recognizable highest-temperature city present in the requested wallets' fills, rather than limiting discovery to Beijing and Shanghai. The bundled registry covers the Polymarket city set verified from the official Gamma search on 2026-08-03 across Asia, Europe, Africa, North America, South America, and Oceania. Future unregistered cities remain in the evidence with local-time fields marked `UNKNOWN` until a verified IANA override is supplied.
+
 It does not calculate complete PnL, ROI, win rate, realized or unrealized profit, blockchain profit closure, or Negative Risk conversion economics. It does not connect an account, sign, order, cancel, or use authenticated data. `PUBLIC_DATA_ONLY=true`, `PUBLIC_GET_ONLY=true`, `ACCOUNT_CONNECTION=false`, `SIGNING=false`, `REAL_ORDER=false`, and `FORMAL_STARTED=false` are fixed boundaries.
 
 A public trade record is a fill, not an original order. One order can split into multiple fills; unfilled and cancelled orders are normally absent. Results therefore describe observed executions, not complete order intent or a trader's subjective forecast.
@@ -64,6 +66,8 @@ Actual fill prices use exactly:
 - `PRICE_90_100C`: `[0.90,1.00]`
 
 The package does not make a single-fill shares-size distribution. It accumulates shares only for the exact registered key: wallet, city, weather date, event, asset, temperature bucket, bucket kind, outcome, side, canonical exact price, relative weather day, and report time bucket. Cumulative groups use `[0,100)`, `[100,500)`, and `[500,+infinity)`.
+
+Market parsing supports multiword city slugs, title station qualifiers such as `Seoul (Incheon)`, current year-qualified event slugs, legacy yearless daily event slugs, and exact/range/tail temperature buckets. Yearless weather dates choose the calendar year nearest the public fill timestamp, including December/January boundaries.
 
 Reports display both shares and observed trade USD. `activity.usdcSize` is preferred where an exact public identity match is available; otherwise the documented fallback is price times shares.
 

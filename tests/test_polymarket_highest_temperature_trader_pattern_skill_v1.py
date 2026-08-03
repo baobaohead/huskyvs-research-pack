@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -97,6 +98,15 @@ def test_skill_routes_new_wallets_to_public_refresh_and_limits_bundled_evidence(
     assert "do not create a `blocked.md`" in text
 
 
+def test_skill_documents_all_city_default_and_specific_city_filter():
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8").lower()
+    assert "omit `cities` or pass an empty list" in text
+    assert "not limited to beijing or shanghai" in text
+    assert "canonical market city slugs" in text
+    assert "legacy yearless daily event slugs" in text
+    assert "exact, range" in text
+
+
 def test_skill_calls_fixed_python_module_without_statistics_logic():
     text = RUNNER.read_text(encoding="utf-8")
     assert "src.polymarket_highest_temperature_trader_pattern_v1" in text
@@ -150,6 +160,34 @@ def test_runner_requires_exactly_one_evidence_mode():
     payload = runner.load_input(EXAMPLES / "example_input.yaml")
     with pytest.raises(ValueError):
         runner.build_command(payload, TMP, refresh_public_data=False, saved_public_evidence_manifest=None)
+
+
+def test_bundled_plugin_runner_is_self_contained(tmp_path):
+    skill = tmp_path / "plugin/skills/polymarket-highest-temperature-trader-pattern-v1"
+    scripts = skill / "scripts"
+    references = skill / "references"
+    scripts.mkdir(parents=True)
+    references.mkdir()
+    bundled_module = scripts / "polymarket_highest_temperature_trader_pattern_v1.py"
+    shutil.copy2(ROOT / "src/polymarket_highest_temperature_trader_pattern_v1.py", bundled_module)
+    shutil.copy2(RUNNER, scripts / "run_analysis.py")
+    shutil.copy2(ROOT / "config/highest_temperature_city_timezones_v1.json", references / "highest_temperature_city_timezones_v1.json")
+    assert "from src" not in bundled_module.read_text(encoding="utf-8")
+    output = tmp_path / "output"
+    completed = subprocess.run([
+        sys.executable,
+        str(scripts / "run_analysis.py"),
+        "--input",
+        str((EXAMPLES / "example_input.yaml").resolve()),
+        "--output-root",
+        str(output),
+        "--saved-public-evidence-manifest",
+        str(PORTABLE.resolve()),
+    ], cwd=tmp_path, env={**os.environ, "POLYMARKET_PUBLIC_RESEARCH_NO_NETWORK": "1"}, check=False)
+    assert completed.returncode == 0
+    summary = json.loads((output / "0xaf17116ae2b1476032785a67bd5b7c8c05905c20/summary.json").read_text())
+    assert summary["total_public_fill_count"] == 537
+    assert summary["data_quality"]["unknown_timezone_fill_count"] == 0
 
 
 def test_single_wallet_example_runs_offline_and_fields_are_complete():

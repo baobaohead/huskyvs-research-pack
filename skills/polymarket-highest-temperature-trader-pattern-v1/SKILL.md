@@ -29,6 +29,13 @@ Use JSON-compatible YAML for the bundled input file; this keeps the runner depen
 
 For a new wallet, replace the saved-manifest argument with `--refresh-public-data`. The run saves a wallet-specific manifest beneath `OUTPUT_DIRECTORY/_public_evidence/`; use that generated manifest for later offline replays of the same wallet set and weather-date range.
 
+## City scope
+
+- Omit `cities` or pass an empty list to analyze every recognizable Polymarket daily highest-temperature city found in the wallets' public fills. This is not limited to Beijing or Shanghai.
+- Pass one or more canonical market city slugs, such as `beijing`, `nyc`, `hong-kong`, or `cape-town`, to restrict the report to those cities.
+- Use the bundled IANA registry for the verified Polymarket city set. Retain a future unregistered city but mark its market-local time and relative day `UNKNOWN`; use `city_timezones` overrides only with a verified `city=IANA/Zone` value.
+- Accept current year-qualified event slugs and legacy yearless daily event slugs. Keep exact, range, `or below`, and `or higher` temperature contracts distinct.
+
 5. Check each wallet's `data_quality.csv`. Call out `PAGINATION_INCOMPLETE`, request failures, unknown timezones, unknown relative days, identity conflicts, and invalid fills.
 6. Read each wallet's `summary.json` and the root `trader_comparison.csv`/`.md`.
 7. Return plain-language findings, the output directory, and the evidence limitations.

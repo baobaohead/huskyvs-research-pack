@@ -15,6 +15,17 @@ HUSKY = "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
 PORTABLE = Path("docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/manifest.json")
 REVIEWED_FILLS = Path("docs/husky_beijing_full_trade_study_v1/beijing_all_public_fills.csv")
 TMP = Path("/tmp/polymarket_highest_temperature_trader_pattern_v1/tests")
+VERIFIED_POLYMARKET_CITIES = {
+    "amsterdam", "ankara", "atlanta", "austin", "beijing", "buenos-aires",
+    "busan", "cape-town", "chengdu", "chicago", "chongqing", "dallas",
+    "denver", "dubai", "guangzhou", "helsinki", "hong-kong", "houston",
+    "istanbul", "jakarta", "jeddah", "karachi", "kuala-lumpur", "lagos",
+    "london", "los-angeles", "lucknow", "madrid", "manila", "mexico-city",
+    "miami", "milan", "moscow", "munich", "nyc", "panama-city", "paris",
+    "qingdao", "san-francisco", "sao-paulo", "seattle", "seoul", "shanghai",
+    "shenzhen", "singapore", "taipei", "tel-aviv", "tokyo", "toronto",
+    "warsaw", "wellington", "wuhan", "zhengzhou",
+}
 
 
 def raw_fill(
@@ -147,12 +158,34 @@ def test_city_normalization(city, expected):
     assert study.canonical_city(city) == expected
 
 
-@pytest.mark.parametrize("city", ["beijing", "shanghai", "new-york"])
+@pytest.mark.parametrize("city", ["beijing", "shanghai", "new-york", "cape-town", "kuala-lumpur"])
 def test_event_slug_city_and_date_parsing(city):
     row = raw_fill(city=city)
     parsed = study.parse_highest_temperature_market(row)
     assert parsed["canonical_city"] == city
     assert parsed["weather_date_local"] == "2026-07-20"
+
+
+def test_yearless_legacy_event_slug_uses_nearest_trade_year():
+    row = raw_fill(city="dubai", title_bucket="99-100°F")
+    row["eventSlug"] = "highest-temperature-in-dubai-on-may-31"
+    row["slug"] = "will-the-highest-temperature-in-dubai-be-between-99-100f-on-may-31"
+    row["title"] = "Will the highest temperature in Dubai be between 99-100°F on May 31?"
+    row["timestamp"] = int(datetime(2025, 5, 29, 18, tzinfo=timezone.utc).timestamp())
+    parsed = study.parse_highest_temperature_market(row)
+    assert parsed["weather_date_local"] == "2025-05-31"
+    assert parsed["temperature_bucket"] == "99-100°F"
+    assert parsed["bucket_kind"] == "range"
+    assert (parsed["bucket_low"], parsed["bucket_high"]) == (99, 100)
+
+
+def test_yearless_january_slug_chooses_next_year_near_year_boundary():
+    row = raw_fill(city="london")
+    row["eventSlug"] = "highest-temperature-in-london-on-january-1"
+    row["slug"] = "highest-temperature-in-london-on-january-1-10c"
+    row["title"] = "Will the highest temperature in London be 10°C on January 1?"
+    row["timestamp"] = int(datetime(2025, 12, 30, tzinfo=timezone.utc).timestamp())
+    assert study.parse_highest_temperature_market(row)["weather_date_local"] == "2026-01-01"
 
 
 def test_market_slug_temperature_suffix_parses():
@@ -171,6 +204,14 @@ def test_title_assists_when_event_slug_missing():
     assert parsed["weather_date_local"] == "2026-07-20"
 
 
+def test_parenthetical_station_name_does_not_conflict_with_canonical_slug_city():
+    row = raw_fill(city="seoul")
+    row["title"] = "Will the highest temperature in Seoul (Incheon) be 31°C on July 20?"
+    parsed = study.parse_highest_temperature_market(row)
+    assert parsed["canonical_city"] == "seoul"
+    assert parsed["market_identity_status"] == "OBSERVED"
+
+
 @pytest.mark.parametrize("title", [
     "Will it rain in Beijing on July 20?",
     "Will the lowest temperature in Beijing be 20°C on July 20?",
@@ -187,9 +228,35 @@ def test_non_highest_markets_excluded(title):
 def test_all_cities_default_and_explicit_city_filter():
     rows = [raw_fill(city="beijing", tx="0x1"), raw_fill(city="shanghai", tx="0x2", asset="a2")]
     all_fills, _, _ = study.normalize_fill_rows(HUSKY, rows, date_from=datetime(2026, 7, 20).date(), date_to=datetime(2026, 7, 20).date(), cities=[], timezone_registry={"beijing": "Asia/Shanghai", "shanghai": "Asia/Shanghai"})
-    only_beijing, _, _ = study.normalize_fill_rows(HUSKY, rows, date_from=datetime(2026, 7, 20).date(), date_to=datetime(2026, 7, 20).date(), cities=["beijing"], timezone_registry={"beijing": "Asia/Shanghai", "shanghai": "Asia/Shanghai"})
+    only_beijing, beijing_discovery, _ = study.normalize_fill_rows(HUSKY, rows, date_from=datetime(2026, 7, 20).date(), date_to=datetime(2026, 7, 20).date(), cities=["beijing"], timezone_registry={"beijing": "Asia/Shanghai", "shanghai": "Asia/Shanghai"})
     assert {row["canonical_city"] for row in all_fills} == {"beijing", "shanghai"}
     assert {row["canonical_city"] for row in only_beijing} == {"beijing"}
+    assert {row["canonical_city"] for row in beijing_discovery} == {"beijing"}
+
+
+def test_all_cities_default_has_registered_local_time_across_regions():
+    cities = ("seoul", "london", "nyc", "cape-town", "jakarta")
+    rows = [
+        raw_fill(city=city, tx=f"0x{index}", asset=f"asset-{index}")
+        for index, city in enumerate(cities)
+    ]
+    fills, _, quality = study.normalize_fill_rows(
+        HUSKY,
+        rows,
+        date_from=datetime(2026, 7, 20).date(),
+        date_to=datetime(2026, 7, 20).date(),
+        cities=[],
+        timezone_registry=study.load_timezone_registry(),
+    )
+    assert {row["canonical_city"] for row in fills} == set(cities)
+    assert all(row["market_timezone"] and row["trade_time_market_local"] for row in fills)
+    assert quality["unknown_relative_day_count"] == 0
+
+
+def test_timezone_registry_covers_verified_polymarket_highest_temperature_cities():
+    registry = study.load_timezone_registry()
+    assert VERIFIED_POLYMARKET_CITIES <= set(registry)
+    assert all(study.ZoneInfo(registry[city]) for city in VERIFIED_POLYMARKET_CITIES)
 
 
 def test_slug_title_conflict_is_marked_and_not_silently_used():

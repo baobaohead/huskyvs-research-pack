@@ -41,9 +41,11 @@ cd /Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack
 
 可选：
 
-- `city_timezones`：城市时区覆盖，例如 `"new-york=America/New_York"`。
+- `city_timezones`：城市时区覆盖，例如 `"nyc=America/New_York"`。
 - `--refresh-public-data`：访问 Polymarket 官方公开 GET API。
 - `--saved-public-evidence-manifest`：使用已保存证据离线重放。
+
+省略 `cities` 或传入 `[]` 时会统计钱包成交中所有可识别的 Polymarket 每日最高温城市，不再局限于北京、上海。内置 IANA 时区注册表覆盖 2026-08-03 从官方 Gamma 搜索核验出的亚洲、欧洲、非洲、北美、南美和大洋洲城市；指定城市时请使用市场 slug 中的规范名称，例如 `beijing`、`nyc`、`hong-kong`、`cape-town`。未来出现但尚未登记的新城市仍会保留成交，不过当地时间和相对天气日会标为 `UNKNOWN`，直到提供经核验的 `city=IANA/Zone` 覆盖。
 
 Skill 示例文件使用“JSON-compatible YAML”格式，因此不需要额外安装 YAML 解析库；例如：
 
@@ -292,3 +294,31 @@ $polymarket-highest-temperature-trader-pattern-v1
 ```
 
 如果 `$polymarket-highest-temperature-trader-pattern-v1` 没有出现在选择器中，通常是当前对话没有在该仓库中启动、`.agents/skills` 链接未建立，或 Codex 尚未刷新 Skill 列表。先确认当前工作区是上述仓库根目录，再重启 Codex；也可以暂时直接运行本指南第 3 节的固定 runner。
+
+## 12. 个人插件安装与使用
+
+个人插件包位置：
+
+```text
+/Users/baobaotou/plugins/polymarket-highest-temperature-trader-pattern-plugin
+```
+
+个人 marketplace：
+
+```text
+/Users/baobaotou/.agents/plugins/marketplace.json
+```
+
+安装或重新安装：
+
+```bash
+codex plugin add polymarket-highest-temperature-trader-pattern-plugin@personal
+```
+
+检查状态：
+
+```bash
+codex plugin list
+```
+
+应看到 `polymarket-highest-temperature-trader-pattern-plugin@personal` 为 `installed, enabled`。插件自带固定分析程序、runner、示例和城市时区注册表，不依赖当前工作区中的 `src/`。安装或更新后请新建一个 Codex 任务，再用 `$polymarket-highest-temperature-trader-pattern-v1` 调用；旧任务不会自动重新加载新插件内容。

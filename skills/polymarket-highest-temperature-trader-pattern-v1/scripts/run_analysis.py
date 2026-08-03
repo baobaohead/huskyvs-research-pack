@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin, deterministic launcher for the fixed repository analysis module."""
+"""Thin launcher for the repository module or a bundled plugin copy."""
 
 from __future__ import annotations
 
@@ -68,7 +68,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     input_path = Path(args.input).resolve()
-    repo_root = Path(__file__).resolve().parents[3]
+    script_path = Path(__file__).resolve()
+    repo_root = script_path.parents[3]
     command = build_command(
         load_input(input_path),
         Path(args.output_root).resolve(),
@@ -78,7 +79,14 @@ def main(argv: list[str] | None = None) -> int:
             if args.saved_public_evidence_manifest else None
         ),
     )
-    return subprocess.run(command, cwd=repo_root, check=False).returncode
+    bundled_module = script_path.with_name(
+        "polymarket_highest_temperature_trader_pattern_v1.py"
+    )
+    working_directory = repo_root
+    if bundled_module.is_file():
+        command[1:3] = [str(bundled_module)]
+        working_directory = script_path.parents[1]
+    return subprocess.run(command, cwd=working_directory, check=False).returncode
 
 
 if __name__ == "__main__":

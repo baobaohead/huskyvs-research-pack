@@ -22,22 +22,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from datetime import date, datetime, time as datetime_time, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
-from src.husky_beijing_full_trade_study_v1 import (
-    Window,
-    deduplicate_records,
-    epoch_seconds,
-    iso_utc,
-    split_window,
-    stable_trade_key,
-    thirty_day_windows,
-)
-
 
 SCHEMA_VERSION = "polymarket_highest_temperature_trader_pattern_v1"
 EVIDENCE_SCHEMA = "polymarket_highest_temperature_public_evidence_v1"
@@ -54,10 +44,21 @@ REAL_ORDER = False
 FORMAL_STARTED = False
 NETWORK_CALL_COUNT = 0
 HUSKY_WALLET = "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
-DEFAULT_TIMEZONE_REGISTRY = (
-    Path(__file__).resolve().parents[1]
-    / "config/highest_temperature_city_timezones_v1.json"
-)
+
+
+def _default_timezone_registry_path() -> Path:
+    module_path = Path(__file__).resolve()
+    candidates = (
+        module_path.parents[1] / "config/highest_temperature_city_timezones_v1.json",
+        module_path.parents[1] / "references/highest_temperature_city_timezones_v1.json",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[0]
+
+
+DEFAULT_TIMEZONE_REGISTRY = _default_timezone_registry_path()
 
 PRICE_BANDS = (
     ("PRICE_0_10C", Decimal("0.00"), Decimal("0.10"), False),
@@ -88,7 +89,7 @@ MONTHS = {
 }
 EVENT_SLUG_RE = re.compile(
     r"^highest-temperature-in-(?P<city>[a-z0-9]+(?:-[a-z0-9]+)*)-on-"
-    r"(?P<month>[a-z]+)-(?P<day>\d{1,2})-(?P<year>\d{4})(?:$|-)",
+    r"(?P<month>[a-z]+)-(?P<day>\d{1,2})(?:-(?P<year>\d{4}))?(?:$|-)",
     re.IGNORECASE,
 )
 TITLE_CITY_RE = re.compile(
@@ -104,8 +105,18 @@ TITLE_BUCKET_RE = re.compile(
     r"(?:\s+or\s+(?P<tail>below|higher))?\b",
     re.IGNORECASE,
 )
+TITLE_RANGE_BUCKET_RE = re.compile(
+    r"\bbetween\s+(?P<low>-?\d+(?:\.\d+)?)\s*(?:-|to|and)\s*"
+    r"(?P<high>-?\d+(?:\.\d+)?)\s*\u00b0?\s*(?P<unit>[CF])\b",
+    re.IGNORECASE,
+)
 SLUG_BUCKET_RE = re.compile(
     r"-(?P<value>-?\d+(?:\.\d+)?)(?P<unit>[cf])(?P<tail>orbelow|orhigher)?$",
+    re.IGNORECASE,
+)
+SLUG_RANGE_BUCKET_RE = re.compile(
+    r"(?:^|-)between-(?P<low>-?\d+(?:\.\d+)?)-"
+    r"(?P<high>-?\d+(?:\.\d+)?)(?P<unit>[cf])(?:-|$)",
     re.IGNORECASE,
 )
 WALLET_RE = re.compile(r"^0x[0-9a-f]{40}$")
@@ -130,6 +141,28 @@ def _finite(value: Any) -> float | None:
     return result if math.isfinite(result) else None
 
 
+# These small public-fill helpers preserve the reviewed semantics from
+# husky_beijing_full_trade_study_v1, but live here so the generated personal
+# plugin is self-contained and does not copy or import the protected study.
+def epoch_seconds(value: Any) -> int:
+    """Normalize second, millisecond, microsecond, or nanosecond epochs."""
+    number = _finite(value)
+    if number is None:
+        raise ValueError(f"invalid timestamp: {value!r}")
+    magnitude = abs(number)
+    if magnitude >= 1e17:
+        number /= 1e9
+    elif magnitude >= 1e14:
+        number /= 1e6
+    elif magnitude >= 1e11:
+        number /= 1e3
+    return int(number)
+
+
+def iso_utc(value: Any) -> str:
+    return datetime.fromtimestamp(epoch_seconds(value), timezone.utc).isoformat()
+
+
 def _decimal(value: Any) -> Decimal | None:
     try:
         result = Decimal(str(value))
@@ -144,6 +177,72 @@ def canonical_exact_decimal(value: Any) -> str:
         raise ValueError(f"invalid decimal: {value!r}")
     rendered = format(number.normalize(), "f")
     return "0" if rendered == "-0" else rendered
+
+
+def _key_decimal(value: Any) -> str:
+    number = _decimal(value)
+    return format(number.normalize(), "f") if number is not None else ""
+
+
+def stable_trade_key(row: dict[str, Any]) -> tuple[str, ...]:
+    """Return the portable public-fill identity used for deduplication."""
+    return (
+        str(row.get("timestamp") or row.get("timestamp_epoch") or ""),
+        str(row.get("transactionHash") or row.get("transaction_hash") or "").lower(),
+        str(row.get("conditionId") or row.get("condition_id") or "").lower(),
+        str(row.get("asset") or ""),
+        str(row.get("side") or "").upper(),
+        _key_decimal(row.get("price")),
+        _key_decimal(row.get("size") if "size" in row else row.get("shares")),
+    )
+
+
+def deduplicate_records(rows: Iterable[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """Deduplicate public records while preserving source provenance flags."""
+    by_key: dict[tuple[str, ...], dict[str, Any]] = {}
+    duplicates = 0
+    for source in rows:
+        row = dict(source)
+        key = stable_trade_key(row)
+        if key not in by_key:
+            by_key[key] = row
+            continue
+        duplicates += 1
+        target = by_key[key]
+        for flag in (
+            "source_repository_trade",
+            "source_repository_activity",
+            "source_current_public_api",
+        ):
+            target[flag] = bool(target.get(flag)) or bool(row.get(flag))
+        existing = str(target.get("source_row_number") or "")
+        incoming = str(row.get("source_row_number") or "")
+        target["source_row_number"] = "|".join(
+            filter(None, dict.fromkeys([existing, incoming]))
+        )
+    return list(by_key.values()), duplicates
+
+
+@dataclass(frozen=True)
+class Window:
+    start: int
+    end: int
+
+
+def thirty_day_windows(start: int, end: int) -> Iterator[Window]:
+    cursor = start
+    step = 30 * 24 * 60 * 60
+    while cursor < end:
+        nxt = min(cursor + step, end)
+        yield Window(cursor, nxt)
+        cursor = nxt
+
+
+def split_window(window: Window) -> tuple[Window, Window]:
+    middle = (window.start + window.end) // 2
+    if middle <= window.start or middle >= window.end:
+        raise RuntimeError(f"cannot split saturated one-second window: {window}")
+    return Window(window.start, middle), Window(middle, window.end)
 
 
 def sha256_file(path: Path) -> str:
@@ -231,16 +330,33 @@ def parse_date_range(date_from: str, date_to: str) -> tuple[date, date]:
     return start, end
 
 
-def _parsed_slug(value: Any) -> dict[str, Any] | None:
+def _nearest_calendar_date(month: int, day: int, reference: date) -> date | None:
+    candidates = []
+    for year in (reference.year - 1, reference.year, reference.year + 1):
+        try:
+            candidates.append(date(year, month, day))
+        except ValueError:
+            continue
+    return min(candidates, key=lambda candidate: abs((candidate - reference).days)) if candidates else None
+
+
+def _parsed_slug(value: Any, fallback_date: date | None = None) -> dict[str, Any] | None:
     match = EVENT_SLUG_RE.match(str(value or "").strip())
     if not match:
         return None
     month = MONTHS.get(match.group("month").lower())
     if month is None:
         return None
-    try:
-        weather_date = date(int(match.group("year")), month, int(match.group("day")))
-    except ValueError:
+    if match.group("year"):
+        try:
+            weather_date = date(int(match.group("year")), month, int(match.group("day")))
+        except ValueError:
+            return None
+    elif fallback_date:
+        weather_date = _nearest_calendar_date(month, int(match.group("day")), fallback_date)
+        if weather_date is None:
+            return None
+    else:
         return None
     return {
         "canonical_city": canonical_city(match.group("city")),
@@ -257,7 +373,8 @@ def _parsed_title(value: Any, fallback_year: int | None = None) -> dict[str, Any
     date_match = TITLE_DATE_RE.search(text)
     if not city_match:
         return None
-    result: dict[str, Any] = {"canonical_city": canonical_city(city_match.group("city"))}
+    title_city = re.sub(r"\s*\([^)]*\)\s*$", "", city_match.group("city")).strip()
+    result: dict[str, Any] = {"canonical_city": canonical_city(title_city)}
     if date_match:
         month = MONTHS.get(date_match.group("month").lower())
         year = int(date_match.group("year")) if date_match.group("year") else fallback_year
@@ -273,7 +390,22 @@ def _parsed_title(value: Any, fallback_year: int | None = None) -> dict[str, Any
 
 def parse_temperature_bucket(row: dict[str, Any]) -> dict[str, Any]:
     text = str(row.get("title") or "")
-    match = TITLE_BUCKET_RE.search(text) or SLUG_BUCKET_RE.search(str(row.get("slug") or ""))
+    slug = str(row.get("slug") or "")
+    range_match = TITLE_RANGE_BUCKET_RE.search(text) or SLUG_RANGE_BUCKET_RE.search(slug)
+    if range_match:
+        low = float(range_match.group("low"))
+        high = float(range_match.group("high"))
+        if low > high:
+            low, high = high, low
+        unit = range_match.group("unit").upper()
+        return {
+            "temperature_bucket": f"{low:g}-{high:g}\u00b0{unit}",
+            "bucket_kind": "range",
+            "bucket_low": low,
+            "bucket_high": high,
+            "unit": unit,
+        }
+    match = TITLE_BUCKET_RE.search(text) or SLUG_BUCKET_RE.search(slug)
     if not match:
         label = str(row.get("temperature_bucket") or row.get("bucket_label") or "UNKNOWN")
         kind = str(row.get("bucket_kind") or "UNKNOWN").lower()
@@ -282,7 +414,7 @@ def parse_temperature_bucket(row: dict[str, Any]) -> dict[str, Any]:
         high = _finite(row.get("bucket_high"))
         return {
             "temperature_bucket": label,
-            "bucket_kind": kind if kind in {"exact", "below", "above"} else "UNKNOWN",
+            "bucket_kind": kind if kind in {"exact", "range", "below", "above"} else "UNKNOWN",
             "bucket_low": low,
             "bucket_high": high,
             "unit": unit if unit in {"C", "F"} else "UNKNOWN",
@@ -308,17 +440,34 @@ def parse_highest_temperature_market(row: dict[str, Any]) -> dict[str, Any] | No
     explicit_metric = str(row.get("weather_metric") or "").strip().lower()
     if explicit_metric and explicit_metric not in {"highest_temperature", "highest", "high", "tmax"}:
         return None
-    values = [
-        row.get("eventSlug"), row.get("event_slug"), row.get("slug")
+    reference_date: date | None = None
+    explicit_reference = str(
+        row.get("weather_date_local") or row.get("weather_date") or row.get("endDate") or row.get("end_date") or ""
+    )[:10]
+    try:
+        reference_date = date.fromisoformat(explicit_reference)
+    except ValueError:
+        try:
+            reference_date = datetime.fromtimestamp(
+                epoch_seconds(row.get("timestamp") or row.get("timestamp_epoch")), timezone.utc
+            ).date()
+        except ValueError:
+            pass
+    values = [row.get("eventSlug"), row.get("event_slug"), row.get("slug")]
+    slug_identities = [
+        parsed for value in values if (parsed := _parsed_slug(value, reference_date))
     ]
-    slug_identities = [parsed for value in values if (parsed := _parsed_slug(value))]
     title_text = str(row.get("title") or "")
     if re.search(r"\b(lowest|minimum)\s+temperature\b|\brain(?:fall)?\b|\bforecast\b", title_text, re.I):
         return None
     if not slug_identities and not re.search(r"\bhighest\s+temperature\b", title_text, re.I):
         return None
     primary = slug_identities[0] if slug_identities else None
-    fallback_year = int(primary["weather_date_local"][:4]) if primary else None
+    fallback_year = (
+        int(primary["weather_date_local"][:4]) if primary else (
+            reference_date.year if reference_date else None
+        )
+    )
     title_identity = _parsed_title(title_text, fallback_year)
     if primary is None and not title_identity:
         return None
@@ -493,6 +642,10 @@ def normalize_fill_rows(
             discovery.append({"source_row": index, "status": "UNPARSEABLE_OR_NOT_HIGHEST", "title": row.get("title", ""), "event_slug": row.get("eventSlug", ""), "slug": row.get("slug", "")})
             continue
         weather_day = date.fromisoformat(identity["weather_date_local"])
+        if weather_day < date_from or weather_day > date_to:
+            continue
+        if requested_cities and identity["canonical_city"] not in requested_cities:
+            continue
         discovery.append({
             "source_row": index,
             "status": identity["market_identity_status"],
@@ -508,10 +661,6 @@ def normalize_fill_rows(
         })
         if identity["market_identity_status"] == "MARKET_IDENTITY_CONFLICT":
             quality["market_identity_conflict_count"] += 1
-            continue
-        if weather_day < date_from or weather_day > date_to:
-            continue
-        if requested_cities and identity["canonical_city"] not in requested_cities:
             continue
         side = str(row.get("side") or "").strip().upper()
         outcome = str(row.get("outcome") or "").strip().upper()
