@@ -1083,42 +1083,268 @@ def _summary(
     }
 
 
-def render_summary(summary: dict[str, Any]) -> str:
-    cities = ", ".join(summary["discovered_cities"]) or "none found"
+_CITY_NAMES_ZH = {
+    "beijing": "北京",
+    "shanghai": "上海",
+    "san-francisco": "旧金山",
+    "new-york": "纽约",
+    "wellington": "惠灵顿",
+}
+
+_DAY_NAMES_ZH = {
+    "D-2": "天气日前两天",
+    "D-1": "天气日前一天",
+    "D0": "天气当天",
+    "POST_EVENT": "天气日以后",
+    "EARLIER_THAN_D2": "天气日前两天以前",
+    "UNKNOWN": "无法判断",
+}
+
+_TIME_NAMES_ZH = {
+    "D0_00_08": "当天00:00—08:00",
+    "D0_08_12": "当天08:00—12:00",
+    "D0_12_16": "当天12:00—16:00",
+    "D0_16_24": "当天16:00—24:00",
+    "D-1": "天气日前一天",
+    "POST_EVENT": "天气日以后",
+    "UNKNOWN": "无法判断",
+}
+
+_PRICE_NAMES_ZH = {
+    "PRICE_0_10C": "0—10美分",
+    "PRICE_10_30C": "10—30美分",
+    "PRICE_30_70C": "30—70美分",
+    "PRICE_70_90C": "70—90美分",
+    "PRICE_90_100C": "90—100美分",
+    "UNKNOWN": "当前没有足够成交可判断",
+}
+
+_SHARES_NAMES_ZH = {
+    "SHARES_0_100": "同一价格累计不足100份",
+    "SHARES_100_500": "同一价格累计100—500份",
+    "SHARES_500_PLUS": "同一价格累计500份以上",
+    "UNKNOWN": "当前没有足够成交可判断",
+}
+
+
+def _zh_city(city: str) -> str:
+    return _CITY_NAMES_ZH.get(city, f"{city}（{city}）")
+
+
+def _zh_day(value: str) -> str:
+    return _DAY_NAMES_ZH.get(value, "无法判断")
+
+
+def _zh_time(value: str) -> str:
+    return _TIME_NAMES_ZH.get(value, "无法判断")
+
+
+def _zh_price(value: str) -> str:
+    return _PRICE_NAMES_ZH.get(value, "当前没有足够成交可判断")
+
+
+def _zh_shares(value: str) -> str:
+    return _SHARES_NAMES_ZH.get(value, "当前没有足够成交可判断")
+
+
+def _fmt_amount(value: Any, unit: str) -> str:
+    number = float(value or 0)
+    return "未观察到" if number == 0 else f"{number:.2f}{unit}"
+
+
+def _fmt_shares(value: Any) -> str:
+    number = float(value or 0)
+    return "未观察到" if number == 0 else f"{number:.2f}份"
+
+
+def _data_quality_lines(summary: dict[str, Any]) -> list[str]:
     q = summary["data_quality"]
-    return "\n".join([
-        "# Polymarket daily highest-temperature public fill pattern",
+    lines: list[str] = []
+    if q.get("pagination_saturation_status") == "PAGINATION_INCOMPLETE":
+        lines.extend([
+            "> **重要提醒：**本次数据抓取达到公开接口的分页上限，报告可能只包含部分历史成交。",
+            "> 因此，当前没有观察到的交易不能解释为没有发生；买入为0不能解释为交易员没有买入，温度组合为0也可能只是缺少买入证据。本报告只描述当前抓到的公开成交记录。",
+        ])
+    else:
+        lines.append("> **数据状态：**当前公开接口抓取未发现分页截断。")
+    if q.get("api_request_failure_count", 0):
+        lines.append(f"- 有{q['api_request_failure_count']}个公开接口请求失败，相关历史可能缺失。")
+    if q.get("unknown_timezone_fill_count", 0) or q.get("unknown_relative_day_count", 0):
+        lines.append("- 有部分成交无法映射到城市本地时间或天气相对日期。")
+    if q.get("market_identity_conflict_count", 0):
+        lines.append(f"- 有{q['market_identity_conflict_count']}条市场身份信息冲突，已按质量规则保留并标记。")
+    if q.get("unknown_side_count", 0) or q.get("unknown_outcome_count", 0):
+        lines.append("- 有部分成交缺少买卖方向或YES/NO结果，未用于对应方向的统计。")
+    if q.get("trade_usd_missing_count", 0):
+        lines.append(f"- 有{q['trade_usd_missing_count']}条公开记录没有原生美元金额字段，金额沿用现有分析器的备用金额口径。")
+    if q.get("unparseable_market_count", 0):
+        lines.append(f"- 有{q['unparseable_market_count']}条记录无法识别为目标最高温市场，未纳入成交模式统计。")
+    lines.append("- 本报告只包含公开成交，不包含未成交挂单和撤单；卖出成交额不是利润。")
+    return lines
+
+
+def _direction_sentence(summary: dict[str, Any]) -> str:
+    buys = summary["buy_fill_count"]
+    sells = summary["sell_fill_count"]
+    total = summary["total_public_fill_count"]
+    if buys == 0 and sells:
+        return f"本次在最高温市场中观察到{total}笔公开成交，当前抓到的记录全部是卖出，没有观察到买入。"
+    if sells == 0 and buys:
+        return f"本次在最高温市场中观察到{total}笔公开成交，当前抓到的记录全部是买入，没有观察到卖出。"
+    if buys and sells:
+        return f"本次在最高温市场中观察到{total}笔公开成交，买入和卖出两种方向都有记录。"
+    return "本次没有解析到可用于模式判断的公开成交。"
+
+
+def render_summary(summary: dict[str, Any]) -> str:
+    q = summary["data_quality"]
+    discovered = summary.get("discovered_cities") or summary.get("requested_cities") or []
+    cities = "、".join(_zh_city(city) for city in discovered) or "未识别城市"
+    buy_count = summary["buy_fill_count"]
+    sell_count = summary["sell_fill_count"]
+    day = _zh_day(summary["main_relative_weather_day_by_usd"])
+    d0_time = _zh_time(summary["main_d0_bucket_by_usd"])
+    if buy_count == 0:
+        conclusion = (
+            f"{_direction_sentence(summary)}由于数据完整性为{('可能不完整' if q.get('pagination_saturation_status') == 'PAGINATION_INCOMPLETE' else '公开成交证据')}，"
+            "不能据此认定交易员没有买入，也不能还原完整建仓方式。"
+        )
+    else:
+        conclusion = f"{_direction_sentence(summary)}已观察到的成交金额主要集中在{day}，其中{d0_time}是天气当天的主要时段。"
+    if sell_count:
+        sell_prices = []
+        if summary["sell_yes_fill_count"]:
+            sell_prices.append(f"卖出YES主要在{_zh_price(summary['sell_yes_main_price_band_by_usd'])}")
+        if summary["sell_no_fill_count"]:
+            sell_prices.append(f"卖出NO主要在{_zh_price(summary['sell_no_main_price_band_by_usd'])}")
+        price_sentence = "；".join(sell_prices) + "。" if sell_prices else ""
+    else:
+        price_sentence = ""
+    if buy_count == 0:
+        temp_sentence = "当前没有买入证据，因此无法判断温度组合方式。"
+    else:
+        temp_sentence = "温度组合可结合后文的买入记录判断。"
+
+    rows = [
+        "# Polymarket最高温市场交易模式报告",
         "",
-        f"1. OBSERVED wallet: `{summary['wallet']}`.",
-        f"2. OBSERVED weather dates: {summary['weather_date_from']} to {summary['weather_date_to']}.",
-        f"3. OBSERVED cities: {cities}.",
-        f"4. OBSERVED highest-temperature events: {summary['weather_event_count']}.",
-        f"5. OBSERVED public fills: {summary['total_public_fill_count']}.",
-        f"6. OBSERVED BUY YES / BUY NO / SELL YES / SELL NO fills: {summary['buy_yes_fill_count']} / {summary['buy_no_fill_count']} / {summary['sell_yes_fill_count']} / {summary['sell_no_fill_count']}.",
-        f"7. OBSERVED BUY YES: ${summary['buy_yes_trade_usd']:.2f}, {summary['buy_yes_shares']:.4f} shares; BUY NO: ${summary['buy_no_trade_usd']:.2f}, {summary['buy_no_shares']:.4f} shares.",
-        f"   OBSERVED SELL YES: ${summary['sell_yes_trade_usd']:.2f}, {summary['sell_yes_shares']:.4f} shares; SELL NO: ${summary['sell_no_trade_usd']:.2f}, {summary['sell_no_shares']:.4f} shares.",
-        f"8. INFERRED main D-2/D-1/D0 bucket by observed USD: {summary['main_relative_weather_day_by_usd']}.",
-        f"9. INFERRED main D0 hour bucket by observed USD: {summary['main_d0_bucket_by_usd']}.",
-        f"10. INFERRED BUY YES main price band: {summary['buy_yes_main_price_band_by_usd']}.",
-        f"11. INFERRED BUY NO main price band: {summary['buy_no_main_price_band_by_usd']}.",
-        f"12. INFERRED SELL YES main price band: {summary['sell_yes_main_price_band_by_usd']}.",
-        f"13. INFERRED SELL NO main price band: {summary['sell_no_main_price_band_by_usd']}.",
-        f"14. INFERRED main same-price cumulative shares band: {summary['main_cumulative_shares_band_by_usd']}.",
-        "15. OBSERVED shares and actual trade USD are both reported; many cheap shares are not described as large capital unless USD is also large.",
-        f"16. OBSERVED single-YES-temperature events: {summary['single_yes_temperature_event_count']}.",
-        f"17. OBSERVED events with multiple YES temperatures: {summary['multi_yes_event_count']}.",
-        f"18. OBSERVED multiple-NO exclusion events: {summary['multi_no_only_event_count']}.",
-        f"19. OBSERVED mixed YES/NO events: {summary['mixed_yes_no_event_count']}.",
-        f"20. OBSERVED multi-YES events with adjacent exact buckets: {summary['adjacent_yes_event_count']}.",
-        "21. UNKNOWN/INFERRED city differences require city_summary.csv; no intent or causality is asserted.",
-        f"22. UNKNOWN data issues: unknown timezone fills={q.get('unknown_relative_day_count', 0)}, pagination={q.get('pagination_saturation_status', 'COMPLETE')}.",
-        "23. NOT_SUPPORTED: complete PnL, ROI, win rate, unfilled/cancelled orders, subjective intent, and Negative Risk conversion economics.",
+        "## 一、先说结论",
         "",
-        f"Collection UTC range: {summary['collection_start_utc']} to {summary['collection_end_utc']}.",
-        "A public fill is not an original order: an order may split into several fills, and cancelled or unfilled orders are normally invisible.",
-        "Distribution CSVs retain POST_EVENT and UNKNOWN fills, but exclude EARLIER_THAN_D2 from registered strategy distributions.",
+        *( ["> **重要提醒：本次数据抓取没有覆盖完整历史。**", ""] if q.get("pagination_saturation_status") == "PAGINATION_INCOMPLETE" else [] ),
+        conclusion,
+        price_sentence + temp_sentence,
+        "",
+        "## 二、本次研究范围",
+        "",
+        "| 项目 | 本次结果 |",
+        "|---|---|",
+        f"| 交易员钱包 | `{summary['wallet']}` |",
+        f"| 研究日期 | {summary['weather_date_from']} 至 {summary['weather_date_to']} |",
+        f"| 研究城市 | {cities} |",
+        f"| 最高温事件 | {summary['weather_event_count']}个天气日 |",
+        f"| 公开成交 | {summary['total_public_fill_count']}笔 |",
+        f"| 数据完整性 | {'可能不完整' if q.get('pagination_saturation_status') == 'PAGINATION_INCOMPLETE' else '当前未发现分页截断'} |",
+        "",
+        "## 三、先看数据完整性",
+        "",
+        *_data_quality_lines(summary),
+        "",
+        "## 四、成交概览",
+        "",
+        "| 成交类型 | 笔数 | 总份数 | 成交金额 |",
+        "|---|---:|---:|---:|",
+        f"| 买入YES | {summary['buy_yes_fill_count'] or '未观察到'} | {_fmt_shares(summary['buy_yes_shares'])} | {_fmt_amount(summary['buy_yes_trade_usd'], '美元')} |",
+        f"| 买入NO | {summary['buy_no_fill_count'] or '未观察到'} | {_fmt_shares(summary['buy_no_shares'])} | {_fmt_amount(summary['buy_no_trade_usd'], '美元')} |",
+        f"| 卖出YES | {summary['sell_yes_fill_count'] or '未观察到'} | {_fmt_shares(summary['sell_yes_shares'])} | {_fmt_amount(summary['sell_yes_trade_usd'], '美元')} |",
+        f"| 卖出NO | {summary['sell_no_fill_count'] or '未观察到'} | {_fmt_shares(summary['sell_no_shares'])} | {_fmt_amount(summary['sell_no_trade_usd'], '美元')} |",
+        "",
+        "YES表示押某个温度结果会发生；NO表示押某个温度结果不会发生。卖出金额只是公开观察到的卖出成交额，不是利润。",
+        "",
+        "## 五、买入方式",
+        "",
+    ]
+    if buy_count == 0:
+        rows.extend([
+            "【当前无法判断】当前证据中没有观察到买入成交，因此无法判断这个交易员如何建仓、主要买哪个价格、是否分批买入，以及是否同时购买多个温度。",
+            "这不等于交易员没有买入；尤其在数据分页未完整时，部分买入记录可能没有进入当前证据。",
+        ])
+    else:
+        rows.extend([
+            f"当前观察到{summary['buy_fill_count']}笔买入成交：买入YES {summary['buy_yes_fill_count']}笔，主要价格为{_zh_price(summary['buy_yes_main_price_band_by_usd'])}；买入NO {summary['buy_no_fill_count']}笔，主要价格为{_zh_price(summary['buy_no_main_price_band_by_usd'])}。",
+            f"买入主要发生在{day}，温度组合统计显示：单一YES事件{summary['single_yes_temperature_event_count']}个，多YES事件{summary['multi_yes_event_count']}个，多NO排除事件{summary['multi_no_only_event_count']}个，YES/NO混合事件{summary['mixed_yes_no_event_count']}个。",
+        ])
+    rows.extend([
+        "",
+        "## 六、卖出方式",
         "",
     ])
+    if sell_count:
+        rows.append(
+            f"当前观察到卖出YES {summary['sell_yes_fill_count']}笔、{_fmt_shares(summary['sell_yes_shares'])}，卖出成交额{_fmt_amount(summary['sell_yes_trade_usd'], '美元')}；卖出NO {summary['sell_no_fill_count']}笔、{_fmt_shares(summary['sell_no_shares'])}，卖出成交额{_fmt_amount(summary['sell_no_trade_usd'], '美元')}。"
+        )
+        rows.append(f"卖出金额主要集中在{day}，其中{d0_time}是主要时段。")
+    else:
+        rows.append("当前证据中没有观察到卖出成交，因此无法判断退出或止盈方式。")
+    rows.extend([
+        "",
+        "## 七、交易时间集中在哪里",
+        "",
+        f"按公开成交金额计算，交易最集中在{day}。天气当天的主要时段是{d0_time}。",
+        "",
+        "## 八、主要在什么价格成交",
+        "",
+    ])
+    if buy_count:
+        rows.append(f"买入YES主要在{_zh_price(summary['buy_yes_main_price_band_by_usd'])}，买入NO主要在{_zh_price(summary['buy_no_main_price_band_by_usd'])}。")
+    else:
+        rows.append("由于没有观察到买入记录，无法判断买入价格偏好。")
+    if sell_count:
+        rows.append(price_sentence.rstrip("。") + "。")
+    else:
+        rows.append("当前没有观察到卖出记录，无法判断卖出价格偏好。")
+    rows.extend([
+        "",
+        "## 九、同一价格累计成交规模",
+        "",
+        f"按现有统计，最常见的同价累计规模是{_zh_shares(summary['main_cumulative_shares_band_by_usd'])}。这里的累计范围是同一交易员、同一天、同一温度档、同一YES/NO方向、同一买卖方向、同一价格和同一时间桶的成交合计；它不是单笔订单大小，也不是实际投入美元。",
+        "",
+        "## 十、他通常买几个温度",
+        "",
+    ])
+    if buy_count:
+        rows.append(f"根据当前买入记录，可以看到单一YES事件{summary['single_yes_temperature_event_count']}个、多YES事件{summary['multi_yes_event_count']}个、多NO排除事件{summary['multi_no_only_event_count']}个，以及YES/NO混合事件{summary['mixed_yes_no_event_count']}个。")
+    else:
+        rows.append("当前没有观察到买入成交，所以无法判断他是只押一个温度，还是会组合多个温度。现有卖出记录不能代替建仓记录来判断温度组合。")
+    rows.extend([
+        "",
+        "## 十一、目前可以确认的交易特点",
+        "",
+    ])
+    if sell_count:
+        rows.append(f"- 【已观察】当前公开记录中有{summary['sell_fill_count']}笔卖出成交，卖出YES和卖出NO均有记录。")
+    elif buy_count:
+        rows.append(f"- 【已观察】当前公开记录中有{summary['buy_fill_count']}笔买入成交。")
+    if summary["main_relative_weather_day_by_usd"] != "UNKNOWN":
+        rows.append(f"- 【行为概括】成交金额主要集中在{day}，其中{d0_time}是主要时间段。")
+    if sell_count:
+        rows.append(f"- 【行为概括】{price_sentence.rstrip('。')}。")
+    rows.append(f"- 【行为概括】同一价格累计成交的主区间为{_zh_shares(summary['main_cumulative_shares_band_by_usd'])}。")
+    if buy_count == 0:
+        rows.append("- 【当前无法判断】由于没有观察到买入记录，无法还原完整建仓方法或温度组合方式。")
+    rows.extend([
+        "",
+        "## 十二、目前不能下的结论",
+        "",
+        "- 不能据此计算完整PnL、ROI或胜率，也不能判断是否赚钱。",
+        "- 不能看到未成交挂单和撤单，不能知道每笔公开成交背后的完整订单。",
+        "- 不能从公开成交直接知道交易员的主观预测意图。",
+        "- 没有观察到买入时，不能判断建仓策略；数据分页不完整时，也不能把本报告当成完整历史。",
+        "- 卖出成交额不等于利润。",
+        "",
+        "这份报告适合用来观察已经抓到的公开成交习惯，不适合单独用来判断交易员是否盈利或复制其完整策略。",
+        "",
+    ])
+    return "\n".join(rows)
 
 
 class PublicGetClient:

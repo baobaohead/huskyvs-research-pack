@@ -28,6 +28,57 @@ VERIFIED_POLYMARKET_CITIES = {
 }
 
 
+def summary_fixture(*, with_buy: bool = False) -> dict:
+    return {
+        "wallet": HUSKY,
+        "weather_date_from": "2026-03-21",
+        "weather_date_to": "2026-07-23",
+        "requested_cities": ["beijing"],
+        "discovered_cities": ["beijing"],
+        "weather_event_count": 22,
+        "total_public_fill_count": 69,
+        "buy_fill_count": 2 if with_buy else 0,
+        "sell_fill_count": 69,
+        "buy_yes_fill_count": 1 if with_buy else 0,
+        "buy_no_fill_count": 1 if with_buy else 0,
+        "sell_yes_fill_count": 53,
+        "sell_no_fill_count": 16,
+        "buy_yes_shares": 10 if with_buy else 0,
+        "buy_yes_trade_usd": 2 if with_buy else 0,
+        "buy_no_shares": 20 if with_buy else 0,
+        "buy_no_trade_usd": 4 if with_buy else 0,
+        "sell_yes_shares": 9841.0373,
+        "sell_yes_trade_usd": 8819.29,
+        "sell_no_shares": 1281.13,
+        "sell_no_trade_usd": 1279.27,
+        "main_relative_weather_day_by_usd": "D0",
+        "main_d0_bucket_by_usd": "D0_16_24",
+        "buy_yes_main_price_band_by_usd": "PRICE_30_70C" if with_buy else "UNKNOWN",
+        "buy_no_main_price_band_by_usd": "PRICE_10_30C" if with_buy else "UNKNOWN",
+        "sell_yes_main_price_band_by_usd": "PRICE_90_100C",
+        "sell_no_main_price_band_by_usd": "PRICE_90_100C",
+        "main_cumulative_shares_band_by_usd": "SHARES_100_500",
+        "single_yes_temperature_event_count": 1 if with_buy else 0,
+        "single_no_temperature_event_count": 0,
+        "multi_yes_event_count": 1 if with_buy else 0,
+        "multi_no_only_event_count": 0,
+        "mixed_yes_no_event_count": 1 if with_buy else 0,
+        "collection_start_utc": "2026-03-18T00:00:00+00:00",
+        "collection_end_utc": "2026-07-26T23:59:59+00:00",
+        "data_quality": {
+            "pagination_saturation_status": "PAGINATION_INCOMPLETE",
+            "api_request_failure_count": 0,
+            "unknown_timezone_fill_count": 0,
+            "unknown_relative_day_count": 0,
+            "market_identity_conflict_count": 0,
+            "unknown_side_count": 0,
+            "unknown_outcome_count": 0,
+            "trade_usd_missing_count": 69,
+            "unparseable_market_count": 0,
+        },
+    }
+
+
 def raw_fill(
     *,
     wallet: str = HUSKY,
@@ -540,6 +591,42 @@ def test_husky_regression_counts_and_fill_set_match():
             values.append(value)
         return tuple(values)
     assert {key(row) for row in old} == {key(row) for row in new}
+
+
+def test_summary_is_readable_chinese_for_incomplete_no_buy_fixture():
+    text = study.render_summary(summary_fixture())
+    assert text.startswith("# Polymarket最高温市场交易模式报告")
+    for heading in (
+        "## 一、先说结论", "## 二、本次研究范围", "## 三、先看数据完整性",
+        "## 四、成交概览", "## 五、买入方式", "## 六、卖出方式",
+        "## 七、交易时间集中在哪里", "## 八、主要在什么价格成交",
+        "## 九、同一价格累计成交规模", "## 十、他通常买几个温度",
+        "## 十一、目前可以确认的交易特点", "## 十二、目前不能下的结论",
+    ):
+        assert heading in text
+    assert "没有观察到买入成交" in text
+    assert "不能判断" in text and "建仓" in text
+    assert "该交易员没有买入" not in text
+    assert "天气当天" in text
+    assert "当天16:00—24:00" in text
+    assert "90—100美分" in text
+    assert "累计100—500份" in text
+    assert "重要提醒" in text and "可能只包含部分历史成交" in text
+    assert "卖出成交额不是利润" in text
+    assert "PnL" in text and "ROI" in text
+    assert "OBSERVED" not in text and "INFERRED" not in text and "UNKNOWN" not in text
+    assert not any(f"\n{number}." in text for number in range(1, 24))
+
+
+def test_summary_chinese_rendering_keeps_buy_and_temperature_sections():
+    text = study.render_summary(summary_fixture(with_buy=True))
+    assert "当前观察到2笔买入成交" in text
+    assert "买入YES主要在30—70美分" in text
+    assert "买入NO主要在10—30美分" in text
+    assert "多YES事件1个" in text
+    assert "YES/NO混合事件1个" in text
+    assert study._zh_price("UNKNOWN") == "当前没有足够成交可判断"
+    assert study._zh_shares("SHARES_100_500") == "同一价格累计100—500份"
 
 
 def test_output_tree_city_all_cities_quality_and_no_pnl_fields():
