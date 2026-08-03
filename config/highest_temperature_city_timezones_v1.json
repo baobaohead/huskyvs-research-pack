@@ -1,0 +1,7 @@
+{
+  "schema_version": "highest_temperature_city_timezones_v1",
+  "cities": {
+    "beijing": "Asia/Shanghai",
+    "shanghai": "Asia/Shanghai"
+  }
+}

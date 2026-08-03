@@ -1,0 +1,4 @@
+interface:
+  display_name: "Polymarket Highest Temperature Trader Pattern"
+  short_description: "Analyze public highest-temperature trader fills"
+  default_prompt: "Use $polymarket-highest-temperature-trader-pattern-v1 to analyze public highest-temperature market fill patterns for these wallets, dates, and cities."
