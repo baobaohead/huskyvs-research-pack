@@ -64,9 +64,11 @@ skills/polymarket-highest-temperature-trader-pattern-v1/examples/example_multi_w
 skills/polymarket-highest-temperature-trader-pattern-v1/examples/example_all_cities.yaml
 ```
 
-## 3. 推荐调用方式：离线重放
+## 3. 已有匹配证据时：离线重放
 
 离线重放不会发出网络请求，适合回归测试、审阅和复现历史结果：
+
+仓库内置的 `docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/manifest.json` 是 **Husky 钱包专属证据**，只属于 `0xaf17116ae2b1476032785a67bd5b7c8c05905c20`。它不能用于分析其他钱包。离线重放前，manifest 的钱包集合和天气日期范围必须与本次请求匹配；新钱包没有匹配证据时，应先按第 4 节联网获取公开数据。
 
 ```bash
 cd /Users/baobaotou/Documents/竞争对手分析/huskyvs_research_pack
@@ -110,6 +112,8 @@ unset POLYMARKET_PUBLIC_RESEARCH_NO_NETWORK
 ```
 
 程序会为每个钱包保存独立的公开证据目录和 manifest，并记录每次 GET 的基础 URL、参数、请求时间、返回记录数、SHA256、成功/失败和重试次数。
+
+更换钱包时，只需把输入文件中的 `trader_ids` 改为新地址并使用 `--refresh-public-data`。本次运行生成的钱包专属 manifest 位于输出目录的 `_public_evidence/` 下；以后只有在钱包集合与天气日期范围均匹配时，才能把它传给 `--saved-public-evidence-manifest` 做离线重放。
 
 如果分页达到上限，报告会写入 `PAGINATION_INCOMPLETE`；这类结果不能当作完整历史静默使用。
 
@@ -246,6 +250,8 @@ ln -s ../../skills/polymarket-highest-temperature-trader-pattern-v1 \
 
 在对话框中输入下面这种请求即可：
 
+下面的离线示例之所以能运行，是因为仓库恰好包含与 Husky 钱包匹配的便携证据：
+
 ```text
 $polymarket-highest-temperature-trader-pattern-v1
 
@@ -260,6 +266,19 @@ $polymarket-highest-temperature-trader-pattern-v1
 不要计算 PnL、ROI、胜率，也不要下单。
 ```
 
+换成新钱包时，不要继续指定 Husky 离线证据。第一次应允许 Skill 通过公开、无需认证的 GET 请求采集该钱包的数据：
+
+```text
+$polymarket-highest-temperature-trader-pattern-v1
+
+分析钱包 0x4ce3f17be91c3d0d6dbfed7bd4d326957dec4291 在 2026-03-21 至 2026-07-23 的北京每日最高温市场公开成交模式。
+这是新钱包，允许联网；请使用 --refresh-public-data，仅访问 Polymarket 公开、无需认证的 GET 接口。不要使用 Husky 的离线 evidence manifest。
+输出结果写到 /tmp/polymarket_highest_temperature_trader_pattern_v1/new_wallet_run_001。完成后告诉我本次生成的钱包专属 evidence manifest 路径，并总结 BUY/SELL、YES/NO、时间桶、价格带、同价累计 shares、温度组合和 data_quality。
+不要计算 PnL、ROI、胜率，也不要连接账户、签名或下单。
+```
+
+完成首次联网采集后，后续可要求“使用上次生成且钱包和日期范围匹配的 manifest 离线重放”。若用户明确禁止联网且没有匹配证据，Skill 应直接说明需要先采集公开数据，不应生成 `BLOCKED.md`。
+
 多钱包示例：
 
 ```text
@@ -269,7 +288,7 @@ $polymarket-highest-temperature-trader-pattern-v1
 - 0xaf17116ae2b1476032785a67bd5b7c8c05905c20
 - 0x1111111111111111111111111111111111111111
 
-天气日期 2026-06-01 至 2026-07-31，城市 beijing 和 shanghai。每个钱包单独分析，并生成 trader_comparison；不要混合钱包数据。
+天气日期 2026-06-01 至 2026-07-31，城市 beijing 和 shanghai。这两个钱包没有共同的匹配离线 manifest，因此允许联网并使用 --refresh-public-data。每个钱包单独分析，并生成 trader_comparison；不要混合钱包数据。
 ```
 
 如果 `$polymarket-highest-temperature-trader-pattern-v1` 没有出现在选择器中，通常是当前对话没有在该仓库中启动、`.agents/skills` 链接未建立，或 Codex 尚未刷新 Skill 列表。先确认当前工作区是上述仓库根目录，再重启 Codex；也可以暂时直接运行本指南第 3 节的固定 runner。

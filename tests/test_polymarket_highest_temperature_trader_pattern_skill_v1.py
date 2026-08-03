@@ -88,6 +88,15 @@ def test_skill_documents_applicable_and_inapplicable_requests():
         assert phrase in text
 
 
+def test_skill_routes_new_wallets_to_public_refresh_and_limits_bundled_evidence():
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8").lower()
+    assert "for a new wallet" in text
+    assert "--refresh-public-data" in text
+    assert "belongs only to `0xaf17116ae2b1476032785a67bd5b7c8c05905c20`" in text
+    assert "never substitute evidence from another wallet" in text
+    assert "do not create a `blocked.md`" in text
+
+
 def test_skill_calls_fixed_python_module_without_statistics_logic():
     text = RUNNER.read_text(encoding="utf-8")
     assert "src.polymarket_highest_temperature_trader_pattern_v1" in text

@@ -1163,7 +1163,11 @@ def load_saved_evidence(
         raise RuntimeError("EVIDENCE_PUBLIC_SAFETY_FLAGS_MISMATCH")
     if manifest.get("schema_version") == LEGACY_HUSKY_EVIDENCE_SCHEMA:
         if wallets != [HUSKY_WALLET]:
-            raise RuntimeError("EVIDENCE_WALLET_MISMATCH")
+            raise RuntimeError(
+                "EVIDENCE_WALLET_MISMATCH: the bundled legacy manifest belongs only to "
+                f"{HUSKY_WALLET}; use --refresh-public-data for a new wallet or provide "
+                "a saved manifest that belongs to the requested wallet"
+            )
         result: dict[str, list[dict[str, Any]]] = {}
         for name in ("activity", "trades"):
             meta = manifest["aggregates"][name]
@@ -1208,7 +1212,11 @@ def load_saved_evidence(
             raise RuntimeError("EVIDENCE_PUBLIC_SAFETY_FLAGS_MISMATCH")
         wallet = str(child.get("wallet") or "").lower()
         if wallet not in wallets:
-            raise RuntimeError("EVIDENCE_WALLET_MISMATCH")
+            raise RuntimeError(
+                "EVIDENCE_WALLET_MISMATCH: the saved manifest wallet set does not match "
+                "the requested wallet set; use --refresh-public-data for new wallets or "
+                "provide the matching saved manifest"
+            )
         if child.get("weather_date_from") != date_from.isoformat() or child.get("weather_date_to") != date_to.isoformat():
             raise RuntimeError("EVIDENCE_ANALYSIS_RANGE_MISMATCH")
         payloads = {}

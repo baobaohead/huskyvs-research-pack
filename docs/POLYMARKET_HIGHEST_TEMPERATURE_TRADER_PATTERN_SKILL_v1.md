@@ -16,6 +16,8 @@ A public trade record is a fill, not an original order. One order can split into
 - `--city-timezone city=IANA/Zone` explicitly overrides the versioned registry after `zoneinfo` validation.
 - Exactly one of `--refresh-public-data` and `--saved-public-evidence-manifest` is required.
 
+Use `--refresh-public-data` for a new wallet or whenever no saved manifest matches the complete requested wallet set and weather-date range. Use `--saved-public-evidence-manifest` only for a matching replay. The bundled manifest in the command below is a legacy Husky-only fixture for `0xaf17116ae2b1476032785a67bd5b7c8c05905c20`; it must never be substituted for another wallet's evidence.
+
 ```bash
 python -m src.polymarket_highest_temperature_trader_pattern_v1 analyze \
   --wallet 0xaf17116ae2b1476032785a67bd5b7c8c05905c20 \
@@ -27,7 +29,7 @@ python -m src.polymarket_highest_temperature_trader_pattern_v1 analyze \
   docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/manifest.json
 ```
 
-Set `POLYMARKET_PUBLIC_RESEARCH_NO_NETWORK=1` for offline replay. Any attempted network request then fails before a request is made.
+Set `POLYMARKET_PUBLIC_RESEARCH_NO_NETWORK=1` for offline replay only when a matching manifest already exists. Any attempted network request then fails before a request is made. A first run for a new wallet requires the public GET refresh; it creates wallet-specific evidence beneath the chosen output root for later offline replay.
 
 The bundled `.yaml` inputs use the JSON-compatible YAML subset so the runner has no YAML runtime dependency. Environments without a `python` launcher can use their Python interpreter path (for example `python3`) with the same arguments.
 
@@ -77,4 +79,4 @@ Live evidence records the GET base URL, parameters, request time, record count, 
 
 ## Validation
 
-The new program suite contains 129 cases and the skill suite contains 16 cases. The Husky portable replay preserves 50 events, 537 fills, 453 BUY, 84 SELL, 400 BUY YES, 53 BUY NO, 29 multi-YES events, and 21 events with adjacent YES buckets. The reviewed/new fill sets are compared on transaction hash, condition ID, asset, side, normalized outcome, price, shares, and timestamp, with the wallet fixed to the requested Husky address.
+The new program and skill suites verify arbitrary-wallet routing as well as manifest wallet isolation. The Husky portable replay preserves 50 events, 537 fills, 453 BUY, 84 SELL, 400 BUY YES, 53 BUY NO, 29 multi-YES events, and 21 events with adjacent YES buckets. The reviewed/new fill sets are compared on transaction hash, condition ID, asset, side, normalized outcome, price, shares, and timestamp, with the wallet fixed to the requested Husky address.

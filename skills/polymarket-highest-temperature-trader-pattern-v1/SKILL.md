@@ -11,10 +11,12 @@ Use the bundled deterministic runner. Do not recreate or alter its registered bu
 
 1. Collect one or more wallet addresses, `date_from`, `date_to`, and optional cities. Treat an omitted or empty city list as all identifiable cities.
 2. Validate every wallet as a 42-character `0x` address. Normalize to lowercase and deduplicate.
-3. Choose exactly one evidence mode:
-   - Use `--refresh-public-data` for official unauthenticated Polymarket GET collection.
-   - Use `--saved-public-evidence-manifest PATH` for validated offline replay.
-4. Run:
+3. Choose exactly one evidence mode based on the requested wallet set:
+   - For a new wallet, or whenever no saved manifest matches every requested wallet and the weather-date range, use `--refresh-public-data`. This uses only official unauthenticated Polymarket GET endpoints and creates wallet-specific evidence for later replay.
+   - Use `--saved-public-evidence-manifest PATH` only after confirming that the manifest belongs to every requested wallet and matches the weather-date range. Never substitute evidence from another wallet.
+   - The repository's bundled `docs/husky_beijing_full_trade_study_v1/saved_evidence_v1/manifest.json` belongs only to `0xaf17116ae2b1476032785a67bd5b7c8c05905c20`; it cannot analyze any other wallet.
+   - If the user requires no network and no matching manifest exists, explain that a first public-data refresh is required. Do not create a `BLOCKED.md` or modify the repository merely to record this condition.
+4. For a matching offline manifest, run:
 
 ```bash
 python skills/polymarket-highest-temperature-trader-pattern-v1/scripts/run_analysis.py \
@@ -24,6 +26,8 @@ python skills/polymarket-highest-temperature-trader-pattern-v1/scripts/run_analy
 ```
 
 Use JSON-compatible YAML for the bundled input file; this keeps the runner dependency-free. Use the module CLI directly when a `python` launcher or general YAML parser is unavailable.
+
+For a new wallet, replace the saved-manifest argument with `--refresh-public-data`. The run saves a wallet-specific manifest beneath `OUTPUT_DIRECTORY/_public_evidence/`; use that generated manifest for later offline replays of the same wallet set and weather-date range.
 
 5. Check each wallet's `data_quality.csv`. Call out `PAGINATION_INCOMPLETE`, request failures, unknown timezones, unknown relative days, identity conflicts, and invalid fills.
 6. Read each wallet's `summary.json` and the root `trader_comparison.csv`/`.md`.

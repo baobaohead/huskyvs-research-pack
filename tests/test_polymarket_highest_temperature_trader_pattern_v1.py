@@ -420,6 +420,17 @@ def test_offline_manifest_rejects_absolute_parent_and_sha_mismatch(tmp_path):
         study.load_saved_evidence(manifest_path, wallets=[HUSKY], date_from=datetime(2026, 7, 20).date(), date_to=datetime(2026, 7, 20).date())
 
 
+def test_bundled_husky_manifest_explains_how_to_run_a_new_wallet():
+    new_wallet = "0x4ce3f17be91c3d0d6dbfed7bd4d326957dec4291"
+    with pytest.raises(RuntimeError, match="use --refresh-public-data for a new wallet"):
+        study.load_saved_evidence(
+            PORTABLE,
+            wallets=[new_wallet],
+            date_from=datetime(2026, 3, 21).date(),
+            date_to=datetime(2026, 7, 23).date(),
+        )
+
+
 def test_offline_mode_makes_zero_network_calls(monkeypatch):
     study.NETWORK_CALL_COUNT = 0
     monkeypatch.setenv(study.NO_NETWORK_ENV, "1")
