@@ -45,6 +45,7 @@ SIGNING = False
 REAL_ORDER = False
 FORMAL_STARTED = False
 NETWORK_CALL_COUNT = 0
+NETWORK_CALL_COUNT_LOCK = Lock()
 HUSKY_WALLET = "0xaf17116ae2b1476032785a67bd5b7c8c05905c20"
 TARGET_ACTIVITY_OFFSET_CAP = 5_000
 TARGET_TRADES_OFFSET_CAP = 10_000
@@ -1481,7 +1482,8 @@ class PublicGetClient:
             received = datetime.now(timezone.utc).isoformat()
             try:
                 request = urllib.request.Request(full_url, method="GET", headers={"User-Agent": "polymarket-highest-temperature-public-research/1.0"})
-                NETWORK_CALL_COUNT += 1
+                with NETWORK_CALL_COUNT_LOCK:
+                    NETWORK_CALL_COUNT += 1
                 with urllib.request.urlopen(request, timeout=60) as response:
                     raw = response.read()
                 payload = json.loads(raw)
@@ -2508,6 +2510,9 @@ def analyze(
     saved_public_evidence_manifest: Path | None = None,
     city_timezone_overrides: Iterable[str] | None = None,
 ) -> dict[str, Any]:
+    global NETWORK_CALL_COUNT
+    with NETWORK_CALL_COUNT_LOCK:
+        NETWORK_CALL_COUNT = 0
     normalized_wallets = normalize_wallets(wallets)
     requested_cities = normalize_cities(cities)
     start_date, end_date = parse_date_range(date_from, date_to)

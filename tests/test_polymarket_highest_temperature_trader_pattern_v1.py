@@ -3,9 +3,11 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 from datetime import date, datetime, timezone
 from pathlib import Path
+from threading import Lock
 
 import pytest
 
@@ -617,6 +619,80 @@ def test_offline_mode_makes_zero_network_calls(monkeypatch):
 def test_public_get_client_rejects_nonofficial_endpoint(tmp_path):
     with pytest.raises(ValueError, match="official Polymarket"):
         study.PublicGetClient(tmp_path).get_json("https://example.com/trades", {})
+
+
+def test_analyze_resets_network_call_count_between_runs(monkeypatch, tmp_path):
+    row = raw_fill(weather_date="2026-07-20")
+    activity_row = {**row, "type": "TRADE", "usdcSize": 2}
+
+    def fake_refresh(wallet, date_from, date_to, root, cities=()):
+        with study.NETWORK_CALL_COUNT_LOCK:
+            study.NETWORK_CALL_COUNT += 3
+        manifest = {
+            "schema_version": study.EVIDENCE_SCHEMA,
+            "wallet": wallet,
+            "weather_date_from": date_from.isoformat(),
+            "weather_date_to": date_to.isoformat(),
+            "collection_start_utc": "2026-07-17T00:00:00+00:00",
+            "collection_end_utc": "2026-07-23T23:59:59+00:00",
+            "public_data_only": True,
+            "public_get_only": True,
+            "account_connection": False,
+            "signing": False,
+            "real_order": False,
+            "pagination_saturation_status": "COMPLETE",
+            "requests": [{"success": True}] * 3,
+        }
+        root.mkdir(parents=True, exist_ok=True)
+        study.write_json(root / "manifest.json", manifest)
+        return manifest, {"activity": [activity_row], "trades": [row]}
+
+    monkeypatch.setattr(study, "refresh_wallet_evidence", fake_refresh)
+    study.NETWORK_CALL_COUNT = 999
+    first = study.analyze(
+        [HUSKY], "2026-07-20", "2026-07-20", ["beijing"],
+        tmp_path / "first", refresh_public_data=True,
+    )
+    study.NETWORK_CALL_COUNT = 888
+    second = study.analyze(
+        [HUSKY], "2026-07-20", "2026-07-20", ["beijing"],
+        tmp_path / "second", refresh_public_data=True,
+    )
+    assert first["run_manifest"]["network_call_count"] == 3
+    assert second["run_manifest"]["network_call_count"] == 3
+
+
+def test_concurrent_public_requests_count_each_actual_attempt(monkeypatch, tmp_path):
+    attempts = {"count": 0}
+    attempts_lock = Lock()
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
+        def read(self):
+            return b"[]"
+
+    def fake_urlopen(request, timeout):
+        with attempts_lock:
+            attempts["count"] += 1
+        return FakeResponse()
+
+    monkeypatch.setattr(study.urllib.request, "urlopen", fake_urlopen)
+    study.NETWORK_CALL_COUNT = 0
+    client = study.PublicGetClient(tmp_path, attempts=1)
+    request_count = 64
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        list(pool.map(
+            lambda _: client.get_json(f"{study.DATA_API}/trades", {"limit": 1}),
+            range(request_count),
+        ))
+    assert attempts["count"] == request_count
+    assert study.NETWORK_CALL_COUNT == attempts["count"]
+    assert len(client.requests) == request_count
 
 
 def test_husky_regression_counts_and_fill_set_match():
