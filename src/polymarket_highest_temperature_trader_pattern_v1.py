@@ -2671,6 +2671,7 @@ def analyze(
             end_date,
             requested_cities[0] if len(requested_cities) == 1 else "all-cities",
             quality_by_wallet,
+            requested_cities,
         )
     return result
 

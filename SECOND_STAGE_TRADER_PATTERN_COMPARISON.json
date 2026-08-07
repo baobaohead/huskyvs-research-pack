@@ -1,12 +1,18 @@
 {
   "analysis_depth": "advanced",
   "denominator": {
+    "city_weather_day_count": 96,
+    "duplicate_city_weather_day_count": 1,
+    "duplicate_city_weather_days": [
+      "beijing|2026-05-19"
+    ],
     "duplicate_event_count": 2,
     "duplicate_event_date_count": 1,
     "duplicate_event_id_count": 0,
     "duplicate_event_ids": {},
     "duplicate_events": [
       {
+        "canonical_city": "beijing",
         "completeness_status": "COMPLETE",
         "condition_count": 11,
         "event_id": "493677",
@@ -14,6 +20,7 @@
         "weather_date": "2026-05-19"
       },
       {
+        "canonical_city": "beijing",
         "completeness_status": "COMPLETE",
         "condition_count": 11,
         "event_id": "503645",
@@ -22,6 +29,104 @@
       }
     ],
     "event_count": 97,
+    "event_counts_by_city_date": {
+      "beijing|2026-05-01": 1,
+      "beijing|2026-05-02": 1,
+      "beijing|2026-05-03": 1,
+      "beijing|2026-05-04": 1,
+      "beijing|2026-05-05": 1,
+      "beijing|2026-05-06": 1,
+      "beijing|2026-05-07": 1,
+      "beijing|2026-05-08": 1,
+      "beijing|2026-05-09": 1,
+      "beijing|2026-05-10": 1,
+      "beijing|2026-05-11": 1,
+      "beijing|2026-05-12": 1,
+      "beijing|2026-05-13": 1,
+      "beijing|2026-05-14": 1,
+      "beijing|2026-05-15": 1,
+      "beijing|2026-05-16": 1,
+      "beijing|2026-05-17": 1,
+      "beijing|2026-05-18": 1,
+      "beijing|2026-05-19": 2,
+      "beijing|2026-05-20": 1,
+      "beijing|2026-05-21": 1,
+      "beijing|2026-05-22": 1,
+      "beijing|2026-05-23": 1,
+      "beijing|2026-05-24": 1,
+      "beijing|2026-05-25": 1,
+      "beijing|2026-05-26": 1,
+      "beijing|2026-05-27": 1,
+      "beijing|2026-05-28": 1,
+      "beijing|2026-05-29": 1,
+      "beijing|2026-05-30": 1,
+      "beijing|2026-05-31": 1,
+      "beijing|2026-06-01": 1,
+      "beijing|2026-06-02": 1,
+      "beijing|2026-06-03": 1,
+      "beijing|2026-06-04": 1,
+      "beijing|2026-06-05": 1,
+      "beijing|2026-06-06": 1,
+      "beijing|2026-06-07": 1,
+      "beijing|2026-06-08": 1,
+      "beijing|2026-06-09": 1,
+      "beijing|2026-06-10": 1,
+      "beijing|2026-06-11": 1,
+      "beijing|2026-06-12": 1,
+      "beijing|2026-06-13": 1,
+      "beijing|2026-06-14": 1,
+      "beijing|2026-06-15": 1,
+      "beijing|2026-06-16": 1,
+      "beijing|2026-06-17": 1,
+      "beijing|2026-06-18": 1,
+      "beijing|2026-06-19": 1,
+      "beijing|2026-06-20": 1,
+      "beijing|2026-06-21": 1,
+      "beijing|2026-06-22": 1,
+      "beijing|2026-06-23": 1,
+      "beijing|2026-06-24": 1,
+      "beijing|2026-06-25": 1,
+      "beijing|2026-06-26": 1,
+      "beijing|2026-06-27": 1,
+      "beijing|2026-06-28": 1,
+      "beijing|2026-06-29": 1,
+      "beijing|2026-06-30": 1,
+      "beijing|2026-07-01": 1,
+      "beijing|2026-07-02": 1,
+      "beijing|2026-07-03": 1,
+      "beijing|2026-07-04": 1,
+      "beijing|2026-07-05": 1,
+      "beijing|2026-07-06": 1,
+      "beijing|2026-07-07": 1,
+      "beijing|2026-07-08": 1,
+      "beijing|2026-07-09": 1,
+      "beijing|2026-07-10": 1,
+      "beijing|2026-07-11": 1,
+      "beijing|2026-07-12": 1,
+      "beijing|2026-07-13": 1,
+      "beijing|2026-07-14": 1,
+      "beijing|2026-07-15": 1,
+      "beijing|2026-07-16": 1,
+      "beijing|2026-07-17": 1,
+      "beijing|2026-07-18": 1,
+      "beijing|2026-07-19": 1,
+      "beijing|2026-07-20": 1,
+      "beijing|2026-07-21": 1,
+      "beijing|2026-07-22": 1,
+      "beijing|2026-07-23": 1,
+      "beijing|2026-07-24": 1,
+      "beijing|2026-07-25": 1,
+      "beijing|2026-07-26": 1,
+      "beijing|2026-07-27": 1,
+      "beijing|2026-07-28": 1,
+      "beijing|2026-07-29": 1,
+      "beijing|2026-07-30": 1,
+      "beijing|2026-07-31": 1,
+      "beijing|2026-08-01": 1,
+      "beijing|2026-08-02": 1,
+      "beijing|2026-08-03": 1,
+      "beijing|2026-08-04": 1
+    },
     "event_counts_by_date": {
       "2026-05-01": 1,
       "2026-05-02": 1,
@@ -125,12 +230,19 @@
     ],
     "out_of_range_event_count": 0,
     "out_of_range_events": [],
+    "requested_calendar_day_count": 96,
+    "requested_cities": [
+      "beijing"
+    ],
+    "requested_city_count": 1,
     "requested_days": 96,
+    "unique_calendar_date_count": 96,
     "unique_weather_dates": 96
   },
-  "denominator_97_explanation": "96 unique weather dates + 1 extra same-date event records",
+  "denominator_97_explanation": "96 city-weather days + 1 extra same-city-date event records",
   "events": [
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "429723",
@@ -138,6 +250,7 @@
       "weather_date": "2026-05-01"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "433194",
@@ -145,6 +258,7 @@
       "weather_date": "2026-05-02"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "436630",
@@ -152,6 +266,7 @@
       "weather_date": "2026-05-03"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "439966",
@@ -159,6 +274,7 @@
       "weather_date": "2026-05-04"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "443324",
@@ -166,6 +282,7 @@
       "weather_date": "2026-05-05"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "448475",
@@ -173,6 +290,7 @@
       "weather_date": "2026-05-06"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "450205",
@@ -180,6 +298,7 @@
       "weather_date": "2026-05-07"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "453831",
@@ -187,6 +306,7 @@
       "weather_date": "2026-05-08"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "457245",
@@ -194,6 +314,7 @@
       "weather_date": "2026-05-09"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "460678",
@@ -201,6 +322,7 @@
       "weather_date": "2026-05-10"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "465284",
@@ -208,6 +330,7 @@
       "weather_date": "2026-05-11"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "469213",
@@ -215,6 +338,7 @@
       "weather_date": "2026-05-12"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "472585",
@@ -222,6 +346,7 @@
       "weather_date": "2026-05-13"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "476122",
@@ -229,6 +354,7 @@
       "weather_date": "2026-05-14"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "479735",
@@ -236,6 +362,7 @@
       "weather_date": "2026-05-15"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "483468",
@@ -243,6 +370,7 @@
       "weather_date": "2026-05-16"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "486846",
@@ -250,6 +378,7 @@
       "weather_date": "2026-05-17"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "490253",
@@ -257,6 +386,7 @@
       "weather_date": "2026-05-18"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "493677",
@@ -264,6 +394,7 @@
       "weather_date": "2026-05-19"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "503645",
@@ -271,6 +402,7 @@
       "weather_date": "2026-05-19"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "497013",
@@ -278,6 +410,7 @@
       "weather_date": "2026-05-20"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "500692",
@@ -285,6 +418,7 @@
       "weather_date": "2026-05-21"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "504546",
@@ -292,6 +426,7 @@
       "weather_date": "2026-05-22"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "509226",
@@ -299,6 +434,7 @@
       "weather_date": "2026-05-23"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "512238",
@@ -306,6 +442,7 @@
       "weather_date": "2026-05-24"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "515690",
@@ -313,6 +450,7 @@
       "weather_date": "2026-05-25"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "519083",
@@ -320,6 +458,7 @@
       "weather_date": "2026-05-26"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "522329",
@@ -327,6 +466,7 @@
       "weather_date": "2026-05-27"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "525775",
@@ -334,6 +474,7 @@
       "weather_date": "2026-05-28"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "529454",
@@ -341,6 +482,7 @@
       "weather_date": "2026-05-29"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "533166",
@@ -348,6 +490,7 @@
       "weather_date": "2026-05-30"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "536707",
@@ -355,6 +498,7 @@
       "weather_date": "2026-05-31"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "540097",
@@ -362,6 +506,7 @@
       "weather_date": "2026-06-01"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "543490",
@@ -369,6 +514,7 @@
       "weather_date": "2026-06-02"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "546783",
@@ -376,6 +522,7 @@
       "weather_date": "2026-06-03"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "550253",
@@ -383,6 +530,7 @@
       "weather_date": "2026-06-04"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "553918",
@@ -390,6 +538,7 @@
       "weather_date": "2026-06-05"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "560849",
@@ -397,6 +546,7 @@
       "weather_date": "2026-06-06"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "564414",
@@ -404,6 +554,7 @@
       "weather_date": "2026-06-07"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "566670",
@@ -411,6 +562,7 @@
       "weather_date": "2026-06-08"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "568052",
@@ -418,6 +570,7 @@
       "weather_date": "2026-06-09"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "571442",
@@ -425,6 +578,7 @@
       "weather_date": "2026-06-10"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "575054",
@@ -432,6 +586,7 @@
       "weather_date": "2026-06-11"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "578711",
@@ -439,6 +594,7 @@
       "weather_date": "2026-06-12"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "582442",
@@ -446,6 +602,7 @@
       "weather_date": "2026-06-13"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "585989",
@@ -453,6 +610,7 @@
       "weather_date": "2026-06-14"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "589482",
@@ -460,6 +618,7 @@
       "weather_date": "2026-06-15"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "593034",
@@ -467,6 +626,7 @@
       "weather_date": "2026-06-16"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "596359",
@@ -474,6 +634,7 @@
       "weather_date": "2026-06-17"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "599827",
@@ -481,6 +642,7 @@
       "weather_date": "2026-06-18"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "603551",
@@ -488,6 +650,7 @@
       "weather_date": "2026-06-19"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "607148",
@@ -495,6 +658,7 @@
       "weather_date": "2026-06-20"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "610673",
@@ -502,6 +666,7 @@
       "weather_date": "2026-06-21"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "614108",
@@ -509,6 +674,7 @@
       "weather_date": "2026-06-22"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "617573",
@@ -516,6 +682,7 @@
       "weather_date": "2026-06-23"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "620945",
@@ -523,6 +690,7 @@
       "weather_date": "2026-06-24"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "624490",
@@ -530,6 +698,7 @@
       "weather_date": "2026-06-25"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "628196",
@@ -537,6 +706,7 @@
       "weather_date": "2026-06-26"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "631933",
@@ -544,6 +714,7 @@
       "weather_date": "2026-06-27"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "635493",
@@ -551,6 +722,7 @@
       "weather_date": "2026-06-28"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "639553",
@@ -558,6 +730,7 @@
       "weather_date": "2026-06-29"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "643060",
@@ -565,6 +738,7 @@
       "weather_date": "2026-06-30"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "646498",
@@ -572,6 +746,7 @@
       "weather_date": "2026-07-01"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "650053",
@@ -579,6 +754,7 @@
       "weather_date": "2026-07-02"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "653830",
@@ -586,6 +762,7 @@
       "weather_date": "2026-07-03"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "657482",
@@ -593,6 +770,7 @@
       "weather_date": "2026-07-04"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "661259",
@@ -600,6 +778,7 @@
       "weather_date": "2026-07-05"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "664864",
@@ -607,6 +786,7 @@
       "weather_date": "2026-07-06"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "668431",
@@ -614,6 +794,7 @@
       "weather_date": "2026-07-07"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "671852",
@@ -621,6 +802,7 @@
       "weather_date": "2026-07-08"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "675499",
@@ -628,6 +810,7 @@
       "weather_date": "2026-07-09"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "679203",
@@ -635,6 +818,7 @@
       "weather_date": "2026-07-10"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "682952",
@@ -642,6 +826,7 @@
       "weather_date": "2026-07-11"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "686646",
@@ -649,6 +834,7 @@
       "weather_date": "2026-07-12"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "690251",
@@ -656,6 +842,7 @@
       "weather_date": "2026-07-13"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "693928",
@@ -663,6 +850,7 @@
       "weather_date": "2026-07-14"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "697517",
@@ -670,6 +858,7 @@
       "weather_date": "2026-07-15"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "701563",
@@ -677,6 +866,7 @@
       "weather_date": "2026-07-16"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "705213",
@@ -684,6 +874,7 @@
       "weather_date": "2026-07-17"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "708829",
@@ -691,6 +882,7 @@
       "weather_date": "2026-07-18"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "712465",
@@ -698,6 +890,7 @@
       "weather_date": "2026-07-19"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "716237",
@@ -705,6 +898,7 @@
       "weather_date": "2026-07-20"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "720242",
@@ -712,6 +906,7 @@
       "weather_date": "2026-07-21"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "724035",
@@ -719,6 +914,7 @@
       "weather_date": "2026-07-22"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "727811",
@@ -726,6 +922,7 @@
       "weather_date": "2026-07-23"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "731557",
@@ -733,6 +930,7 @@
       "weather_date": "2026-07-24"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "736363",
@@ -740,6 +938,7 @@
       "weather_date": "2026-07-25"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "741832",
@@ -747,6 +946,7 @@
       "weather_date": "2026-07-26"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "746397",
@@ -754,6 +954,7 @@
       "weather_date": "2026-07-27"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "750611",
@@ -761,6 +962,7 @@
       "weather_date": "2026-07-28"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "754882",
@@ -768,6 +970,7 @@
       "weather_date": "2026-07-29"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "759575",
@@ -775,6 +978,7 @@
       "weather_date": "2026-07-30"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "766615",
@@ -782,6 +986,7 @@
       "weather_date": "2026-07-31"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "771092",
@@ -789,6 +994,7 @@
       "weather_date": "2026-08-01"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "775394",
@@ -796,6 +1002,7 @@
       "weather_date": "2026-08-02"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "779956",
@@ -803,6 +1010,7 @@
       "weather_date": "2026-08-03"
     },
     {
+      "canonical_city": "beijing",
       "completeness_status": "COMPLETE",
       "condition_count": 11,
       "event_id": "784725",
@@ -816,7 +1024,9 @@
   "schema_version": "second_stage_trader_pattern_comparison_v2",
   "scope": {
     "city": "beijing",
+    "city_weather_day_count": 96,
     "requested_calendar_day_count": 96,
+    "requested_city_count": 1,
     "weather_date_from": "2026-05-01",
     "weather_date_to": "2026-08-04"
   },
@@ -849,6 +1059,18 @@
         "SINGLE_YES_ONLY": 3,
         "SINGLE_YES_PLUS_NO": 2
       },
+      "dominant_d0_time_buckets": {
+        "BUY NO": "D0_00_08",
+        "BUY YES": "D0_00_08",
+        "SELL NO": "D0_00_08",
+        "SELL YES": "D0_16_24"
+      },
+      "dominant_price_bands": {
+        "BUY NO": "PRICE_70_90C",
+        "BUY YES": "PRICE_10_30C",
+        "SELL NO": "PRICE_70_90C",
+        "SELL YES": "PRICE_90_100C"
+      },
       "high_sell_summary": {
         "daily_cases": [
           {
@@ -858,6 +1080,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -895,6 +1118,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -932,6 +1156,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -969,6 +1194,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1006,6 +1232,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1043,6 +1270,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1115,6 +1343,7 @@
         "highest_hold_case": {
           "asset": "12956496639408126329398760430283940488064473596957081806926551540804789737754",
           "asset_exit_classification": "HAS_NEAR_FULL",
+          "canonical_city": "beijing",
           "condition_id": "0x0c0c4efe1d24b1cf1284f1af27180caf309cbfedeac75ddb0ad9b220643d55ac",
           "first_any_buy_to_first_high_sell_seconds": 184634,
           "first_low_buy_to_first_high_sell_seconds": 184634,
@@ -1166,6 +1395,7 @@
         "lowest_hold_case": {
           "asset": "16965443463146400687539218410880436586787279682503322483556606534661067919109",
           "asset_exit_classification": "HAS_NEAR_FULL",
+          "canonical_city": "beijing",
           "condition_id": "0xbd82bbf250a42f9a6a6f35ba61069462ef3c4f29469a63a88a7ac3b7eb172846",
           "first_any_buy_to_first_high_sell_seconds": 132418,
           "first_low_buy_to_first_high_sell_seconds": 132418,
@@ -1409,6 +1639,7 @@
         "top_days": [
           {
             "buy_fills": 183,
+            "canonical_city": "beijing",
             "fills": 302,
             "sell_fills": 119,
             "usd": 687.927534,
@@ -1416,6 +1647,7 @@
           },
           {
             "buy_fills": 130,
+            "canonical_city": "beijing",
             "fills": 219,
             "sell_fills": 89,
             "usd": 749.55633,
@@ -1423,6 +1655,7 @@
           },
           {
             "buy_fills": 135,
+            "canonical_city": "beijing",
             "fills": 200,
             "sell_fills": 65,
             "usd": 573.32104,
@@ -1430,6 +1663,7 @@
           },
           {
             "buy_fills": 125,
+            "canonical_city": "beijing",
             "fills": 190,
             "sell_fills": 65,
             "usd": 525.326423,
@@ -1437,6 +1671,7 @@
           },
           {
             "buy_fills": 182,
+            "canonical_city": "beijing",
             "fills": 189,
             "sell_fills": 7,
             "usd": 759.831685,
@@ -1444,6 +1679,7 @@
           },
           {
             "buy_fills": 97,
+            "canonical_city": "beijing",
             "fills": 185,
             "sell_fills": 88,
             "usd": 646.070765,
@@ -1451,6 +1687,7 @@
           },
           {
             "buy_fills": 130,
+            "canonical_city": "beijing",
             "fills": 182,
             "sell_fills": 52,
             "usd": 971.614183,
@@ -1458,6 +1695,7 @@
           },
           {
             "buy_fills": 92,
+            "canonical_city": "beijing",
             "fills": 178,
             "sell_fills": 86,
             "usd": 527.00263,
@@ -1465,6 +1703,7 @@
           },
           {
             "buy_fills": 139,
+            "canonical_city": "beijing",
             "fills": 160,
             "sell_fills": 21,
             "usd": 529.917218,
@@ -1472,6 +1711,7 @@
           },
           {
             "buy_fills": 108,
+            "canonical_city": "beijing",
             "fills": 160,
             "sell_fills": 52,
             "usd": 421.305369,
@@ -1479,62 +1719,62 @@
           }
         ],
         "yes_no_active_days": [
-          "2026-05-02",
-          "2026-05-04",
-          "2026-05-05",
-          "2026-05-06",
-          "2026-05-07",
-          "2026-05-26",
-          "2026-05-27",
-          "2026-05-28",
-          "2026-05-29",
-          "2026-05-30",
-          "2026-05-31",
-          "2026-06-01",
-          "2026-06-02",
-          "2026-06-04",
-          "2026-06-05",
-          "2026-06-06",
-          "2026-06-08",
-          "2026-06-09",
-          "2026-06-10",
-          "2026-06-12",
-          "2026-06-13",
-          "2026-06-14",
-          "2026-06-15",
-          "2026-06-16",
-          "2026-06-17",
-          "2026-06-18",
-          "2026-06-19",
-          "2026-06-20",
-          "2026-06-21",
-          "2026-06-22",
-          "2026-06-23",
-          "2026-06-24",
-          "2026-06-25",
-          "2026-06-26",
-          "2026-06-27",
-          "2026-06-28",
-          "2026-06-29",
-          "2026-06-30",
-          "2026-07-01",
-          "2026-07-02",
-          "2026-07-03",
-          "2026-07-05",
-          "2026-07-06",
-          "2026-07-10",
-          "2026-07-13",
-          "2026-07-14",
-          "2026-07-18",
-          "2026-07-21",
-          "2026-07-22",
-          "2026-07-23",
-          "2026-07-24",
-          "2026-07-26",
-          "2026-07-28",
-          "2026-08-01",
-          "2026-08-03",
-          "2026-08-04"
+          "beijing|2026-05-02",
+          "beijing|2026-05-04",
+          "beijing|2026-05-05",
+          "beijing|2026-05-06",
+          "beijing|2026-05-07",
+          "beijing|2026-05-26",
+          "beijing|2026-05-27",
+          "beijing|2026-05-28",
+          "beijing|2026-05-29",
+          "beijing|2026-05-30",
+          "beijing|2026-05-31",
+          "beijing|2026-06-01",
+          "beijing|2026-06-02",
+          "beijing|2026-06-04",
+          "beijing|2026-06-05",
+          "beijing|2026-06-06",
+          "beijing|2026-06-08",
+          "beijing|2026-06-09",
+          "beijing|2026-06-10",
+          "beijing|2026-06-12",
+          "beijing|2026-06-13",
+          "beijing|2026-06-14",
+          "beijing|2026-06-15",
+          "beijing|2026-06-16",
+          "beijing|2026-06-17",
+          "beijing|2026-06-18",
+          "beijing|2026-06-19",
+          "beijing|2026-06-20",
+          "beijing|2026-06-21",
+          "beijing|2026-06-22",
+          "beijing|2026-06-23",
+          "beijing|2026-06-24",
+          "beijing|2026-06-25",
+          "beijing|2026-06-26",
+          "beijing|2026-06-27",
+          "beijing|2026-06-28",
+          "beijing|2026-06-29",
+          "beijing|2026-06-30",
+          "beijing|2026-07-01",
+          "beijing|2026-07-02",
+          "beijing|2026-07-03",
+          "beijing|2026-07-05",
+          "beijing|2026-07-06",
+          "beijing|2026-07-10",
+          "beijing|2026-07-13",
+          "beijing|2026-07-14",
+          "beijing|2026-07-18",
+          "beijing|2026-07-21",
+          "beijing|2026-07-22",
+          "beijing|2026-07-23",
+          "beijing|2026-07-24",
+          "beijing|2026-07-26",
+          "beijing|2026-07-28",
+          "beijing|2026-08-01",
+          "beijing|2026-08-03",
+          "beijing|2026-08-04"
         ]
       }
     },
@@ -1547,6 +1787,18 @@
         "SINGLE_YES_ONLY": 2,
         "SINGLE_YES_PLUS_NO": 9
       },
+      "dominant_d0_time_buckets": {
+        "BUY NO": "D0_12_16",
+        "BUY YES": "D0_08_12",
+        "SELL NO": "D0_16_24",
+        "SELL YES": "D0_16_24"
+      },
+      "dominant_price_bands": {
+        "BUY NO": "PRICE_30_70C",
+        "BUY YES": "PRICE_10_30C",
+        "SELL NO": "PRICE_90_100C",
+        "SELL YES": "PRICE_90_100C"
+      },
       "high_sell_summary": {
         "daily_cases": [
           {
@@ -1556,6 +1808,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1593,6 +1846,7 @@
               "MIXED_EXIT_PATTERN": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1631,6 +1885,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1668,6 +1923,7 @@
               "MIXED_EXIT_PATTERN": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1706,6 +1962,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1743,6 +2000,7 @@
               "MIXED_EXIT_PATTERN": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1781,6 +2039,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1818,6 +2077,7 @@
               "MIXED_EXIT_PATTERN": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1856,6 +2116,7 @@
               "MIXED_EXIT_PATTERN": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1894,6 +2155,7 @@
               "MIXED_EXIT_PATTERN": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1932,6 +2194,7 @@
               "MIXED_EXIT_PATTERN": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -1970,6 +2233,7 @@
               "MIXED_EXIT_PATTERN": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2008,6 +2272,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2045,6 +2310,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2082,6 +2348,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2119,6 +2386,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2156,6 +2424,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2193,6 +2462,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2230,6 +2500,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2267,6 +2538,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2304,6 +2576,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2341,6 +2614,7 @@
               "ALL_PARTIAL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2378,6 +2652,7 @@
               "HAS_NEAR_FULL": 1
             },
             "assets": 1,
+            "canonical_city": "beijing",
             "dates": 1,
             "exceeds_asset_count": 0,
             "exceeds_fill_count": 0,
@@ -2450,6 +2725,7 @@
         "highest_hold_case": {
           "asset": "101327604660363478165747299662132031244788579714289952251498871531003610683140",
           "asset_exit_classification": "ALL_PARTIAL",
+          "canonical_city": "beijing",
           "condition_id": "0x343e67d5b603958e16020a9b97e4dd441662cd1ede0bbf23fcdfaa1cca069199",
           "first_any_buy_to_first_high_sell_seconds": 189563,
           "first_low_buy_to_first_high_sell_seconds": 189563,
@@ -2504,6 +2780,7 @@
         "lowest_hold_case": {
           "asset": "14863342124646821629675644586739462743432409305773531662511208160344934804629",
           "asset_exit_classification": "HAS_NEAR_FULL",
+          "canonical_city": "beijing",
           "condition_id": "0x88fd3d0fb536e2a593c1eb75ec13c838ffb4193cf77b0d68f820f803b1d09bfd",
           "first_any_buy_to_first_high_sell_seconds": 16026,
           "first_low_buy_to_first_high_sell_seconds": 12135,
@@ -2749,6 +3026,7 @@
         "top_days": [
           {
             "buy_fills": 300,
+            "canonical_city": "beijing",
             "fills": 300,
             "sell_fills": 0,
             "usd": 1110.830266,
@@ -2756,6 +3034,7 @@
           },
           {
             "buy_fills": 278,
+            "canonical_city": "beijing",
             "fills": 278,
             "sell_fills": 0,
             "usd": 676.10298,
@@ -2763,6 +3042,7 @@
           },
           {
             "buy_fills": 216,
+            "canonical_city": "beijing",
             "fills": 218,
             "sell_fills": 2,
             "usd": 3175.62089,
@@ -2770,6 +3050,7 @@
           },
           {
             "buy_fills": 216,
+            "canonical_city": "beijing",
             "fills": 217,
             "sell_fills": 1,
             "usd": 890.645867,
@@ -2777,6 +3058,7 @@
           },
           {
             "buy_fills": 203,
+            "canonical_city": "beijing",
             "fills": 211,
             "sell_fills": 8,
             "usd": 2152.139124,
@@ -2784,6 +3066,7 @@
           },
           {
             "buy_fills": 199,
+            "canonical_city": "beijing",
             "fills": 202,
             "sell_fills": 3,
             "usd": 682.399809,
@@ -2791,6 +3074,7 @@
           },
           {
             "buy_fills": 195,
+            "canonical_city": "beijing",
             "fills": 198,
             "sell_fills": 3,
             "usd": 658.015151,
@@ -2798,6 +3082,7 @@
           },
           {
             "buy_fills": 197,
+            "canonical_city": "beijing",
             "fills": 198,
             "sell_fills": 1,
             "usd": 594.4468449999999,
@@ -2805,6 +3090,7 @@
           },
           {
             "buy_fills": 196,
+            "canonical_city": "beijing",
             "fills": 197,
             "sell_fills": 1,
             "usd": 637.274194,
@@ -2812,6 +3098,7 @@
           },
           {
             "buy_fills": 196,
+            "canonical_city": "beijing",
             "fills": 196,
             "sell_fills": 0,
             "usd": 423.891837,
@@ -2819,74 +3106,74 @@
           }
         ],
         "yes_no_active_days": [
-          "2026-05-06",
-          "2026-05-07",
-          "2026-05-08",
-          "2026-05-09",
-          "2026-05-10",
-          "2026-05-11",
-          "2026-05-13",
-          "2026-05-15",
-          "2026-05-16",
-          "2026-05-20",
-          "2026-05-21",
-          "2026-05-22",
-          "2026-05-24",
-          "2026-05-25",
-          "2026-05-26",
-          "2026-05-27",
-          "2026-05-28",
-          "2026-05-29",
-          "2026-05-30",
-          "2026-05-31",
-          "2026-06-01",
-          "2026-06-02",
-          "2026-06-03",
-          "2026-06-04",
-          "2026-06-05",
-          "2026-06-06",
-          "2026-06-07",
-          "2026-06-08",
-          "2026-06-09",
-          "2026-06-10",
-          "2026-06-11",
-          "2026-06-12",
-          "2026-06-13",
-          "2026-06-14",
-          "2026-06-15",
-          "2026-06-16",
-          "2026-06-17",
-          "2026-06-19",
-          "2026-06-20",
-          "2026-06-21",
-          "2026-06-22",
-          "2026-06-23",
-          "2026-06-24",
-          "2026-06-25",
-          "2026-06-30",
-          "2026-07-01",
-          "2026-07-02",
-          "2026-07-03",
-          "2026-07-04",
-          "2026-07-07",
-          "2026-07-08",
-          "2026-07-09",
-          "2026-07-10",
-          "2026-07-11",
-          "2026-07-12",
-          "2026-07-13",
-          "2026-07-14",
-          "2026-07-15",
-          "2026-07-16",
-          "2026-07-17",
-          "2026-07-18",
-          "2026-07-19",
-          "2026-07-20",
-          "2026-07-21",
-          "2026-07-22",
-          "2026-07-29",
-          "2026-07-30",
-          "2026-08-03"
+          "beijing|2026-05-06",
+          "beijing|2026-05-07",
+          "beijing|2026-05-08",
+          "beijing|2026-05-09",
+          "beijing|2026-05-10",
+          "beijing|2026-05-11",
+          "beijing|2026-05-13",
+          "beijing|2026-05-15",
+          "beijing|2026-05-16",
+          "beijing|2026-05-20",
+          "beijing|2026-05-21",
+          "beijing|2026-05-22",
+          "beijing|2026-05-24",
+          "beijing|2026-05-25",
+          "beijing|2026-05-26",
+          "beijing|2026-05-27",
+          "beijing|2026-05-28",
+          "beijing|2026-05-29",
+          "beijing|2026-05-30",
+          "beijing|2026-05-31",
+          "beijing|2026-06-01",
+          "beijing|2026-06-02",
+          "beijing|2026-06-03",
+          "beijing|2026-06-04",
+          "beijing|2026-06-05",
+          "beijing|2026-06-06",
+          "beijing|2026-06-07",
+          "beijing|2026-06-08",
+          "beijing|2026-06-09",
+          "beijing|2026-06-10",
+          "beijing|2026-06-11",
+          "beijing|2026-06-12",
+          "beijing|2026-06-13",
+          "beijing|2026-06-14",
+          "beijing|2026-06-15",
+          "beijing|2026-06-16",
+          "beijing|2026-06-17",
+          "beijing|2026-06-19",
+          "beijing|2026-06-20",
+          "beijing|2026-06-21",
+          "beijing|2026-06-22",
+          "beijing|2026-06-23",
+          "beijing|2026-06-24",
+          "beijing|2026-06-25",
+          "beijing|2026-06-30",
+          "beijing|2026-07-01",
+          "beijing|2026-07-02",
+          "beijing|2026-07-03",
+          "beijing|2026-07-04",
+          "beijing|2026-07-07",
+          "beijing|2026-07-08",
+          "beijing|2026-07-09",
+          "beijing|2026-07-10",
+          "beijing|2026-07-11",
+          "beijing|2026-07-12",
+          "beijing|2026-07-13",
+          "beijing|2026-07-14",
+          "beijing|2026-07-15",
+          "beijing|2026-07-16",
+          "beijing|2026-07-17",
+          "beijing|2026-07-18",
+          "beijing|2026-07-19",
+          "beijing|2026-07-20",
+          "beijing|2026-07-21",
+          "beijing|2026-07-22",
+          "beijing|2026-07-29",
+          "beijing|2026-07-30",
+          "beijing|2026-08-03"
         ]
       }
     }
