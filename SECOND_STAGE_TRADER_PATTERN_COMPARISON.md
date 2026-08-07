@@ -1,6 +1,6 @@
 # SECOND_STAGE_TRADER_PATTERN_COMPARISON
 
-研究范围：北京每日最高温市场；天气日期 2026-05-01 至 2026-08-04。
+研究范围：beijing每日最高温市场；天气日期 2026-05-01 至 2026-08-04。
 
 本阶段只读取既有 `all_fills.csv`、`summary.json`、`data_quality.csv` 和 `_public_evidence`，没有重新抓取。价格带沿用第一阶段固定注册桶；本报告只描述公开 fills，不推断未成交订单、完整库存、PnL、ROI、胜率或主观意图。
 
@@ -11,7 +11,8 @@
 | 0x7c63520c2ca9b336af0c205b9ccf68217bb393d4 | READY | 97 | 1067 | 1067 | COMPLETE | 0 |
 | 0x8fbd7cf5f806f563080864694415829f7229a959 | READY | 97 | 1067 | 1067 | COMPLETE | 1 |
 
-两个钱包的目标市场查询均为 COMPLETE；无 API request failure、unknown timezone、unknown relative day、orphan sell 或 identity conflict。钱包二有1笔 activity-only fill，其他成交均有 activity 与 trades 双源对应；这不会改变本地报告的 READY 状态。
+两个钱包的目标市场查询均为 COMPLETE；未发现 API failure、unknown timezone/relative day、orphan sell 或 market identity conflict。本轮 source-only fill 总数为1，其余成交有 activity 与 trades 双源对应；这不会改变本地报告的 READY 状态。
+SECOND_STAGE_NETWORK_CALL_COUNT=0。底层既有 evidence 的历史抓取计数保留在 run_manifest，不属于本轮第二阶段分析。
 
 ## 1. 日期分母核查
 
@@ -23,11 +24,12 @@ DUPLICATE_EVENT_DATE_COUNT=1
 OUT_OF_RANGE_EVENT_COUNT=0
 ```
 
-结论：2026-05-01 至 2026-08-04 首尾包含确实是96个自然天气日。当前报告使用97，是因为 2026-05-19 有两个完整事件，而不是多了一个天气日期：一个 slug 为 `arch-highest-temperature-in-beijing-on-may-19-2026`，另一个为 `highest-temperature-in-beijing-on-may-19-2026`。两者 event_id 不同、各自11个完整 condition；没有范围外事件，也没有完全相同 event_id 的重复。
+结论：请求范围首尾包含确实是96个自然天气日。当前 event 数为97，因为重复天气日期为2026-05-19；重复事件为：2026-05-19 / arch-highest-temperature-in-beijing-on-may-19-2026 / event_id=493677; 2026-05-19 / highest-temperature-in-beijing-on-may-19-2026 / event_id=503645。这些事件分别为arch-highest-temperature-in-beijing-on-may-19-2026=11 conditions; highest-temperature-in-beijing-on-may-19-2026=11 conditions；范围外事件数为0；同一 event_id 重复记录为无。
 
-DENOMINATOR_97_EXPLANATION=96 unique weather dates + 1 extra same-date event on 2026-05-19 (old arch slug and new slug). Daily ratios in this report use 96 calendar dates; event-level path tables retain both event records.
+DENOMINATOR_EVENT_EXPLANATION=96 unique weather dates + 1 extra same-date event records on 2026-05-19. Daily ratios use 96 calendar dates; event-level path tables retain all 97 event records.
+DENOMINATOR_97_EXPLANATION=96 unique weather dates + 1 extra same-date event records on 2026-05-19; 97 is an event-record denominator, not a natural-day denominator.
 
-每个日期的 event 数如下；除 2026-05-19 外均为1：
+每个日期的 event 数如下；重复日期为2026-05-19：
 | 日期 | events | 日期 | events |
 |---|---|---|---|
 | 2026-05-01 | 1 | 2026-05-02 | 1 |
@@ -87,7 +89,7 @@ DENOMINATOR_97_EXPLANATION=96 unique weather dates + 1 extra same-date event on 
 
 ## 2. BUY / SELL 时间拆分
 
-D0 是北京市场当地天气日；D0 下的四个小时桶是 D0 的明细，不应与 D0 再相加。每个表的占比均以该 BUY/SELL + YES/NO 类别自身为分母。没有 POST_EVENT 成交；也没有 EARLIER_THAN_D2 或 UNKNOWN 成交。
+D0 是beijing市场当地天气日；D0 下的四个小时桶是 D0 的明细，不应与 D0 再相加。每个表的占比均以该 BUY/SELL + YES/NO 类别自身为分母。POST_EVENT、EARLIER_THAN_D2、UNKNOWN 的额外成交行由本地数据动态检查；当前总计为0、0、0。
 
 ### 0x7c63520c2ca9b336af0c205b9ccf68217bb393d4
 
@@ -199,7 +201,7 @@ D0 是北京市场当地天气日；D0 下的四个小时桶是 D0 的明细，�
 
 ## 3. 每个事件的资金路径时间
 
-以下保留97个 event 记录，因此 2026-05-19 的两个 slug 分开；BUY资金25/50/75% 是该 event 内按时间排序的 BUY USD 累计阈值，不是仓位比例。
+以下保留97个 event 记录，因此重复天气日期的多个 slug 分开；BUY资金25/50/75% 是该 event 内按时间排序的 BUY USD 累计阈值，不是仓位比例。
 
 <details>
 <summary>0x7c63520c2ca9b336af0c205b9ccf68217bb393d4：97个event路径表</summary>
@@ -501,15 +503,15 @@ D0 是北京市场当地天气日；D0 下的四个小时桶是 D0 的明细，�
 
 ### 钱包一 SELL YES 的90—100美分矛盾核查
 
-钱包一 SELL YES 总额为 $7,252.18、总量41,733.22 shares，整体实际加权均价约17.38美分。当前报告的“主要价格带”使用的是固定价格带中按 USD 金额最大的单一桶，不是多数占比：
+0x7c63520c2ca9b336af0c205b9ccf68217bb393d4 SELL YES 总额为$7,252.18、总量41,733.22 shares，整体实际加权均价约17.38¢。当前报告的“主要价格带”使用的是固定价格带中按 USD 金额最大的单一桶，不是多数占比：
 
 | 判断口径 | 最大价格带 | 该带占比 | 是否过半 |
 |---|---|---|---|
-| fill_count | 10—30美分 | 50.08% | 否 |
+| fill_count | 10—30美分 | 50.08% | 是 |
 | shares | 0—10美分 | 49.61% | 否 |
 | trade USD | 90—100美分 | 36.79% | 否 |
 
-因此，90—100美分是按 USD 的最大单一桶，但只占约36.79%；按笔数最大的是10—30美分，按 shares 最大的是0—10美分。原摘要没有错，但“主要”容易被误读为绝大多数，第二阶段应明确为“最大单一USD桶”。
+因此，90—100美分是按 USD 的最大单一桶，占36.79%；按笔数最大的是10—30美分，按 shares 最大的是0—10美分。报告中的“主要”应明确为“最大单一USD桶”，不等于绝大多数。
 
 ## 5. 逐资产 BUY / SELL 路径匹配
 
@@ -557,30 +559,34 @@ D0 是北京市场当地天气日；D0 下的四个小时桶是 D0 的明细，�
 
 假设定义：同一资产先出现 BUY YES，且此前至少有一笔 BUY YES 落在0—30美分固定价格带，之后出现同一资产的90—100美分 SELL YES。只按同一资产追溯，不跨温度合同。
 
-| 范围 | 90—100¢ SELL YES笔数 | 可追溯资产数 | 天气日数 | 对应BUY USD均价 | 对应SELL USD均价 | SELL shares / BUY shares | 中位持有 |
-|---|---|---|---|---|---|---|---|
-| 全部90—100¢ SELL YES | 43 | 25 | 25 | 16.35¢ | 99.76¢ | 95.02% | 40.29h |
-| 其中此前有0—30¢ BUY | 40 | 23 | 23 | 11.35¢ | 99.76¢ | 96.06% | 40.29h |
+| 范围 | 90—100¢ SELL YES笔数 | 可追溯资产数 | 天气日数 | 全部此前BUY均价 | 0—30¢ BUY均价 | 90—100¢ SELL均价 | SELL shares / BUY shares | 任意BUY→高价SELL中位 | 低价BUY→高价SELL中位 |
+|---|---|---|---|---|---|---|---|---|---|
+| 全部90—100¢ SELL YES | 43 | 25 | 25 | 16.35¢ | 11.35¢ | 99.76¢ | 95.02% | 40.29h | 40.29h |
+| 其中此前有0—30¢ BUY | 40 | 23 | 23 | 14.88¢ | 11.35¢ | 99.76¢ | 96.06% | 40.29h | 40.29h |
 
-部分/近似全部/超过观察买入份数：8 / 15 / 0 个资产路径。这里是观察到的 SELL shares 与此前 BUY shares 的比值，不是完整库存核算。
+在可解释的公开观察库存路径中，部分退出的资产更多。
+逐笔高价SELL分类（fills）：PARTIAL_OBSERVED_EXIT=26，NEAR_FULL_OBSERVED_EXIT=14，EXCEEDS_OBSERVED_INVENTORY=0，UNKNOWN_INVENTORY=0。资产级分类：ALL_PARTIAL=9，HAS_NEAR_FULL=6，MIXED_EXIT_PATTERN=8，HAS_EXCESS=0，UNKNOWN=0。
+观察库存只基于公开 fills，不等于真实完整账户库存；每笔高价SELL都按时间顺序扣减，后续BUY会重新增加观察库存。
+修复前/修复后低买高卖天气日数：23 / 23；修复前/修复后资产级部分退出数：8 / 9；修复前/修复后接近全部退出数：15 / 6。
+修复前中位‘低价BUY’持有时间（实际为任意BUY→高价SELL）：40.29h；修复后任意BUY→高价SELL：40.29h；修复后0—30¢ BUY→高价SELL：40.29h。
 
 按90—100¢ SELL YES路径的高价卖出金额排序，至少列出10个真实天气日案例：
-| 天气日期 | 温度档 | 匹配资产数 | 高价SELL笔数 | 对应BUY USD | 高价SELL USD | SELL/BUY shares | 主退出形态 | 中位持有 |
-|---|---|---|---|---|---|---|---|---|
-| 2026-06-30 | 30°C | 1 | 2 | 52.58 | 2,488.19 | 96.72% | 近似全部（按观察到的买入份数） | 52.66h |
-| 2026-07-17 | 31°C | 1 | 6 | 92.11 | 991.58 | 100.00% | 近似全部（按观察到的买入份数） | 21.39h |
-| 2026-06-26 | 34°C | 1 | 1 | 265.13 | 845.86 | 100.00% | 近似全部（按观察到的买入份数） | 26.24h |
-| 2026-08-01 | 36°C | 1 | 3 | 41.48 | 772.27 | 100.00% | 近似全部（按观察到的买入份数） | 50.22h |
-| 2026-07-03 | 35°C | 1 | 1 | 60.85 | 480.75 | 100.00% | 近似全部（按观察到的买入份数） | 38.35h |
-| 2026-07-14 | 33°C | 1 | 2 | 88.54 | 467.49 | 100.00% | 近似全部（按观察到的买入份数） | 40.29h |
-| 2026-07-10 | 27°C or below | 1 | 1 | 66.10 | 467.02 | 100.00% | 近似全部（按观察到的买入份数） | 50.70h |
-| 2026-07-30 | 35°C | 1 | 2 | 142.96 | 440.79 | 100.00% | 近似全部（按观察到的买入份数） | 44.40h |
-| 2026-08-02 | 35°C | 1 | 2 | 105.33 | 414.49 | 100.00% | 近似全部（按观察到的买入份数） | 44.71h |
-| 2026-07-28 | 35°C | 1 | 2 | 130.89 | 409.42 | 100.00% | 近似全部（按观察到的买入份数） | 47.52h |
+| 天气日期 | 温度档 | 匹配资产数 | 高价SELL笔数 | 0—30¢ BUY USD | 高价SELL USD | SELL/观察库存 | 主退出形态 | 任意BUY→高价SELL | 低价BUY→高价SELL |
+|---|---|---|---|---|---|---|---|---|---|
+| 2026-06-30 | 30°C | 1 | 2 | 52.58 | 2,488.19 | 96.72% | 部分退出 | 52.66h | 52.66h |
+| 2026-07-17 | 31°C | 1 | 6 | 92.11 | 991.58 | 100.00% | 混合退出模式 | 21.39h | 21.39h |
+| 2026-06-26 | 34°C | 1 | 1 | 79.68 | 845.86 | 100.00% | 接近全部观察库存退出 | 26.24h | 26.24h |
+| 2026-08-01 | 36°C | 1 | 3 | 41.48 | 772.27 | 100.00% | 混合退出模式 | 50.22h | 50.22h |
+| 2026-07-03 | 35°C | 1 | 1 | 60.85 | 480.75 | 100.00% | 接近全部观察库存退出 | 38.35h | 38.35h |
+| 2026-07-14 | 33°C | 1 | 2 | 88.54 | 467.49 | 100.00% | 混合退出模式 | 40.29h | 40.29h |
+| 2026-07-10 | 27°C or below | 1 | 1 | 44.58 | 467.02 | 100.00% | 接近全部观察库存退出 | 50.70h | 50.70h |
+| 2026-07-30 | 35°C | 1 | 2 | 20.55 | 440.79 | 100.00% | 混合退出模式 | 44.40h | 44.40h |
+| 2026-08-02 | 35°C | 1 | 2 | 105.33 | 414.49 | 100.00% | 混合退出模式 | 44.71h | 44.71h |
+| 2026-07-28 | 35°C | 1 | 2 | 65.35 | 409.42 | 100.00% | 混合退出模式 | 47.52h | 47.52h |
 
-最低持有案例：2026-08-03 / 36°C / asset `106287288353752676541590878526536079604722728259585654624855164693638610432596`；首次低价BUY至首次90—100¢ SELL 3.69h；对应BUY均价 24.83¢，高价SELL均价 99.90¢，高价SELL/此前BUY shares 100.00%。
+最低持有案例：2026-07-11 / 29°C / asset `14863342124646821629675644586739462743432409305773531662511208160344934804629`；任意BUY至首次90—100¢ SELL 4.45h，0—30¢ BUY至首次90—100¢ SELL 3.37h；低价BUY均价 11.99¢，高价SELL均价 99.79¢，资产级退出分类 HAS_NEAR_FULL。
 
-最高持有案例：2026-06-30 / 30°C / asset `101327604660363478165747299662132031244788579714289952251498871531003610683140`；首次低价BUY至首次90—100¢ SELL 52.66h；对应BUY均价 2.04¢，高价SELL均价 99.60¢，高价SELL/此前BUY shares 96.72%。
+最高持有案例：2026-06-30 / 30°C / asset `101327604660363478165747299662132031244788579714289952251498871531003610683140`；任意BUY至首次90—100¢ SELL 52.66h，0—30¢ BUY至首次90—100¢ SELL 52.66h；低价BUY均价 2.04¢，高价SELL均价 99.60¢，资产级退出分类 ALL_PARTIAL。
 
 LOW_BUY_HIGH_SELL_PATTERN=PROVEN_IN_OBSERVED_FILLS
 
@@ -602,7 +608,7 @@ LOW_BUY_HIGH_SELL_PATTERN=PROVEN_IN_OBSERVED_FILLS
 | BUY后6小时内SELL的资产比例 | 37.30% (138/370) |
 | SELL后重新BUY的资产比例 | 39.46% (146/370) |
 | 首次BUY至首次SELL中位持有 | 9.74h |
-| 每个96日历天气日平均成交笔数 | 74.92 |
+| 每个请求日历天气日平均成交笔数 | 74.92 |
 | 每个有成交天气日平均成交笔数 | 82.67 |
 | YES和NO都活跃的天气日数 | 56 |
 | maker/taker | NOT_AVAILABLE |
@@ -636,7 +642,7 @@ YES和NO同时有公开成交的天气日数：56。maker/taker字段：NOT_AVAI
 | BUY后6小时内SELL的资产比例 | 12.20% (5/41) |
 | SELL后重新BUY的资产比例 | 2.44% (1/41) |
 | 首次BUY至首次SELL中位持有 | 38.51h |
-| 每个96日历天气日平均成交笔数 | 65.33 |
+| 每个请求日历天气日平均成交笔数 | 65.33 |
 | 每个有成交天气日平均成交笔数 | 70.47 |
 | YES和NO都活跃的天气日数 | 68 |
 | maker/taker | NOT_AVAILABLE |
@@ -658,16 +664,17 @@ YES和NO同时有公开成交的天气日数：56。maker/taker字段：NOT_AVAI
 YES和NO同时有公开成交的天气日数：68。maker/taker字段：NOT_AVAILABLE。
 
 
-风格标签采用保守规则：
+风格标签采用参数化规则：
+风格阈值：BUY_DOMINANT 要求 BUY fill 占比≥80% 且 SELL/BUY fill≤20%；ACTIVE_REBALANCER 要求重复双向资产占比≥25%、SELL→BUY比例≥20%、同小时双向组数≥10。
 
 | 钱包 | 标签 | 理由 |
 |---|---|---|
-| 0x7c63520c2ca9b336af0c205b9ccf68217bb393d4 | ACTIVE_REBALANCER | 存在大量资产级双向路径、BUY→SELL与SELL→BUY切换；但没有maker/taker证据，不能仅凭成交笔数称为做市商。 |
-| 0x8fbd7cf5f806f563080864694415829f7229a959 | DIRECTIONAL_ACCUMULATOR | BUY明显多于SELL，且买入YES占比高；高价卖出路径存在，但双向反复与短持有证据弱于钱包一。 |
+| 0x7c63520c2ca9b336af0c205b9ccf68217bb393d4 | ACTIVE_REBALANCER | 重复双向资产占比57.9%、SELL→BUY比例39.5%、同小时双向组数90，满足主动再平衡阈值；没有maker/taker证据。 |
+| 0x8fbd7cf5f806f563080864694415829f7229a959 | BUY_DOMINANT_ACCUMULATOR | BUY fill占比98.7%、SELL/BUY fill比1.3%，满足买入主导阈值；不代表完整库存或方向意图。 |
 
 ## 8. 温度组合：互斥主分类
 
-每个96日历天气日严格分入一个类别；2026-05-19 的旧/新事件在天气日级合并，重复 event 不重复计日。yes_bucket_count/no_bucket_count 是该天气日 BUY 记录中的唯一温度桶数。
+每个96日历天气日严格分入一个类别；重复天气日期的多个 event 在天气日级合并，重复 event 不重复计日。yes_bucket_count/no_bucket_count 是该天气日 BUY 记录中的唯一温度桶数。
 
 ### 0x7c63520c2ca9b336af0c205b9ccf68217bb393d4
 
@@ -797,74 +804,78 @@ NO 位置先按价格合同的 bucket_kind、bucket_low、bucket_high 与 YES �
 
 ## 11. 两个钱包的可确认模式
 
-### 钱包一
+### 0x7c63520c2ca9b336af0c205b9ccf68217bb393d4
 
 #### 可以确认
 
-- BUY/SELL 都活跃，且逐资产存在大量同资产双向成交与重复切换；这不是把不同温度合同拼出来的结果。
-- BUY YES、BUY NO、SELL YES、SELL NO 的时间与价格分布明显不同，BUY 与 SELL 不能合并成一个主时点。
-- 多YES组合和相邻温度档覆盖是稳定的公开成交特征；NO 也会与 YES 混合出现。
+- BUY fills=4554、SELL fills=2638；BUY YES D0主时段D0 00—08；BUY NO D0主时段D0 00—08。
+- 逐资产有BUY也有SELL的资产数为370，BUY后发生SELL的天气日数为85；不是把不同温度合同拼接出来的结果。
+- 温度组合中多YES相关天气日为82，相邻YES组合率为97.56%。
 
 #### 合理但尚未证明
 
-- 可能是主动再平衡或短周期调整；6小时内BUY→SELL比例只能证明时间邻近，不能证明订单意图。
-- 低价买入后高价卖出在部分资产上可见，但不能推出完整退出或盈利。
+- 6小时内BUY→SELL比例为37.30%，可支持时间邻近，但不能证明订单意图。
+- SELL YES最大USD桶为90—100美分（36.79%），SELL fills=1853；高价卖出不等于完整退出或盈利。
 
 #### 不支持的说法
 
-- 不能称为确定的做市商；没有maker/taker和订单簿证据。
-- 不能推断每个SELL都对应此前BUY，也不能推断完整库存。
+- 没有 maker/taker 或订单簿证据，不能确定称为做市商。
+- 不能把公开卖出成交解释为完整账户库存或完整PnL。
 
-### 钱包二
+### 0x8fbd7cf5f806f563080864694415829f7229a959
 
 #### 可以确认
 
-- BUY YES占其买入成交的主导位置；BUY YES主要落在10—30美分，90—100美分 SELL YES 中存在大量同资产此前BUY的可追溯路径。
-- 这些高价SELL在大多数匹配资产上是相对此前BUY的部分卖出，而不是完整退出；具体比例见第6节。
-- 成交金额更集中在D0 16:00—24:00，和钱包一的D0 00:00—08:00不同。
+- BUY fills=6189、SELL fills=83；BUY YES D0主时段D0 08—12；BUY NO D0主时段D0 12—16。
+- BUY YES主要价格带为10—30美分（USD占比58.93%）；已在40笔高价SELL、23个资产、23个天气日中观察到此前0—30¢ BUY YES；低价BUY均价11.35¢，高价SELL均价99.76¢。
+- 逐笔观察库存退出中，26笔部分、14笔接近全部、0笔超过观察库存、0笔库存未知；资产级结论由这些逐笔结果动态生成。
 
 #### 合理但尚未证明
 
-- 可能存在低价多YES覆盖后等待部分高价退出的路径，但只适用于已观察到的同资产 fills。
+- 多YES覆盖后等待高价部分退出可以作为候选路径，但只适用于已匹配的23个资产，不代表所有BUY。
 
 #### 不支持的说法
 
-- 不能称为确定的方向性预测者或盈利交易者；没有完整持仓、结算和PnL证据。
-- 不能把所有低价BUY YES都视为同一高价SELL的来源。
+- 不能据此确定方向性预测、盈利或完整仓位管理。
+- 不能把 SELL 金额、观察库存比例或价格差直接解释为PnL/ROI。
 
 ## 12. 最值得学习的3条与不适合复制的行为
 
-1. 可学习：把 BUY YES、BUY NO、SELL YES、SELL NO 分开统计，并按天气日/当地时段复盘；两个钱包的建仓和卖出时段差异说明合并口径会隐藏路径。
-2. 可学习：只在同一 asset + condition_id + temperature_bucket 内做路径匹配，避免把不同温度合同的低价买入与高价卖出拼成假策略。
-3. 可学习：用固定价格带、主力档、相邻温度覆盖和部分卖出比例形成模拟规则候选，但必须继续保留“公开 fills only”证据标签。
+1. 可学习：严格拆分 BUY YES、BUY NO、SELL YES、SELL NO，并按天气日和当地时段复盘。
+2. 可学习：只在同一 wallet + weather_date + condition_id + asset + outcome + temperature_bucket 内做路径匹配。
+3. 可学习：把0—30¢低价买入、90—100¢高价卖出、逐笔观察库存和温度覆盖作为待验证模拟规则，而不是直接复制结论。
 
-不适合直接复制：按低价/高价区间机械追单、把多温度覆盖当作确定预测、把观察到的部分卖出当作完整退出、或把高成交量直接命名为做市。
+不适合直接复制：机械追逐低价/高价、把多温度覆盖当作确定预测、把观察库存当作真实库存、或把高成交量直接命名为做市。
 
 ## 13. 最终对比
 
-| 维度 | 钱包一 | 钱包二 |
+| 维度 | 0x7c63520c2ca9b336af0c205b9ccf68217bb393d4 | 0x8fbd7cf5f806f563080864694415829f7229a959 |
 |---|---|---|
-| 建仓时间 | BUY按YES/NO拆分后主要在D0及D-1；D0内00—08 | BUY主要在D0；D0内按总BUY金额可见16—24较高 |
-| 主要YES价格 | 10—30美分 | 10—30美分 |
-| NO使用方法 | BUY NO主要70—90¢，SELL NO主要70—90¢；与YES混合较多 | BUY NO主要30—70¢；SELL NO全在90—100¢；NO总体投入占比较低 |
-| 温度组合 | 多YES与YES/NO混合并存，相邻YES很常见 | 多YES与YES/NO混合并存，混合日更密集 |
-| 卖出频率 | 2,638笔，明显活跃 | 83笔，远低于买入 |
-| 高价退出 | SELL YES按USD最大单一桶是90—100¢，但仅36.79%且整体均价17.38¢ | 90—100¢ SELL YES约95.2%卖出USD，且可在同资产追溯到此前BUY |
-| 持有时间 | 逐资产BUY→SELL与短时切换较多，见第5/7节 | 低价BUY→高价SELL路径中位持有见第6节 |
-| 反复交易 | 更明显；存在BUY↔SELL切换 | 较弱；主要是BUY，少量高价SELL |
-| 疑似风格 | ACTIVE_REBALANCER | DIRECTIONAL_ACCUMULATOR |
-| 证据强度 | READY；逐资产路径可复核，但无maker/taker/完整库存 | READY；低买高卖同资产路径已复核，但无完整库存/意图 |
+| 建仓时间 | BUY YES D0主时段D0 00—08；BUY NO D0主时段D0 00—08 | BUY YES D0主时段D0 08—12；BUY NO D0主时段D0 12—16 |
+| 主要YES价格 | 10—30美分（USD占比52.29%） | 10—30美分（USD占比58.93%） |
+| NO使用方法 | BUY NO 70—90美分（USD占比50.14%）；混合日NO总体USD占比49.24% | BUY NO 30—70美分（USD占比52.62%）；混合日NO总体USD占比30.02% |
+| 温度组合 | MULTI_YES_ONLY=28、MULTI_YES_PLUS_NO=54、NO_BUY=9（/96日） | MULTI_YES_ONLY=16、MULTI_YES_PLUS_NO=59、NO_BUY=7（/96日） |
+| 卖出频率 | 2638 fills | 83 fills |
+| 高价退出 | SELL YES最大USD桶为90—100美分（36.79%），SELL fills=1853 | SELL YES最大USD桶为90—100美分（95.21%），SELL fills=65 |
+| 持有时间 | 首次BUY→首次SELL中位9.74h | 低价BUY→高价SELL中位40.29h |
+| 反复交易 | BUY→SELL切换570、SELL→BUY切换227 | BUY→SELL切换41、SELL→BUY切换1 |
+| 疑似风格 | ACTIVE_REBALANCER | BUY_DOMINANT_ACCUMULATOR |
+| 证据强度 | READY；逐资产路径和逐笔观察库存可复核 | READY；低买高卖路径和逐笔观察库存可复核 |
 
 ## 14. 特别回答
 
-1. 两个钱包共有的稳定模式：都在多个最高温度档之间分散 BUY YES，且交易集中在D-2/D-1/D0核心窗口；都存在YES/NO混合天气日和部分SELL成交。
-2. 只属于钱包一的模式：SELL 频率显著更高、同资产BUY/SELL切换更明显、D0内较偏00—08；SELL NO也有较多70—90¢成交。
-3. 只属于钱包二的模式：BUY YES占比更高、SELL数量极少但90—100¢集中度极高；低价BUY YES到同资产高价SELL YES的路径证据更集中。
-4. “低价买入、多温度覆盖、高价部分退出”是否被证明：钱包二在观察到的同资产 fills 中已被证明为存在；不是所有资产/所有天气日都满足，不能外推为完整策略。钱包一也有部分同类路径，但不是其全部SELL YES。
-5. 可进入模拟交易候选规则：只可作为待验证候选——按本地天气日分桶、分别建模四类方向、同资产路径验证、低价BUY与高价SELL的部分退出比例、以及相邻温度覆盖。必须在模拟中加入无成交、未匹配、重复event、价格滑点和证据缺口。
-6. 还不能复制：完整仓位管理、订单簿做市、盈利能力、主观预测、所有低价BUY到高价SELL的因果关系，以及任何基于SELL金额的PnL/ROI结论。
+1. 两个钱包共有的稳定模式：两者均有多YES组合（共同至少75个天气日），且路径分析只在同一资产合同内成立；公开证据都不能替代完整库存。
+2. 只属于钱包一的模式：SELL fills=2638、SELL→BUY切换=227、同小时双向组数=90，主动再平衡特征更强。
+3. 只属于钱包二的模式：BUY fills=6189、SELL fills=83，低价BUY→高价SELL路径覆盖23个天气日；标签由通用分类器生成：BUY_DOMINANT_ACCUMULATOR。
+4. “低价买入、多温度覆盖、高价部分退出”是否被逐资产证据证明：已在40笔高价SELL、23个资产、23个天气日中观察到此前0—30¢ BUY YES；低价BUY均价11.35¢，高价SELL均价99.76¢。逐笔观察库存的资产级主导结果为：9个ALL_PARTIAL、6个HAS_NEAR_FULL、8个MIXED、0个HAS_EXCESS、0个UNKNOWN；这说明部分退出的资产更多，不代表完整策略。
+5. 可进入模拟交易候选规则：本地天气日分桶、四类方向分开、同资产匹配、逐笔库存更新、0—30¢与90—100¢路径、部分退出比例和相邻温度覆盖；必须继续加入滑点、未成交和证据缺口。
+6. 还不能复制：真实库存、完整订单、maker/taker、主观预测、盈利能力、PnL/ROI/胜率，以及把任何单一钱包路径外推为通用策略。
 
-## 15. 复现
+## 15. 机器可读输出
+
+同一离线分析函数同时生成 `SECOND_STAGE_TRADER_PATTERN_COMPARISON.json`、`asset_path_summary.csv`、`high_sell_path_fills.csv`、`high_sell_path_assets.csv`、`daily_temperature_structure.csv`、`trader_style_metrics.csv`。
+
+## 16. 复现
 
 ```bash
 python3 scripts/second_stage_trader_pattern_analysis.py \

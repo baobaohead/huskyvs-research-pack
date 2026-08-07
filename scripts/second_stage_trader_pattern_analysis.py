@@ -82,6 +82,22 @@ CATEGORY_ORDER = (
     "NO_BUY",
 )
 SHORT_HOLD_HOURS = 6.0
+SECOND_STAGE_NETWORK_CALL_COUNT = 0
+
+# Second-stage thresholds are explicit so the style labels and observed-exit
+# classifications are reproducible rather than wallet-specific judgments.
+LOW_BUY_BANDS = {"PRICE_0_10C", "PRICE_10_30C"}
+HIGH_SELL_BAND = "PRICE_90_100C"
+OBSERVED_EXIT_PARTIAL_MAX = 0.95
+OBSERVED_EXIT_NEAR_FULL_MAX = 1.05
+STYLE_BUY_DOMINANT_MIN_BUY_FILL_SHARE = 0.80
+STYLE_BUY_DOMINANT_MAX_SELL_TO_BUY_FILL_RATIO = 0.20
+STYLE_ACTIVE_MIN_REPEATED_ASSET_SHARE = 0.25
+STYLE_ACTIVE_MIN_SELL_REBUY_RATIO = 0.20
+STYLE_ACTIVE_MIN_SAME_HOUR_TWO_WAY = 10
+STYLE_MARKET_MIN_SAME_HOUR_TWO_WAY = 20
+STYLE_MARKET_MIN_SHORT_HOLD_RATIO = 0.50
+STYLE_MARKET_MIN_SELL_REBUY_RATIO = 0.30
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -239,6 +255,18 @@ def group_by_event_slug(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, 
     return grouped
 
 
+def classify_observed_exit(observed_net_inventory_before: float, sell_shares: float) -> tuple[str, float | None]:
+    """Classify one high-price SELL against the chronological observed inventory."""
+    if observed_net_inventory_before <= 0:
+        return "UNKNOWN_INVENTORY", None
+    ratio = sell_shares / observed_net_inventory_before
+    if ratio < OBSERVED_EXIT_PARTIAL_MAX:
+        return "PARTIAL_OBSERVED_EXIT", ratio
+    if ratio <= OBSERVED_EXIT_NEAR_FULL_MAX:
+        return "NEAR_FULL_OBSERVED_EXIT", ratio
+    return "EXCEEDS_OBSERVED_INVENTORY", ratio
+
+
 def side_outcome_time_table(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     total = aggregate(rows)
     result = []
@@ -322,11 +350,13 @@ def event_records(root: Path) -> list[dict[str, Any]]:
 
 def date_denominator(root: Path, start: date, end: date, events: list[dict[str, Any]]) -> dict[str, Any]:
     requested = set(date_range(start, end))
-    counts = Counter(parse_date(event["weather_date"]) for event in events)
     in_range = [event for event in events if start <= parse_date(event["weather_date"]) <= end]
     out_of_range = [event for event in events if event not in in_range]
-    duplicate_dates = {day: count for day, count in counts.items() if count > 1}
-    duplicate_event_rows = [event for event in in_range if counts[parse_date(event["weather_date"])] > 1]
+    in_range_counts = Counter(parse_date(event["weather_date"]) for event in in_range)
+    duplicate_dates = {day: count for day, count in in_range_counts.items() if count > 1}
+    duplicate_event_rows = [event for event in in_range if in_range_counts[parse_date(event["weather_date"])] > 1]
+    event_id_counts = Counter(event.get("event_id", "") for event in in_range if event.get("event_id", ""))
+    duplicate_event_ids = {event_id: count for event_id, count in event_id_counts.items() if count > 1}
     duplicate_slug_rows = []
     for day in sorted(duplicate_dates):
         duplicate_slug_rows.extend(event for event in in_range if parse_date(event["weather_date"]) == day)
@@ -342,8 +372,10 @@ def date_denominator(root: Path, start: date, end: date, events: list[dict[str, 
         "event_count": len(in_range),
         "duplicate_event_date_count": len(duplicate_dates),
         "duplicate_event_count": len(duplicate_event_rows),
+        "duplicate_event_id_count": len(duplicate_event_ids),
+        "duplicate_event_ids": duplicate_event_ids,
         "out_of_range_event_count": len(out_of_range),
-        "event_counts_by_date": {day.isoformat(): counts.get(day, 0) for day in sorted(requested)},
+        "event_counts_by_date": {day.isoformat(): in_range_counts.get(day, 0) for day in sorted(requested)},
         "duplicate_events": duplicate_slug_rows,
         "old_new_duplicate_dates": old_new_duplicate,
         "out_of_range_events": out_of_range,
@@ -357,6 +389,26 @@ def asset_paths(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     result = []
     for key, group in sorted(grouped.items(), key=lambda item: item[0]):
         ordered = sorted(group, key=lambda row: (row["_ts"], row.get("transaction_hash", "")))
+        cumulative_buy_shares = 0.0
+        cumulative_sell_shares = 0.0
+        high_sell_ledger_rows = []
+        for row in ordered:
+            row["cumulative_buy_shares_before"] = cumulative_buy_shares
+            row["cumulative_sell_shares_before"] = cumulative_sell_shares
+            row["observed_net_inventory_before"] = cumulative_buy_shares - cumulative_sell_shares
+            row["sell_to_observed_inventory_ratio"] = None
+            row["observed_exit_classification"] = None
+            if row["_side"] == "SELL" and row["_outcome"] == "YES" and row["_band"] == HIGH_SELL_BAND:
+                classification, ratio = classify_observed_exit(
+                    row["observed_net_inventory_before"], row["_shares"]
+                )
+                row["sell_to_observed_inventory_ratio"] = ratio
+                row["observed_exit_classification"] = classification
+                high_sell_ledger_rows.append(row)
+            if row["_side"] == "BUY":
+                cumulative_buy_shares += row["_shares"]
+            elif row["_side"] == "SELL":
+                cumulative_sell_shares += row["_shares"]
         buys = [row for row in ordered if row["_side"] == "BUY"]
         sells = [row for row in ordered if row["_side"] == "SELL"]
         first_buy = buys[0] if buys else None
@@ -389,6 +441,7 @@ def asset_paths(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "rows": ordered,
                 "buys": buys,
                 "sells": sells,
+                "high_sell_ledger_rows": high_sell_ledger_rows,
                 "buy_count": len(buys),
                 "sell_count": len(sells),
                 "buy_shares": sum(row["_shares"] for row in buys),
@@ -648,42 +701,75 @@ def no_position(day: dict[str, Any]) -> str:
     return "无法判断"
 
 
+def asset_exit_classification(high_sell_rows: list[dict[str, Any]]) -> str:
+    classes = {row["observed_exit_classification"] for row in high_sell_rows}
+    if not classes:
+        return "UNKNOWN"
+    if len(classes) > 1:
+        return "MIXED_EXIT_PATTERN"
+    only = next(iter(classes))
+    return {
+        "PARTIAL_OBSERVED_EXIT": "ALL_PARTIAL",
+        "NEAR_FULL_OBSERVED_EXIT": "HAS_NEAR_FULL",
+        "EXCEEDS_OBSERVED_INVENTORY": "HAS_EXCESS",
+        "UNKNOWN_INVENTORY": "UNKNOWN",
+    }.get(only, "UNKNOWN")
+
+
+def exit_label(classification: str) -> str:
+    return {
+        "ALL_PARTIAL": "部分退出",
+        "HAS_NEAR_FULL": "接近全部观察库存退出",
+        "HAS_EXCESS": "超过观察库存",
+        "UNKNOWN": "观察库存未知",
+        "MIXED_EXIT_PATTERN": "混合退出模式",
+    }.get(classification, classification)
+
+
 def wallet_two_high_sell_analysis(paths: list[dict[str, Any]]) -> dict[str, Any]:
     high_paths = []
     for path in paths:
-        if path["outcome"] != "YES":
+        if path["outcome"] != "YES" or not path["high_sell_ledger_rows"]:
             continue
-        high_sells = [row for row in path["sells"] if row["_band"] == "PRICE_90_100C"]
-        if not high_sells:
-            continue
-        first_high = min(high_sells, key=lambda row: row["_ts"])
+        first_high = min(path["high_sell_ledger_rows"], key=lambda row: row["_ts"])
         prior_buys = [row for row in path["buys"] if row["_ts"] < first_high["_ts"]]
-        low_prior_buys = [row for row in prior_buys if row["_band"] in {"PRICE_0_10C", "PRICE_10_30C"}]
-        if prior_buys:
-            high_paths.append(
-                {
-                    "path": path,
-                    "high_sells": high_sells,
-                    "first_high": first_high,
-                    "prior_buys": prior_buys,
-                    "low_prior_buys": low_prior_buys,
-                    "hold_seconds": first_high["_ts"] - prior_buys[0]["_ts"],
-                    "high_sell_shares": sum(row["_shares"] for row in high_sells),
-                    "prior_buy_shares": sum(row["_shares"] for row in prior_buys),
-                    "high_sell_usd": sum(row["_usd"] for row in high_sells),
-                    "prior_buy_usd": sum(row["_usd"] for row in prior_buys),
-                    "all_sell_ratio": path["sold_share_ratio"],
-                    "high_sell_ratio": sum(row["_shares"] for row in high_sells) / sum(row["_shares"] for row in prior_buys) if sum(row["_shares"] for row in prior_buys) else None,
-                }
-            )
+        low_prior_buys = [row for row in prior_buys if row["_band"] in LOW_BUY_BANDS]
+        if not prior_buys:
+            continue
+        item = {
+            "path": path,
+            "high_sells": path["high_sell_ledger_rows"],
+            "first_high": first_high,
+            "prior_buys": prior_buys,
+            "low_prior_buys": low_prior_buys,
+            "first_any_buy_to_first_high_sell_seconds": first_high["_ts"] - prior_buys[0]["_ts"],
+            "first_low_buy_to_first_high_sell_seconds": (
+                first_high["_ts"] - low_prior_buys[0]["_ts"] if low_prior_buys else None
+            ),
+            "high_sell_shares": sum(row["_shares"] for row in path["high_sell_ledger_rows"]),
+            "prior_buy_shares": sum(row["_shares"] for row in prior_buys),
+            "high_sell_usd": sum(row["_usd"] for row in path["high_sell_ledger_rows"]),
+            "prior_buy_usd": sum(row["_usd"] for row in prior_buys),
+            "observed_exit_classes": sorted({row["observed_exit_classification"] for row in path["high_sell_ledger_rows"]}),
+            "asset_exit_classification": asset_exit_classification(path["high_sell_ledger_rows"]),
+        }
+        item["legacy_high_sell_ratio"] = item["high_sell_shares"] / item["prior_buy_shares"] if item["prior_buy_shares"] else None
+        high_paths.append(item)
     low_paths = [item for item in high_paths if item["low_prior_buys"]]
+
     def aggregate_path_set(items: list[dict[str, Any]]) -> dict[str, Any]:
         prior_buys = [row for item in items for row in item["prior_buys"]]
         low_buys = [row for item in items for row in item["low_prior_buys"]]
         high_sells = [row for item in items for row in item["high_sells"]]
+        class_counts = Counter(row["observed_exit_classification"] for row in high_sells)
+        asset_counts = Counter(item["asset_exit_classification"] for item in items)
+        any_holds = [item["first_any_buy_to_first_high_sell_seconds"] for item in items]
+        low_holds = [item["first_low_buy_to_first_high_sell_seconds"] for item in items if item["first_low_buy_to_first_high_sell_seconds"] is not None]
         return {
             "assets": len(items),
-            "fills": sum(len(item["high_sells"]) for item in items),
+            "high_sell_asset_count": len(items),
+            "fills": len(high_sells),
+            "high_sell_fill_count": len(high_sells),
             "dates": len({item["path"]["weather_date"] for item in items}),
             "prior_buy_usd": sum(row["_usd"] for row in prior_buys),
             "prior_buy_shares": sum(row["_shares"] for row in prior_buys),
@@ -691,23 +777,29 @@ def wallet_two_high_sell_analysis(paths: list[dict[str, Any]]) -> dict[str, Any]
             "low_buy_shares": sum(row["_shares"] for row in low_buys),
             "high_sell_usd": sum(row["_usd"] for row in high_sells),
             "high_sell_shares": sum(row["_shares"] for row in high_sells),
-            "buy_avg": weighted_price(prior_buys),
-            "low_buy_avg": weighted_price(low_buys),
-            "sell_avg": weighted_price(high_sells),
+            "all_prior_buy_weighted_price": weighted_price(prior_buys),
+            "low_0_30_buy_weighted_price": weighted_price(low_buys),
+            "high_90_100_sell_weighted_price": weighted_price(high_sells),
             "high_sell_to_prior_buy_ratio": sum(row["_shares"] for row in high_sells) / sum(row["_shares"] for row in prior_buys) if sum(row["_shares"] for row in prior_buys) else None,
-            "median_hold_seconds": statistics.median(item["hold_seconds"] for item in items) if items else None,
+            "median_any_hold_seconds": statistics.median(any_holds) if any_holds else None,
+            "median_low_hold_seconds": statistics.median(low_holds) if low_holds else None,
+            "partial_fill_count": class_counts["PARTIAL_OBSERVED_EXIT"],
+            "near_full_fill_count": class_counts["NEAR_FULL_OBSERVED_EXIT"],
+            "exceeds_fill_count": class_counts["EXCEEDS_OBSERVED_INVENTORY"],
+            "unknown_fill_count": class_counts["UNKNOWN_INVENTORY"],
+            "all_partial_asset_count": asset_counts["ALL_PARTIAL"],
+            "near_full_asset_count": asset_counts["HAS_NEAR_FULL"],
+            "mixed_asset_count": asset_counts["MIXED_EXIT_PATTERN"],
+            "exceeds_asset_count": asset_counts["HAS_EXCESS"],
+            "unknown_asset_count": asset_counts["UNKNOWN"],
+            "exit_class_counts": dict(class_counts),
+            "asset_exit_class_counts": dict(asset_counts),
         }
-    def exit_label(ratio: float | None) -> str:
-        if ratio is None:
-            return "UNKNOWN"
-        if ratio < 0.95:
-            return "部分卖出"
-        if ratio <= 1.05:
-            return "近似全部（按观察到的买入份数）"
-        return "超过观察到的买入份数"
-    for item in low_paths:
-        item["exit_label"] = exit_label(item["high_sell_ratio"])
-    cases = sorted(low_paths, key=lambda item: (item["high_sell_usd"], item["path"]["weather_date"]), reverse=True)
+
+    # These are the old static path numbers retained only as a before/after audit.
+    legacy_partial = sum(item["legacy_high_sell_ratio"] is not None and item["legacy_high_sell_ratio"] < OBSERVED_EXIT_PARTIAL_MAX for item in low_paths)
+    legacy_near_full = sum(item["legacy_high_sell_ratio"] is not None and OBSERVED_EXIT_PARTIAL_MAX <= item["legacy_high_sell_ratio"] <= OBSERVED_EXIT_NEAR_FULL_MAX for item in low_paths)
+    legacy_any_holds = [item["first_any_buy_to_first_high_sell_seconds"] for item in low_paths]
     date_cases: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for item in low_paths:
         date_cases[item["path"]["weather_date"]].append(item)
@@ -716,22 +808,49 @@ def wallet_two_high_sell_analysis(paths: list[dict[str, Any]]) -> dict[str, Any]
         summary = aggregate_path_set(items)
         summary["weather_date"] = day
         summary["temperature_buckets"] = ", ".join(sorted({item["path"]["temperature_bucket"] for item in items}))
-        summary["exit_label"] = Counter(item["exit_label"] for item in items).most_common(1)[0][0]
+        summary["exit_label"] = exit_label(Counter(item["asset_exit_classification"] for item in items).most_common(1)[0][0])
         daily_cases.append(summary)
     daily_cases.sort(key=lambda item: (item["high_sell_usd"], item["weather_date"]), reverse=True)
+    high_traceable = aggregate_path_set(high_paths)
+    low_traceable = aggregate_path_set(low_paths)
+    low_traceable["legacy_partial_asset_count"] = legacy_partial
+    low_traceable["legacy_near_full_asset_count"] = legacy_near_full
+    low_traceable["legacy_dates"] = len({item["path"]["weather_date"] for item in low_paths})
+    low_traceable["legacy_median_low_hold_seconds"] = statistics.median(legacy_any_holds) if legacy_any_holds else None
     return {
-        "high_sell_yes_total_fills": sum(len([row for row in path["sells"] if path["outcome"] == "YES" and row["_band"] == "PRICE_90_100C"]) for path in paths),
-        "high_sell_yes_traceable": aggregate_path_set(high_paths),
-        "low_buy_high_sell": aggregate_path_set(low_paths),
+        "high_sell_yes_total_fills": sum(len(path["high_sell_ledger_rows"]) for path in paths),
+        "high_sell_yes_traceable": high_traceable,
+        "low_buy_high_sell": low_traceable,
         "high_paths": high_paths,
         "low_paths": low_paths,
         "daily_cases": daily_cases,
-        "lowest_hold_case": min(low_paths, key=lambda item: item["hold_seconds"]) if low_paths else None,
-        "highest_hold_case": max(low_paths, key=lambda item: item["hold_seconds"]) if low_paths else None,
-        "partial_count": sum(item["exit_label"] == "部分卖出" for item in low_paths),
-        "near_full_count": sum(item["exit_label"] == "近似全部（按观察到的买入份数）" for item in low_paths),
-        "over_count": sum(item["exit_label"] == "超过观察到的买入份数" for item in low_paths),
+        "lowest_hold_case": min(low_paths, key=lambda item: item["first_low_buy_to_first_high_sell_seconds"]) if low_paths else None,
+        "highest_hold_case": max(low_paths, key=lambda item: item["first_low_buy_to_first_high_sell_seconds"]) if low_paths else None,
+        "legacy_low_buy_high_sell_dates": low_traceable["legacy_dates"],
+        "new_low_buy_high_sell_dates": low_traceable["dates"],
     }
+
+
+def classify_trader_style(metrics: dict[str, Any]) -> str:
+    """Return a parameterized style label; wallet identity is never consulted."""
+    if (
+        metrics["buy_fill_share"] >= STYLE_BUY_DOMINANT_MIN_BUY_FILL_SHARE
+        and metrics["sell_to_buy_fill_ratio"] <= STYLE_BUY_DOMINANT_MAX_SELL_TO_BUY_FILL_RATIO
+    ):
+        return "BUY_DOMINANT_ACCUMULATOR"
+    if (
+        metrics["repeated_asset_share"] >= STYLE_ACTIVE_MIN_REPEATED_ASSET_SHARE
+        and metrics["sell_then_rebuy_ratio_decimal"] >= STYLE_ACTIVE_MIN_SELL_REBUY_RATIO
+        and metrics["same_hour_two_way"] >= STYLE_ACTIVE_MIN_SAME_HOUR_TWO_WAY
+    ):
+        return "ACTIVE_REBALANCER"
+    if (
+        metrics["same_hour_two_way"] >= STYLE_MARKET_MIN_SAME_HOUR_TWO_WAY
+        and metrics["short_hold_ratio_decimal"] >= STYLE_MARKET_MIN_SHORT_HOLD_RATIO
+        and metrics["sell_then_rebuy_ratio_decimal"] >= STYLE_MARKET_MIN_SELL_REBUY_RATIO
+    ):
+        return "POSSIBLE_MARKET_MAKER"
+    return "MIXED_OR_UNCLEAR"
 
 
 def wallet_style(paths: list[dict[str, Any]], rows: list[dict[str, Any]], requested_dates: list[date]) -> dict[str, Any]:
@@ -765,7 +884,9 @@ def wallet_style(paths: list[dict[str, Any]], rows: list[dict[str, Any]], reques
     maker_fields = {"maker", "taker", "maker_taker", "liquidity_side", "role"}
     available_fields = set(rows[0]) if rows else set()
     maker_taker = sorted(available_fields & maker_fields)
-    return {
+    metrics = {
+        "buy_fill_count": sum(row["_side"] == "BUY" for row in rows),
+        "sell_fill_count": sum(row["_side"] == "SELL" for row in rows),
         "asset_count": len(paths),
         "both_buy_sell_assets": len(both),
         "matched_buy_then_sell_assets": len(matched),
@@ -777,6 +898,7 @@ def wallet_style(paths: list[dict[str, Any]], rows: list[dict[str, Any]], reques
         "short_hold_ratio": pct(len(short_assets), len(matched)),
         "sell_then_rebuy_assets": len(sell_then_buy),
         "sell_then_rebuy_ratio": pct(len(sell_then_buy), len(both)),
+        "sell_then_rebuy_ratio_decimal": len(sell_then_buy) / len(both) if both else 0.0,
         "median_hold_seconds": statistics.median(hold_values) if hold_values else None,
         "average_fills_per_requested_day": len(rows) / len(requested_dates) if requested_dates else None,
         "average_fills_per_active_day": len(rows) / len(active_dates) if active_dates else None,
@@ -785,6 +907,13 @@ def wallet_style(paths: list[dict[str, Any]], rows: list[dict[str, Any]], reques
         "top_days": top_days[:10],
         "maker_taker": maker_taker or None,
     }
+    metrics["buy_fill_share"] = pct(metrics["buy_fill_count"], len(rows)) / 100 if rows else 0.0
+    metrics["sell_to_buy_fill_ratio"] = metrics["sell_fill_count"] / metrics["buy_fill_count"] if metrics["buy_fill_count"] else float("inf")
+    metrics["repeated_asset_share"] = metrics["repeated_buy_sell_assets"] / metrics["asset_count"] if metrics["asset_count"] else 0.0
+    metrics["same_hour_two_way"] = metrics["same_hour_two_way_asset_hours"]
+    metrics["short_hold_ratio_decimal"] = metrics["short_hold_ratio"] / 100 if metrics["short_hold_ratio"] is not None else 0.0
+    metrics["style_label"] = classify_trader_style(metrics)
+    return metrics
 
 
 def percentile_summary(values: list[float]) -> dict[str, float | None]:
@@ -899,7 +1028,212 @@ def aggregate_path_metrics(paths: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def make_report(root: Path, report_path: Path, start: date, end: date, city: str) -> None:
+def jsonable(value: Any) -> Any:
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, dict):
+        return {str(key): jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [jsonable(item) for item in value]
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return None
+    return value
+
+
+def write_csv_rows(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: jsonable(row.get(field, "")) for field in fieldnames})
+
+
+def build_machine_outputs(
+    report_path: Path,
+    start: date,
+    end: date,
+    city: str,
+    requested_dates: list[date],
+    events: list[dict[str, Any]],
+    denominator: dict[str, Any],
+    data: dict[str, dict[str, Any]],
+    high_analyses: dict[str, dict[str, Any]],
+) -> None:
+    output_dir = report_path.parent
+    asset_rows = []
+    high_fill_rows = []
+    high_asset_rows = []
+    daily_rows = []
+    style_rows = []
+    for wallet in WALLETS:
+        item = data[wallet]
+        for path in item["paths"]:
+            asset_rows.append({
+                "wallet": wallet,
+                "weather_date": path["weather_date"],
+                "condition_id": path["condition_id"],
+                "asset": path["asset"],
+                "outcome": path["outcome"],
+                "temperature_bucket": path["temperature_bucket"],
+                "event_slug": path["event_slug"],
+                "buy_count": path["buy_count"],
+                "sell_count": path["sell_count"],
+                "buy_shares": path["buy_shares"],
+                "sell_shares": path["sell_shares"],
+                "sold_share_ratio": path["sold_share_ratio"],
+                "buy_usd_weighted_price": path["buy_avg"],
+                "sell_usd_weighted_price": path["sell_avg"],
+                "sell_minus_buy_price": path["price_difference"],
+                "first_buy_to_first_sell_seconds": path["first_buy_to_first_sell_seconds"],
+                "last_buy_to_first_sell_seconds": path["last_buy_to_first_sell_seconds"],
+                "buy_after_sell": path["buy_after_sell"],
+                "same_hour_two_way": path["same_hour_two_way"],
+            })
+            if path["high_sell_ledger_rows"]:
+                high_asset_rows.append({
+                    "wallet": wallet,
+                    "weather_date": path["weather_date"],
+                    "condition_id": path["condition_id"],
+                    "asset": path["asset"],
+                    "outcome": path["outcome"],
+                    "temperature_bucket": path["temperature_bucket"],
+                    "event_slug": path["event_slug"],
+                    "high_sell_fill_count": len(path["high_sell_ledger_rows"]),
+                    "asset_exit_classification": asset_exit_classification(path["high_sell_ledger_rows"]),
+                    "all_buy_shares": path["buy_shares"],
+                    "all_sell_shares": path["sell_shares"],
+                    "sold_share_ratio": path["sold_share_ratio"],
+                    "buy_usd_weighted_price": path["buy_avg"],
+                    "sell_usd_weighted_price": path["sell_avg"],
+                })
+                for fill in path["high_sell_ledger_rows"]:
+                    prior_buys = [row for row in path["buys"] if row["_ts"] < fill["_ts"]]
+                    low_buys = [row for row in prior_buys if row["_band"] in LOW_BUY_BANDS]
+                    first_any = prior_buys[0] if prior_buys else None
+                    first_low = low_buys[0] if low_buys else None
+                    high_fill_rows.append({
+                        "wallet": wallet,
+                        "weather_date": path["weather_date"],
+                        "condition_id": path["condition_id"],
+                        "asset": path["asset"],
+                        "outcome": path["outcome"],
+                        "temperature_bucket": path["temperature_bucket"],
+                        "event_slug": path["event_slug"],
+                        "sell_timestamp": fill["_local_dt"],
+                        "sell_price": fill["_price"],
+                        "sell_shares": fill["_shares"],
+                        "cumulative_buy_shares_before": fill["cumulative_buy_shares_before"],
+                        "cumulative_sell_shares_before": fill["cumulative_sell_shares_before"],
+                        "observed_net_inventory_before": fill["observed_net_inventory_before"],
+                        "sell_to_observed_inventory_ratio": fill["sell_to_observed_inventory_ratio"],
+                        "observed_exit_classification": fill["observed_exit_classification"],
+                        "has_prior_any_buy": bool(prior_buys),
+                        "has_prior_low_0_30_buy": bool(low_buys),
+                        "first_any_buy_to_this_high_sell_seconds": fill["_ts"] - first_any["_ts"] if first_any else None,
+                        "first_low_buy_to_this_high_sell_seconds": fill["_ts"] - first_low["_ts"] if first_low else None,
+                    })
+        for day in item["temperature_days"]:
+            daily_rows.append({
+                "wallet": wallet,
+                "weather_date": day["weather_date"],
+                "category": day["category"],
+                "yes_bucket_count": day["yes_bucket_count"],
+                "no_bucket_count": day["no_bucket_count"],
+                "adjacent_yes": day["adjacent_yes"],
+                "non_adjacent_yes": day["non_adjacent_yes"],
+                "same_bucket_both_sides": day["same_bucket_both_sides"],
+                "cross_bucket_yes_no": day["cross_bucket_yes_no"],
+                "main_yes_bucket": day["main_key"][0] if day["main_key"] else "",
+                "main_yes_usd_share": day["main_usd_share"],
+                "yes_buy_usd": day["all_yes_usd"],
+                "no_buy_usd": day["all_no_usd"],
+                "all_buy_usd": day["all_buy_usd"],
+            })
+        style = item["style"]
+        style_rows.append({key: value for key, value in style.items() if key != "top_days" and key != "yes_no_active_days"})
+
+    def compact_case(item: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not item:
+            return None
+        path = item["path"]
+        return {
+            "weather_date": path["weather_date"],
+            "condition_id": path["condition_id"],
+            "asset": path["asset"],
+            "outcome": path["outcome"],
+            "temperature_bucket": path["temperature_bucket"],
+            "first_any_buy_to_first_high_sell_seconds": item["first_any_buy_to_first_high_sell_seconds"],
+            "first_low_buy_to_first_high_sell_seconds": item["first_low_buy_to_first_high_sell_seconds"],
+            "low_0_30_buy_weighted_price": weighted_price(item["low_prior_buys"]),
+            "high_90_100_sell_weighted_price": weighted_price(item["high_sells"]),
+            "asset_exit_classification": item["asset_exit_classification"],
+        }
+
+    def compact_high_analysis(analysis: dict[str, Any]) -> dict[str, Any]:
+        excluded = {"high_paths", "low_paths", "lowest_hold_case", "highest_hold_case"}
+        result = {key: value for key, value in analysis.items() if key not in excluded}
+        result["lowest_hold_case"] = compact_case(analysis.get("lowest_hold_case"))
+        result["highest_hold_case"] = compact_case(analysis.get("highest_hold_case"))
+        return result
+
+    json_payload = {
+        "schema_version": "second_stage_trader_pattern_comparison_v2",
+        "public_fills_only": True,
+        "network_accessed": False,
+        "network_call_count": SECOND_STAGE_NETWORK_CALL_COUNT,
+        "scope": {
+            "weather_date_from": start.isoformat(),
+            "weather_date_to": end.isoformat(),
+            "city": city,
+            "requested_calendar_day_count": len(requested_dates),
+        },
+        "denominator": denominator,
+        "denominator_97_explanation": (
+            f"{denominator['unique_weather_dates']} unique weather dates + "
+            f"{denominator['event_count'] - denominator['unique_weather_dates']} extra same-date event records"
+        ),
+        "thresholds": {
+            "low_buy_bands": sorted(LOW_BUY_BANDS),
+            "high_sell_band": HIGH_SELL_BAND,
+            "observed_exit_partial_max": OBSERVED_EXIT_PARTIAL_MAX,
+            "observed_exit_near_full_max": OBSERVED_EXIT_NEAR_FULL_MAX,
+            "short_hold_hours": SHORT_HOLD_HOURS,
+            "style": {
+                "buy_dominant_min_buy_fill_share": STYLE_BUY_DOMINANT_MIN_BUY_FILL_SHARE,
+                "buy_dominant_max_sell_to_buy_fill_ratio": STYLE_BUY_DOMINANT_MAX_SELL_TO_BUY_FILL_RATIO,
+                "active_min_repeated_asset_share": STYLE_ACTIVE_MIN_REPEATED_ASSET_SHARE,
+                "active_min_sell_rebuy_ratio": STYLE_ACTIVE_MIN_SELL_REBUY_RATIO,
+                "active_min_same_hour_two_way": STYLE_ACTIVE_MIN_SAME_HOUR_TWO_WAY,
+            },
+        },
+        "events": events,
+        "wallets": {
+            wallet: {
+                "quality": data[wallet]["quality"],
+                "path_metrics": data[wallet]["path_metrics"],
+                "category_counts": dict(data[wallet]["category_counts"]),
+                "multi_yes": data[wallet]["multi_yes"],
+                "no": data[wallet]["no"],
+                "style": data[wallet]["style"],
+                "high_sell_summary": compact_high_analysis(high_analyses[wallet]),
+            }
+            for wallet in WALLETS
+        },
+    }
+    (output_dir / "SECOND_STAGE_TRADER_PATTERN_COMPARISON.json").write_text(
+        json.dumps(jsonable(json_payload), ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    write_csv_rows(output_dir / "asset_path_summary.csv", asset_rows, list(asset_rows[0]) if asset_rows else ["wallet"])
+    write_csv_rows(output_dir / "high_sell_path_fills.csv", high_fill_rows, list(high_fill_rows[0]) if high_fill_rows else ["wallet"])
+    write_csv_rows(output_dir / "high_sell_path_assets.csv", high_asset_rows, list(high_asset_rows[0]) if high_asset_rows else ["wallet"])
+    write_csv_rows(output_dir / "daily_temperature_structure.csv", daily_rows, list(daily_rows[0]) if daily_rows else ["wallet"])
+    write_csv_rows(output_dir / "trader_style_metrics.csv", style_rows, list(style_rows[0]) if style_rows else ["wallet"])
+
+
+def make_report(root: Path, report_path: Path, start: date, end: date, city: str) -> dict[str, Any]:
     requested_dates = date_range(start, end)
     events = event_records(root)
     denominator = date_denominator(root, start, end, events)
@@ -928,12 +1262,15 @@ def make_report(root: Path, report_path: Path, start: date, end: date, city: str
             key = f"{side} {outcome}"
             wallet_data[wallet]["time"][key] = side_outcome_time_table(scoped)
             wallet_data[wallet]["price"][key] = price_table(scoped)
-    w2_high = wallet_two_high_sell_analysis(wallet_data[WALLETS[1]]["paths"])
+    high_analyses = {wallet: wallet_two_high_sell_analysis(wallet_data[wallet]["paths"]) for wallet in WALLETS}
+    w2_high = high_analyses[WALLETS[1]]
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
         render_report(root, report_path, start, end, city, requested_dates, events, denominator, wallet_data, w2_high).replace("\n+  --", "\n  --"),
         encoding="utf-8",
     )
+    build_machine_outputs(report_path, start, end, city, requested_dates, events, denominator, wallet_data, high_analyses)
+    return {"denominator": denominator, "wallet_data": wallet_data, "high_analyses": high_analyses}
 
 
 def render_time_table(rows: list[dict[str, Any]]) -> str:
@@ -969,12 +1306,11 @@ def render_event_path_table(rows: list[dict[str, Any]]) -> str:
     )
 
 
-def render_category_table(data: dict[str, Any]) -> str:
+def render_category_table(data: dict[str, Any], total_days: int) -> str:
     counts = data["category_counts"]
-    total = 96
     return md_table(
         ["互斥主类别", "天气日数", "比例"],
-        [[category, counts.get(category, 0), fmt_pct(pct(counts.get(category, 0), total))] for category in CATEGORY_ORDER],
+        [[category, counts.get(category, 0), fmt_pct(pct(counts.get(category, 0), total_days))] for category in CATEGORY_ORDER],
     )
 
 
@@ -1003,22 +1339,34 @@ def render_path_metrics(metrics: dict[str, Any]) -> str:
 def render_high_cases(analysis: dict[str, Any]) -> str:
     aggregate_rows = analysis["low_buy_high_sell"]
     high_rows = analysis["high_sell_yes_traceable"]
+    partial = aggregate_rows["all_partial_asset_count"]
+    near_full = aggregate_rows["near_full_asset_count"]
+    if near_full > partial:
+        dominance_sentence = "在可解释的公开观察库存路径中，接近全部观察库存退出的资产更多。"
+    elif partial > near_full:
+        dominance_sentence = "在可解释的公开观察库存路径中，部分退出的资产更多。"
+    else:
+        dominance_sentence = "在可解释的公开观察库存路径中，部分退出和接近全部退出均存在，没有单一主导模式。"
     lines = [
         md_table(
-            ["范围", "90—100¢ SELL YES笔数", "可追溯资产数", "天气日数", "对应BUY USD均价", "对应SELL USD均价", "SELL shares / BUY shares", "中位持有"],
+            ["范围", "90—100¢ SELL YES笔数", "可追溯资产数", "天气日数", "全部此前BUY均价", "0—30¢ BUY均价", "90—100¢ SELL均价", "SELL shares / BUY shares", "任意BUY→高价SELL中位", "低价BUY→高价SELL中位"],
             [
-                ["全部90—100¢ SELL YES", analysis["high_sell_yes_total_fills"], high_rows["assets"], high_rows["dates"], fmt_price(high_rows["buy_avg"]), fmt_price(high_rows["sell_avg"]), f"{high_rows['high_sell_to_prior_buy_ratio'] * 100:.2f}%" if high_rows["high_sell_to_prior_buy_ratio"] is not None else "—", fmt_hours(high_rows["median_hold_seconds"])],
-                ["其中此前有0—30¢ BUY", aggregate_rows["fills"], aggregate_rows["assets"], aggregate_rows["dates"], fmt_price(aggregate_rows["low_buy_avg"]), fmt_price(aggregate_rows["sell_avg"]), f"{aggregate_rows['high_sell_to_prior_buy_ratio'] * 100:.2f}%" if aggregate_rows["high_sell_to_prior_buy_ratio"] is not None else "—", fmt_hours(aggregate_rows["median_hold_seconds"])],
+                ["全部90—100¢ SELL YES", analysis["high_sell_yes_total_fills"], high_rows["assets"], high_rows["dates"], fmt_price(high_rows["all_prior_buy_weighted_price"]), fmt_price(high_rows["low_0_30_buy_weighted_price"]), fmt_price(high_rows["high_90_100_sell_weighted_price"]), f"{high_rows['high_sell_to_prior_buy_ratio'] * 100:.2f}%" if high_rows["high_sell_to_prior_buy_ratio"] is not None else "—", fmt_hours(high_rows["median_any_hold_seconds"]), fmt_hours(high_rows["median_low_hold_seconds"])],
+                ["其中此前有0—30¢ BUY", aggregate_rows["fills"], aggregate_rows["assets"], aggregate_rows["dates"], fmt_price(aggregate_rows["all_prior_buy_weighted_price"]), fmt_price(aggregate_rows["low_0_30_buy_weighted_price"]), fmt_price(aggregate_rows["high_90_100_sell_weighted_price"]), f"{aggregate_rows['high_sell_to_prior_buy_ratio'] * 100:.2f}%" if aggregate_rows["high_sell_to_prior_buy_ratio"] is not None else "—", fmt_hours(aggregate_rows["median_any_hold_seconds"]), fmt_hours(aggregate_rows["median_low_hold_seconds"])],
             ],
         ),
         "",
-        f"部分/近似全部/超过观察买入份数：{analysis['partial_count']} / {analysis['near_full_count']} / {analysis['over_count']} 个资产路径。这里是观察到的 SELL shares 与此前 BUY shares 的比值，不是完整库存核算。",
+        f"{dominance_sentence}",
+        f"逐笔高价SELL分类（fills）：PARTIAL_OBSERVED_EXIT={aggregate_rows['partial_fill_count']}，NEAR_FULL_OBSERVED_EXIT={aggregate_rows['near_full_fill_count']}，EXCEEDS_OBSERVED_INVENTORY={aggregate_rows['exceeds_fill_count']}，UNKNOWN_INVENTORY={aggregate_rows['unknown_fill_count']}。资产级分类：ALL_PARTIAL={aggregate_rows['all_partial_asset_count']}，HAS_NEAR_FULL={aggregate_rows['near_full_asset_count']}，MIXED_EXIT_PATTERN={aggregate_rows['mixed_asset_count']}，HAS_EXCESS={aggregate_rows['exceeds_asset_count']}，UNKNOWN={aggregate_rows['unknown_asset_count']}。",
+        "观察库存只基于公开 fills，不等于真实完整账户库存；每笔高价SELL都按时间顺序扣减，后续BUY会重新增加观察库存。",
+        f"修复前/修复后低买高卖天气日数：{aggregate_rows['legacy_dates']} / {aggregate_rows['dates']}；修复前/修复后资产级部分退出数：{aggregate_rows['legacy_partial_asset_count']} / {aggregate_rows['all_partial_asset_count']}；修复前/修复后接近全部退出数：{aggregate_rows['legacy_near_full_asset_count']} / {aggregate_rows['near_full_asset_count']}。",
+        f"修复前中位‘低价BUY’持有时间（实际为任意BUY→高价SELL）：{fmt_hours(aggregate_rows['legacy_median_low_hold_seconds'])}；修复后任意BUY→高价SELL：{fmt_hours(aggregate_rows['median_any_hold_seconds'])}；修复后0—30¢ BUY→高价SELL：{fmt_hours(aggregate_rows['median_low_hold_seconds'])}。",
         "",
         "按90—100¢ SELL YES路径的高价卖出金额排序，至少列出10个真实天气日案例：",
         md_table(
-            ["天气日期", "温度档", "匹配资产数", "高价SELL笔数", "对应BUY USD", "高价SELL USD", "SELL/BUY shares", "主退出形态", "中位持有"],
+            ["天气日期", "温度档", "匹配资产数", "高价SELL笔数", "0—30¢ BUY USD", "高价SELL USD", "SELL/观察库存", "主退出形态", "任意BUY→高价SELL", "低价BUY→高价SELL"],
             [
-                [case["weather_date"], case["temperature_buckets"], case["assets"], case["fills"], fmt_num(case["prior_buy_usd"]), fmt_num(case["high_sell_usd"]), f"{case['high_sell_to_prior_buy_ratio'] * 100:.2f}%" if case["high_sell_to_prior_buy_ratio"] is not None else "—", case["exit_label"], fmt_hours(case["median_hold_seconds"])]
+                [case["weather_date"], case["temperature_buckets"], case["assets"], case["fills"], fmt_num(case["low_buy_usd"]), fmt_num(case["high_sell_usd"]), f"{case['high_sell_to_prior_buy_ratio'] * 100:.2f}%" if case["high_sell_to_prior_buy_ratio"] is not None else "—", case["exit_label"], fmt_hours(case["median_any_hold_seconds"]), fmt_hours(case["median_low_hold_seconds"])]
                 for case in analysis["daily_cases"][:10]
             ],
         ),
@@ -1028,7 +1376,7 @@ def render_high_cases(analysis: dict[str, Any]) -> str:
             path = item["path"]
             lines.extend([
                 "",
-                f"{label}：{path['weather_date']} / {path['temperature_bucket']} / asset `{path['asset']}`；首次低价BUY至首次90—100¢ SELL {fmt_hours(item['hold_seconds'])}；对应BUY均价 {fmt_price(weighted_price(item['prior_buys']))}，高价SELL均价 {fmt_price(weighted_price(item['high_sells']))}，高价SELL/此前BUY shares {item['high_sell_ratio'] * 100:.2f}%。",
+                f"{label}：{path['weather_date']} / {path['temperature_bucket']} / asset `{path['asset']}`；任意BUY至首次90—100¢ SELL {fmt_hours(item['first_any_buy_to_first_high_sell_seconds'])}，0—30¢ BUY至首次90—100¢ SELL {fmt_hours(item['first_low_buy_to_first_high_sell_seconds'])}；低价BUY均价 {fmt_price(weighted_price(item['low_prior_buys']))}，高价SELL均价 {fmt_price(weighted_price(item['high_sells']))}，资产级退出分类 {item['asset_exit_classification']}。",
             ])
     return "\n".join(lines)
 
@@ -1045,12 +1393,148 @@ def render_style(style: dict[str, Any]) -> str:
             [f"BUY后{SHORT_HOLD_HOURS:.0f}小时内SELL的资产比例", f"{style['short_hold_ratio']:.2f}% ({style['short_hold_assets']}/{style['matched_buy_then_sell_assets']})"],
             ["SELL后重新BUY的资产比例", f"{style['sell_then_rebuy_ratio']:.2f}% ({style['sell_then_rebuy_assets']}/{style['both_buy_sell_assets']})"],
             ["首次BUY至首次SELL中位持有", fmt_hours(style["median_hold_seconds"])],
-            ["每个96日历天气日平均成交笔数", fmt_num(style["average_fills_per_requested_day"])],
+            ["每个请求日历天气日平均成交笔数", fmt_num(style["average_fills_per_requested_day"])],
             ["每个有成交天气日平均成交笔数", fmt_num(style["average_fills_per_active_day"])],
             ["YES和NO都活跃的天气日数", len(style["yes_no_active_days"])],
             ["maker/taker", "NOT_AVAILABLE" if style["maker_taker"] is None else ", ".join(style["maker_taker"])],
         ],
     )
+
+
+def render_dynamic_conclusion_sections(
+    root: Path,
+    report_path: Path,
+    city: str,
+    requested_dates: list[date],
+    data: dict[str, dict[str, Any]],
+    w2_high: dict[str, Any],
+) -> list[str]:
+    calendar_day_count = len(requested_dates)
+    w1, w2 = (data[wallet] for wallet in WALLETS)
+    w1_style, w2_style = w1["style"], w2["style"]
+    w2_low = w2_high["low_buy_high_sell"]
+    w2_label = w2_style["style_label"]
+    w1_label = w1_style["style_label"]
+    if w2_low["near_full_asset_count"] > w2_low["all_partial_asset_count"]:
+        w2_exit_sentence = "接近全部观察库存退出的资产更多"
+    elif w2_low["all_partial_asset_count"] > w2_low["near_full_asset_count"]:
+        w2_exit_sentence = "部分退出的资产更多"
+    else:
+        w2_exit_sentence = "部分退出和接近全部退出没有单一主导模式"
+    common_multi = min(w1["multi_yes"]["multi_yes_days"], w2["multi_yes"]["multi_yes_days"])
+    if w2_low["assets"]:
+        low_high_proof = (
+            f"已在{w2_low['fills']}笔高价SELL、{w2_low['assets']}个资产、{w2_low['dates']}个天气日中观察到此前0—30¢ BUY YES；"
+            f"低价BUY均价{fmt_price(w2_low['low_0_30_buy_weighted_price'])}，高价SELL均价{fmt_price(w2_low['high_90_100_sell_weighted_price'])}。"
+        )
+    else:
+        low_high_proof = "当前没有可追溯的此前0—30¢ BUY YES→90—100¢ SELL YES资产路径。"
+    def time_summary(wallet_data: dict[str, Any]) -> str:
+        return f"BUY YES D0主时段{main_time_for_wallet(wallet_data, 'BUY YES')}；BUY NO D0主时段{main_time_for_wallet(wallet_data, 'BUY NO')}"
+    def main_time_for_wallet(wallet_data: dict[str, Any], key: str) -> str:
+        rows = [row for row in wallet_data["time"][key] if row["bucket"].startswith("D0_")]
+        return TIME_NAMES[max(rows, key=lambda row: row["usd"])["bucket"]] if rows else "—"
+    def price_summary(wallet_data: dict[str, Any], key: str) -> str:
+        row = max(wallet_data["price"][key], key=lambda item: item["usd"])
+        return f"{PRICE_NAMES[row['band']]}（USD占比{fmt_pct(row['usd_share'])}）"
+    def composition_summary(wallet_data: dict[str, Any]) -> str:
+        counts = wallet_data["category_counts"]
+        return f"MULTI_YES_ONLY={counts.get('MULTI_YES_ONLY', 0)}、MULTI_YES_PLUS_NO={counts.get('MULTI_YES_PLUS_NO', 0)}、NO_BUY={counts.get('NO_BUY', 0)}（/{calendar_day_count}日）"
+    def sell_exit_summary(wallet_data: dict[str, Any]) -> str:
+        sell_yes = wallet_data["price"]["SELL YES"]
+        max_row = max(sell_yes, key=lambda item: item["usd"])
+        return f"SELL YES最大USD桶为{PRICE_NAMES[max_row['band']]}（{fmt_pct(max_row['usd_share'])}），SELL fills={sum(row['fills'] for row in sell_yes)}"
+    style_table = md_table(
+        ["钱包", "标签", "证据驱动理由"],
+        [
+            [wallet, data[wallet]["style"]["style_label"], f"BUY fills={data[wallet]['style']['buy_fill_count']}、SELL fills={data[wallet]['style']['sell_fill_count']}、重复双向资产占比{data[wallet]['style']['repeated_asset_share']:.1%}、同小时双向组数{data[wallet]['style']['same_hour_two_way']}。"]
+            for wallet in WALLETS
+        ],
+    )
+    return [
+        "",
+        "## 11. 两个钱包的可确认模式",
+        "",
+        f"### {WALLETS[0]}",
+        "",
+        "#### 可以确认",
+        "",
+        f"- BUY fills={w1_style['buy_fill_count']}、SELL fills={w1_style['sell_fill_count']}；{time_summary(w1)}。",
+        f"- 逐资产有BUY也有SELL的资产数为{w1['path_metrics']['buy_and_sell_assets']}，BUY后发生SELL的天气日数为{w1['path_metrics']['buy_then_sell_weather_days']}；不是把不同温度合同拼接出来的结果。",
+        f"- 温度组合中多YES相关天气日为{w1['multi_yes']['multi_yes_days']}，相邻YES组合率为{w1['multi_yes']['adjacent_rate']:.2f}%。",
+        "",
+        "#### 合理但尚未证明",
+        "",
+        f"- {SHORT_HOLD_HOURS:.0f}小时内BUY→SELL比例为{w1_style['short_hold_ratio']:.2f}%，可支持时间邻近，但不能证明订单意图。",
+        f"- {sell_exit_summary(w1)}；高价卖出不等于完整退出或盈利。",
+        "",
+        "#### 不支持的说法",
+        "",
+        "- 没有 maker/taker 或订单簿证据，不能确定称为做市商。",
+        "- 不能把公开卖出成交解释为完整账户库存或完整PnL。",
+        "",
+        f"### {WALLETS[1]}",
+        "",
+        "#### 可以确认",
+        "",
+        f"- BUY fills={w2_style['buy_fill_count']}、SELL fills={w2_style['sell_fill_count']}；{time_summary(w2)}。",
+        f"- BUY YES主要价格带为{price_summary(w2, 'BUY YES')}；{low_high_proof}",
+        f"- 逐笔观察库存退出中，{w2_low['partial_fill_count']}笔部分、{w2_low['near_full_fill_count']}笔接近全部、{w2_low['exceeds_fill_count']}笔超过观察库存、{w2_low['unknown_fill_count']}笔库存未知；资产级结论由这些逐笔结果动态生成。",
+        "",
+        "#### 合理但尚未证明",
+        "",
+        f"- 多YES覆盖后等待高价部分退出可以作为候选路径，但只适用于已匹配的{w2_low['assets']}个资产，不代表所有BUY。",
+        "",
+        "#### 不支持的说法",
+        "",
+        "- 不能据此确定方向性预测、盈利或完整仓位管理。",
+        "- 不能把 SELL 金额、观察库存比例或价格差直接解释为PnL/ROI。",
+        "",
+        "## 12. 最值得学习的3条与不适合复制的行为",
+        "",
+        "1. 可学习：严格拆分 BUY YES、BUY NO、SELL YES、SELL NO，并按天气日和当地时段复盘。",
+        "2. 可学习：只在同一 wallet + weather_date + condition_id + asset + outcome + temperature_bucket 内做路径匹配。",
+        "3. 可学习：把0—30¢低价买入、90—100¢高价卖出、逐笔观察库存和温度覆盖作为待验证模拟规则，而不是直接复制结论。",
+        "",
+        "不适合直接复制：机械追逐低价/高价、把多温度覆盖当作确定预测、把观察库存当作真实库存、或把高成交量直接命名为做市。",
+        "",
+        "## 13. 最终对比",
+        "",
+        md_table(
+            ["维度", WALLETS[0], WALLETS[1]],
+            [
+                ["建仓时间", time_summary(w1), time_summary(w2)],
+                ["主要YES价格", price_summary(w1, "BUY YES"), price_summary(w2, "BUY YES")],
+                ["NO使用方法", f"BUY NO {price_summary(w1, 'BUY NO')}；混合日NO总体USD占比{w1['no']['overall_no_usd_share']:.2f}%", f"BUY NO {price_summary(w2, 'BUY NO')}；混合日NO总体USD占比{w2['no']['overall_no_usd_share']:.2f}%"],
+                ["温度组合", composition_summary(w1), composition_summary(w2)],
+                ["卖出频率", f"{w1_style['sell_fill_count']} fills", f"{w2_style['sell_fill_count']} fills"],
+                ["高价退出", sell_exit_summary(w1), sell_exit_summary(w2)],
+                ["持有时间", f"首次BUY→首次SELL中位{fmt_hours(w1['path_metrics']['first_buy_to_first_sell_percentiles']['P50'] * 3600 if w1['path_metrics']['first_buy_to_first_sell_percentiles']['P50'] is not None else None)}", f"低价BUY→高价SELL中位{fmt_hours(w2_low['median_low_hold_seconds'])}"],
+                ["反复交易", f"BUY→SELL切换{w1_style['buy_sell_transitions']}、SELL→BUY切换{w1_style['sell_buy_transitions']}", f"BUY→SELL切换{w2_style['buy_sell_transitions']}、SELL→BUY切换{w2_style['sell_buy_transitions']}"],
+                ["疑似风格", w1_label, w2_label],
+                ["证据强度", "READY；逐资产路径和逐笔观察库存可复核", "READY；低买高卖路径和逐笔观察库存可复核"],
+            ],
+        ),
+        "",
+        "## 14. 特别回答",
+        "",
+        f"1. 两个钱包共有的稳定模式：两者均有多YES组合（共同至少{common_multi}个天气日），且路径分析只在同一资产合同内成立；公开证据都不能替代完整库存。",
+        f"2. 只属于钱包一的模式：SELL fills={w1_style['sell_fill_count']}、SELL→BUY切换={w1_style['sell_buy_transitions']}、同小时双向组数={w1_style['same_hour_two_way']}，主动再平衡特征更强。",
+        f"3. 只属于钱包二的模式：BUY fills={w2_style['buy_fill_count']}、SELL fills={w2_style['sell_fill_count']}，低价BUY→高价SELL路径覆盖{w2_low['dates']}个天气日；标签由通用分类器生成：{w2_label}。",
+        f"4. “低价买入、多温度覆盖、高价部分退出”是否被逐资产证据证明：{low_high_proof}逐笔观察库存的资产级主导结果为：{w2_low['all_partial_asset_count']}个ALL_PARTIAL、{w2_low['near_full_asset_count']}个HAS_NEAR_FULL、{w2_low['mixed_asset_count']}个MIXED、{w2_low['exceeds_asset_count']}个HAS_EXCESS、{w2_low['unknown_asset_count']}个UNKNOWN；这说明{w2_exit_sentence}，不代表完整策略。",
+        "5. 可进入模拟交易候选规则：本地天气日分桶、四类方向分开、同资产匹配、逐笔库存更新、0—30¢与90—100¢路径、部分退出比例和相邻温度覆盖；必须继续加入滑点、未成交和证据缺口。",
+        "6. 还不能复制：真实库存、完整订单、maker/taker、主观预测、盈利能力、PnL/ROI/胜率，以及把任何单一钱包路径外推为通用策略。",
+        "",
+        "## 15. 机器可读输出",
+        "",
+        "同一离线分析函数同时生成 `SECOND_STAGE_TRADER_PATTERN_COMPARISON.json`、`asset_path_summary.csv`、`high_sell_path_fills.csv`、`high_sell_path_assets.csv`、`daily_temperature_structure.csv`、`trader_style_metrics.csv`。",
+        "",
+        "## 16. 复现",
+        "",
+        f"```bash\npython3 scripts/second_stage_trader_pattern_analysis.py \\\n+  --output-root {root} \\\n+  --report {report_path} \\\n+  --date-from {min(requested_dates).isoformat()} \\\n+  --date-to {max(requested_dates).isoformat()} \\\n+  --city {city}\n```".replace("\n+  --", "\n  --"),
+        "",
+        "本脚本为本地离线分析，不会发起网络请求、签名或下单。",
+    ]
 
 
 def render_report(
@@ -1065,10 +1549,59 @@ def render_report(
     data: dict[str, dict[str, Any]],
     w2_high: dict[str, Any],
 ) -> str:
+    calendar_day_count = len(requested_dates)
+    event_count = len(events)
+    duplicate_dates = sorted(denominator.get("old_new_duplicate_dates", []))
+    duplicate_date_text = ", ".join(duplicate_dates) if duplicate_dates else "无"
+    duplicate_event_text = "; ".join(
+        f"{event['weather_date']} / {event['event_slug']} / event_id={event['event_id']}"
+        for event in denominator.get("duplicate_events", [])
+    ) or "无"
+    duplicate_condition_text = "; ".join(
+        f"{event['event_slug']}={event['condition_count']} conditions"
+        for event in denominator.get("duplicate_events", [])
+    ) or "无"
+    duplicate_event_id_text = "; ".join(
+        f"{event_id}×{count}" for event_id, count in sorted(denominator.get("duplicate_event_ids", {}).items())
+    ) or "无"
+    quality_failures = []
+    source_only_total = 0
+    for wallet in WALLETS:
+        quality = data[wallet]["quality"]
+        source_only_total += int(quality.get("activity_only_fill_count", 0)) + int(quality.get("trades_only_fill_count", 0))
+        for metric in ("api_request_failure_count", "unknown_timezone_fill_count", "unknown_relative_day_count", "orphan_sell_asset_count", "market_identity_conflict_count"):
+            if int(quality.get(metric, 0)):
+                quality_failures.append(f"{wallet}:{metric}={quality[metric]}")
+    quality_sentence = "未发现 API failure、unknown timezone/relative day、orphan sell 或 market identity conflict。" if not quality_failures else "质量告警：" + ", ".join(quality_failures) + "。"
+    w1 = data[WALLETS[0]]
+    w2 = data[WALLETS[1]]
+    w1_rows = w1["rows"]
+    w2_rows = w2["rows"]
+    def class_price(wallet_data: dict[str, Any], key: str) -> str:
+        rows = wallet_data["price"][key]
+        row = max(rows, key=lambda item: item["usd"])
+        return PRICE_NAMES[row["band"]]
+    def main_d0_time(wallet_data: dict[str, Any], key: str = "BUY YES") -> str:
+        rows = [row for row in wallet_data["time"][key] if row["bucket"].startswith("D0_")]
+        return TIME_NAMES[max(rows, key=lambda item: item["usd"])["bucket"]] if rows else "—"
+    def observed_exit_sentence(summary: dict[str, Any]) -> str:
+        partial = summary["all_partial_asset_count"]
+        near = summary["near_full_asset_count"]
+        if near > partial:
+            return "接近全部观察库存退出的资产更多"
+        if partial > near:
+            return "部分退出的资产更多"
+        return "部分退出和接近全部退出没有单一主导模式"
+    w2_low = w2_high["low_buy_high_sell"]
+    w2_exit_sentence = observed_exit_sentence(w2_low)
+    style_threshold_sentence = (
+        f"风格阈值：BUY_DOMINANT 要求 BUY fill 占比≥{STYLE_BUY_DOMINANT_MIN_BUY_FILL_SHARE:.0%} 且 SELL/BUY fill≤{STYLE_BUY_DOMINANT_MAX_SELL_TO_BUY_FILL_RATIO:.0%}；"
+        f"ACTIVE_REBALANCER 要求重复双向资产占比≥{STYLE_ACTIVE_MIN_REPEATED_ASSET_SHARE:.0%}、SELL→BUY比例≥{STYLE_ACTIVE_MIN_SELL_REBUY_RATIO:.0%}、同小时双向组数≥{STYLE_ACTIVE_MIN_SAME_HOUR_TWO_WAY}。"
+    )
     lines = [
         "# SECOND_STAGE_TRADER_PATTERN_COMPARISON",
         "",
-        f"研究范围：北京每日最高温市场；天气日期 {start.isoformat()} 至 {end.isoformat()}。",
+        f"研究范围：{city}每日最高温市场；天气日期 {start.isoformat()} 至 {end.isoformat()}。",
         "",
         "本阶段只读取既有 `all_fills.csv`、`summary.json`、`data_quality.csv` 和 `_public_evidence`，没有重新抓取。价格带沿用第一阶段固定注册桶；本报告只描述公开 fills，不推断未成交订单、完整库存、PnL、ROI、胜率或主观意图。",
         "",
@@ -1082,7 +1615,8 @@ def render_report(
             ],
         ),
         "",
-        "两个钱包的目标市场查询均为 COMPLETE；无 API request failure、unknown timezone、unknown relative day、orphan sell 或 identity conflict。钱包二有1笔 activity-only fill，其他成交均有 activity 与 trades 双源对应；这不会改变本地报告的 READY 状态。",
+        f"两个钱包的目标市场查询均为 COMPLETE；{quality_sentence}本轮 source-only fill 总数为{source_only_total}，其余成交有 activity 与 trades 双源对应；这不会改变本地报告的 READY 状态。",
+        f"SECOND_STAGE_NETWORK_CALL_COUNT={SECOND_STAGE_NETWORK_CALL_COUNT}。底层既有 evidence 的历史抓取计数保留在 run_manifest，不属于本轮第二阶段分析。",
         "",
         "## 1. 日期分母核查",
         "",
@@ -1094,11 +1628,12 @@ def render_report(
         f"OUT_OF_RANGE_EVENT_COUNT={denominator['out_of_range_event_count']}",
         "```",
         "",
-        "结论：2026-05-01 至 2026-08-04 首尾包含确实是96个自然天气日。当前报告使用97，是因为 2026-05-19 有两个完整事件，而不是多了一个天气日期：一个 slug 为 `arch-highest-temperature-in-beijing-on-may-19-2026`，另一个为 `highest-temperature-in-beijing-on-may-19-2026`。两者 event_id 不同、各自11个完整 condition；没有范围外事件，也没有完全相同 event_id 的重复。",
+        f"结论：请求范围首尾包含确实是{calendar_day_count}个自然天气日。当前 event 数为{event_count}，因为重复天气日期为{duplicate_date_text}；重复事件为：{duplicate_event_text}。这些事件分别为{duplicate_condition_text}；范围外事件数为{denominator['out_of_range_event_count']}；同一 event_id 重复记录为{duplicate_event_id_text}。",
         "",
-        f"DENOMINATOR_97_EXPLANATION=96 unique weather dates + 1 extra same-date event on 2026-05-19 (old arch slug and new slug). Daily ratios in this report use 96 calendar dates; event-level path tables retain both event records.",
+        f"DENOMINATOR_EVENT_EXPLANATION={denominator['unique_weather_dates']} unique weather dates + {event_count - denominator['unique_weather_dates']} extra same-date event records on {duplicate_date_text}. Daily ratios use {calendar_day_count} calendar dates; event-level path tables retain all {event_count} event records.",
+        f"DENOMINATOR_97_EXPLANATION={denominator['unique_weather_dates']} unique weather dates + {event_count - denominator['unique_weather_dates']} extra same-date event records on {duplicate_date_text}; 97 is an event-record denominator, not a natural-day denominator.",
         "",
-        "每个日期的 event 数如下；除 2026-05-19 外均为1：",
+        f"每个日期的 event 数如下；重复日期为{duplicate_date_text}：",
         md_table(
             ["日期", "events", "日期", "events"],
             [[left, denominator["event_counts_by_date"][left], right, denominator["event_counts_by_date"][right]] for left, right in zip(list(denominator["event_counts_by_date"])[::2], list(denominator["event_counts_by_date"])[1::2])],
@@ -1112,15 +1647,15 @@ def render_report(
         "",
         "## 2. BUY / SELL 时间拆分",
         "",
-        "D0 是北京市场当地天气日；D0 下的四个小时桶是 D0 的明细，不应与 D0 再相加。每个表的占比均以该 BUY/SELL + YES/NO 类别自身为分母。没有 POST_EVENT 成交；也没有 EARLIER_THAN_D2 或 UNKNOWN 成交。",
+        f"D0 是{city}市场当地天气日；D0 下的四个小时桶是 D0 的明细，不应与 D0 再相加。每个表的占比均以该 BUY/SELL + YES/NO 类别自身为分母。POST_EVENT、EARLIER_THAN_D2、UNKNOWN 的额外成交行由本地数据动态检查；当前总计为{sum(1 for wallet in WALLETS for row in data[wallet]['rows'] if row['relative_weather_day'] == 'POST_EVENT')}、{sum(1 for wallet in WALLETS for row in data[wallet]['rows'] if row['relative_weather_day'] == 'EARLIER_THAN_D2')}、{sum(1 for wallet in WALLETS for row in data[wallet]['rows'] if row['relative_weather_day'] == 'UNKNOWN')}。",
     ]
     for wallet in WALLETS:
         lines.extend(["", f"### {wallet}"])
         for key in ("BUY YES", "BUY NO", "SELL YES", "SELL NO"):
             lines.extend(["", f"#### {key}", "", render_time_table(data[wallet]["time"][key])])
-    lines.extend(["", "## 3. 每个事件的资金路径时间", "", "以下保留97个 event 记录，因此 2026-05-19 的两个 slug 分开；BUY资金25/50/75% 是该 event 内按时间排序的 BUY USD 累计阈值，不是仓位比例。"])
+    lines.extend(["", "## 3. 每个事件的资金路径时间", "", f"以下保留{event_count}个 event 记录，因此重复天气日期的多个 slug 分开；BUY资金25/50/75% 是该 event 内按时间排序的 BUY USD 累计阈值，不是仓位比例。"])
     for wallet in WALLETS:
-        lines.extend(["", details(f"{wallet}：97个event路径表", render_event_path_table(data[wallet]["event_paths"]))])
+        lines.extend(["", details(f"{wallet}：{event_count}个event路径表", render_event_path_table(data[wallet]["event_paths"]))])
     lines.extend(["", "## 4. 完整价格带占比", "", "每个表的 fill_share、shares_share、usd_share 分别以该四类自身总量为分母；NO 价格保持 NO 合约自身价格，未转换为 YES 等价价格。USD加权均价 = 实际 trade USD / shares。"])
     for wallet in WALLETS:
         lines.extend(["", f"### {wallet}"])
@@ -1128,22 +1663,28 @@ def render_report(
             lines.extend(["", f"#### {key}", "", render_price_table(data[wallet]["price"][key])])
     w1_sell_yes = data[WALLETS[0]]["price"]["SELL YES"]
     w1_sell_yes_largest_by = max(w1_sell_yes, key=lambda row: row["usd"])["band"]
+    w1_sell_yes_total_usd = sum(row["usd"] for row in w1_sell_yes)
+    w1_sell_yes_total_shares = sum(row["shares"] for row in w1_sell_yes)
+    w1_sell_yes_weighted = w1_sell_yes_total_usd / w1_sell_yes_total_shares if w1_sell_yes_total_shares else None
+    w1_sell_yes_by_fill = max(w1_sell_yes, key=lambda row: row["fills"])
+    w1_sell_yes_by_shares = max(w1_sell_yes, key=lambda row: row["shares"])
+    w1_sell_yes_by_usd = max(w1_sell_yes, key=lambda row: row["usd"])
     lines.extend([
         "",
         "### 钱包一 SELL YES 的90—100美分矛盾核查",
         "",
-        "钱包一 SELL YES 总额为 $7,252.18、总量41,733.22 shares，整体实际加权均价约17.38美分。当前报告的“主要价格带”使用的是固定价格带中按 USD 金额最大的单一桶，不是多数占比：",
+        f"{WALLETS[0]} SELL YES 总额为${w1_sell_yes_total_usd:,.2f}、总量{w1_sell_yes_total_shares:,.2f} shares，整体实际加权均价约{fmt_price(w1_sell_yes_weighted)}。当前报告的“主要价格带”使用的是固定价格带中按 USD 金额最大的单一桶，不是多数占比：",
         "",
         md_table(
             ["判断口径", "最大价格带", "该带占比", "是否过半"],
             [
-                ["fill_count", PRICE_NAMES[max(w1_sell_yes, key=lambda row: row["fills"])["band"]], fmt_pct(max(w1_sell_yes, key=lambda row: row["fills"])["fill_share"]), "否"],
-                ["shares", PRICE_NAMES[max(w1_sell_yes, key=lambda row: row["shares"])["band"]], fmt_pct(max(w1_sell_yes, key=lambda row: row["shares"])["shares_share"]), "否"],
-                ["trade USD", PRICE_NAMES[w1_sell_yes_largest_by], fmt_pct(max(w1_sell_yes, key=lambda row: row["usd"])["usd_share"]), "否"],
+                ["fill_count", PRICE_NAMES[w1_sell_yes_by_fill["band"]], fmt_pct(w1_sell_yes_by_fill["fill_share"]), "是" if w1_sell_yes_by_fill["fill_share"] > 50 else "否"],
+                ["shares", PRICE_NAMES[w1_sell_yes_by_shares["band"]], fmt_pct(w1_sell_yes_by_shares["shares_share"]), "是" if w1_sell_yes_by_shares["shares_share"] > 50 else "否"],
+                ["trade USD", PRICE_NAMES[w1_sell_yes_by_usd["band"]], fmt_pct(w1_sell_yes_by_usd["usd_share"]), "是" if w1_sell_yes_by_usd["usd_share"] > 50 else "否"],
             ],
         ),
         "",
-        "因此，90—100美分是按 USD 的最大单一桶，但只占约36.79%；按笔数最大的是10—30美分，按 shares 最大的是0—10美分。原摘要没有错，但“主要”容易被误读为绝大多数，第二阶段应明确为“最大单一USD桶”。",
+        f"因此，{PRICE_NAMES[w1_sell_yes_by_usd['band']]}是按 USD 的最大单一桶，占{fmt_pct(w1_sell_yes_by_usd['usd_share'])}；按笔数最大的是{PRICE_NAMES[w1_sell_yes_by_fill['band']]}，按 shares 最大的是{PRICE_NAMES[w1_sell_yes_by_shares['band']]}。报告中的“主要”应明确为“最大单一USD桶”，不等于绝大多数。",
         "",
         "## 5. 逐资产 BUY / SELL 路径匹配",
         "",
@@ -1160,18 +1701,26 @@ def render_report(
         style = data[wallet]["style"]
         lines.extend(["", f"### {wallet}", "", render_style(style), "", "成交最密集的10个天气日：", md_table(["天气日期", "fills", "BUY fills", "SELL fills", "trade USD"], [[item["weather_date"], item["fills"], item["buy_fills"], item["sell_fills"], fmt_num(item["usd"])] for item in style["top_days"]])])
         lines.extend(["", f"YES和NO同时有公开成交的天气日数：{len(style['yes_no_active_days'])}。maker/taker字段：{'NOT_AVAILABLE' if style['maker_taker'] is None else ', '.join(style['maker_taker'])}。", ""])
-    lines.extend(["", "风格标签采用保守规则：", "", md_table(["钱包", "标签", "理由"], [
-        [WALLETS[0], "ACTIVE_REBALANCER", "存在大量资产级双向路径、BUY→SELL与SELL→BUY切换；但没有maker/taker证据，不能仅凭成交笔数称为做市商。"],
-        [WALLETS[1], "DIRECTIONAL_ACCUMULATOR", "BUY明显多于SELL，且买入YES占比高；高价卖出路径存在，但双向反复与短持有证据弱于钱包一。"],
+    def style_reason(style: dict[str, Any]) -> str:
+        label = style["style_label"]
+        if label == "BUY_DOMINANT_ACCUMULATOR":
+            return f"BUY fill占比{style['buy_fill_share']:.1%}、SELL/BUY fill比{style['sell_to_buy_fill_ratio']:.1%}，满足买入主导阈值；不代表完整库存或方向意图。"
+        if label == "ACTIVE_REBALANCER":
+            return f"重复双向资产占比{style['repeated_asset_share']:.1%}、SELL→BUY比例{style['sell_then_rebuy_ratio_decimal']:.1%}、同小时双向组数{style['same_hour_two_way']}，满足主动再平衡阈值；没有maker/taker证据。"
+        if label == "POSSIBLE_MARKET_MAKER":
+            return f"同小时双向组数{style['same_hour_two_way']}、短持有比例{style['short_hold_ratio_decimal']:.1%}、SELL→BUY比例{style['sell_then_rebuy_ratio_decimal']:.1%}达到可能做市候选阈值，但maker/taker不可用。"
+        return "当前指标没有满足预设的主动再平衡、买入主导或可能做市候选阈值。"
+    lines.extend(["", "风格标签采用参数化规则：", style_threshold_sentence, "", md_table(["钱包", "标签", "理由"], [
+        [wallet, data[wallet]["style"]["style_label"], style_reason(data[wallet]["style"])] for wallet in WALLETS
     ])])
-    lines.extend(["", "## 8. 温度组合：互斥主分类", "", "每个96日历天气日严格分入一个类别；2026-05-19 的旧/新事件在天气日级合并，重复 event 不重复计日。yes_bucket_count/no_bucket_count 是该天气日 BUY 记录中的唯一温度桶数。"])
+    lines.extend(["", "## 8. 温度组合：互斥主分类", "", f"每个{calendar_day_count}日历天气日严格分入一个类别；重复天气日期的多个 event 在天气日级合并，重复 event 不重复计日。yes_bucket_count/no_bucket_count 是该天气日 BUY 记录中的唯一温度桶数。"])
     for wallet in WALLETS:
-        lines.extend(["", f"### {wallet}", "", render_category_table(data[wallet])])
+        lines.extend(["", f"### {wallet}", "", render_category_table(data[wallet], calendar_day_count)])
         lines.extend(["", "辅助特征统计：", "", md_table(["特征", "天气日数", "比例"], [
-            ["adjacent_yes", sum(day["adjacent_yes"] for day in data[wallet]["temperature_days"]), fmt_pct(pct(sum(day["adjacent_yes"] for day in data[wallet]["temperature_days"]), 96))],
-            ["non_adjacent_yes", sum(day["non_adjacent_yes"] for day in data[wallet]["temperature_days"]), fmt_pct(pct(sum(day["non_adjacent_yes"] for day in data[wallet]["temperature_days"]), 96))],
-            ["same_bucket_both_sides", sum(day["same_bucket_both_sides"] for day in data[wallet]["temperature_days"]), fmt_pct(pct(sum(day["same_bucket_both_sides"] for day in data[wallet]["temperature_days"]), 96))],
-            ["cross_bucket_yes_no", sum(day["cross_bucket_yes_no"] for day in data[wallet]["temperature_days"]), fmt_pct(pct(sum(day["cross_bucket_yes_no"] for day in data[wallet]["temperature_days"]), 96))],
+            ["adjacent_yes", sum(day["adjacent_yes"] for day in data[wallet]["temperature_days"]), fmt_pct(pct(sum(day["adjacent_yes"] for day in data[wallet]["temperature_days"]), calendar_day_count))],
+            ["non_adjacent_yes", sum(day["non_adjacent_yes"] for day in data[wallet]["temperature_days"]), fmt_pct(pct(sum(day["non_adjacent_yes"] for day in data[wallet]["temperature_days"]), calendar_day_count))],
+            ["same_bucket_both_sides", sum(day["same_bucket_both_sides"] for day in data[wallet]["temperature_days"]), fmt_pct(pct(sum(day["same_bucket_both_sides"] for day in data[wallet]["temperature_days"]), calendar_day_count))],
+            ["cross_bucket_yes_no", sum(day["cross_bucket_yes_no"] for day in data[wallet]["temperature_days"]), fmt_pct(pct(sum(day["cross_bucket_yes_no"] for day in data[wallet]["temperature_days"]), calendar_day_count))],
         ])])
     lines.extend(["", "## 9. 多YES组合结构", "", "‘便宜尾部YES’固定定义为 BUY YES 0—10美分价格带；相邻YES只按精确温度相差1°C识别。主力YES档是该天气日 BUY YES USD 最大的温度桶。"])
     for wallet in WALLETS:
@@ -1203,34 +1752,10 @@ def render_report(
             ["混合天气日NO投入USD占当天BUY USD P25/P50/P75/P90", "/".join("—" if value is None else f"{value:.2f}%" for value in item["daily_no_usd_share_percentiles"].values())],
             ["混合天气日NO总体USD占比", fmt_pct(item["overall_no_usd_share"])],
         ]), "", "混合天气日 BUY NO 价格带：", render_price_table(item["price_rows"])])
-    lines.extend(["", "## 11. 两个钱包的可确认模式", "", "### 钱包一", "", "#### 可以确认", "", "- BUY/SELL 都活跃，且逐资产存在大量同资产双向成交与重复切换；这不是把不同温度合同拼出来的结果。", "- BUY YES、BUY NO、SELL YES、SELL NO 的时间与价格分布明显不同，BUY 与 SELL 不能合并成一个主时点。", "- 多YES组合和相邻温度档覆盖是稳定的公开成交特征；NO 也会与 YES 混合出现。", "", "#### 合理但尚未证明", "", "- 可能是主动再平衡或短周期调整；6小时内BUY→SELL比例只能证明时间邻近，不能证明订单意图。", "- 低价买入后高价卖出在部分资产上可见，但不能推出完整退出或盈利。", "", "#### 不支持的说法", "", "- 不能称为确定的做市商；没有maker/taker和订单簿证据。", "- 不能推断每个SELL都对应此前BUY，也不能推断完整库存。", "", "### 钱包二", "", "#### 可以确认", "", "- BUY YES占其买入成交的主导位置；BUY YES主要落在10—30美分，90—100美分 SELL YES 中存在大量同资产此前BUY的可追溯路径。", "- 这些高价SELL在大多数匹配资产上是相对此前BUY的部分卖出，而不是完整退出；具体比例见第6节。", "- 成交金额更集中在D0 16:00—24:00，和钱包一的D0 00:00—08:00不同。", "", "#### 合理但尚未证明", "", "- 可能存在低价多YES覆盖后等待部分高价退出的路径，但只适用于已观察到的同资产 fills。", "", "#### 不支持的说法", "", "- 不能称为确定的方向性预测者或盈利交易者；没有完整持仓、结算和PnL证据。", "- 不能把所有低价BUY YES都视为同一高价SELL的来源。", "", "## 12. 最值得学习的3条与不适合复制的行为", "", "1. 可学习：把 BUY YES、BUY NO、SELL YES、SELL NO 分开统计，并按天气日/当地时段复盘；两个钱包的建仓和卖出时段差异说明合并口径会隐藏路径。", "2. 可学习：只在同一 asset + condition_id + temperature_bucket 内做路径匹配，避免把不同温度合同的低价买入与高价卖出拼成假策略。", "3. 可学习：用固定价格带、主力档、相邻温度覆盖和部分卖出比例形成模拟规则候选，但必须继续保留“公开 fills only”证据标签。", "", "不适合直接复制：按低价/高价区间机械追单、把多温度覆盖当作确定预测、把观察到的部分卖出当作完整退出、或把高成交量直接命名为做市。", "", "## 13. 最终对比", "", md_table(["维度", "钱包一", "钱包二"], [
-            ["建仓时间", "BUY按YES/NO拆分后主要在D0及D-1；D0内00—08", "BUY主要在D0；D0内按总BUY金额可见16—24较高"],
-            ["主要YES价格", PRICE_NAMES[max(data[WALLETS[0]]["price"]["BUY YES"], key=lambda row: row["usd"])["band"]], PRICE_NAMES[max(data[WALLETS[1]]["price"]["BUY YES"], key=lambda row: row["usd"])["band"]]],
-            ["NO使用方法", "BUY NO主要70—90¢，SELL NO主要70—90¢；与YES混合较多", "BUY NO主要30—70¢；SELL NO全在90—100¢；NO总体投入占比较低"],
-            ["温度组合", "多YES与YES/NO混合并存，相邻YES很常见", "多YES与YES/NO混合并存，混合日更密集"],
-            ["卖出频率", "2,638笔，明显活跃", "83笔，远低于买入"],
-            ["高价退出", "SELL YES按USD最大单一桶是90—100¢，但仅36.79%且整体均价17.38¢", "90—100¢ SELL YES约95.2%卖出USD，且可在同资产追溯到此前BUY"],
-            ["持有时间", "逐资产BUY→SELL与短时切换较多，见第5/7节", "低价BUY→高价SELL路径中位持有见第6节"],
-            ["反复交易", "更明显；存在BUY↔SELL切换", "较弱；主要是BUY，少量高价SELL"],
-            ["疑似风格", "ACTIVE_REBALANCER", "DIRECTIONAL_ACCUMULATOR"],
-            ["证据强度", "READY；逐资产路径可复核，但无maker/taker/完整库存", "READY；低买高卖同资产路径已复核，但无完整库存/意图"],
-        ]),
-        "",
-        "## 14. 特别回答",
-        "",
-        "1. 两个钱包共有的稳定模式：都在多个最高温度档之间分散 BUY YES，且交易集中在D-2/D-1/D0核心窗口；都存在YES/NO混合天气日和部分SELL成交。",
-        "2. 只属于钱包一的模式：SELL 频率显著更高、同资产BUY/SELL切换更明显、D0内较偏00—08；SELL NO也有较多70—90¢成交。",
-        "3. 只属于钱包二的模式：BUY YES占比更高、SELL数量极少但90—100¢集中度极高；低价BUY YES到同资产高价SELL YES的路径证据更集中。",
-        "4. “低价买入、多温度覆盖、高价部分退出”是否被证明：钱包二在观察到的同资产 fills 中已被证明为存在；不是所有资产/所有天气日都满足，不能外推为完整策略。钱包一也有部分同类路径，但不是其全部SELL YES。",
-        "5. 可进入模拟交易候选规则：只可作为待验证候选——按本地天气日分桶、分别建模四类方向、同资产路径验证、低价BUY与高价SELL的部分退出比例、以及相邻温度覆盖。必须在模拟中加入无成交、未匹配、重复event、价格滑点和证据缺口。",
-        "6. 还不能复制：完整仓位管理、订单簿做市、盈利能力、主观预测、所有低价BUY到高价SELL的因果关系，以及任何基于SELL金额的PnL/ROI结论。",
-        "",
-        "## 15. 复现",
-        "",
-        f"```bash\npython3 scripts/second_stage_trader_pattern_analysis.py \\\n+  --output-root {root} \\\n+  --report {report_path} \\\n+  --date-from {start.isoformat()} \\\n+  --date-to {end.isoformat()} \\\n+  --city {city}\n```",
-        "",
-        "本脚本为本地离线分析，不会发起网络请求、签名或下单。",
-    ])
+    # Sections 11 onward are generated below from the current analysis data.
+    conclusion_start = next((index for index, line in enumerate(lines) if line == "## 11. 两个钱包的可确认模式"), len(lines))
+    lines = lines[:conclusion_start]
+    lines.extend(render_dynamic_conclusion_sections(root, report_path, city, requested_dates, data, w2_high))
     return "\n".join(lines) + "\n"
 
 
