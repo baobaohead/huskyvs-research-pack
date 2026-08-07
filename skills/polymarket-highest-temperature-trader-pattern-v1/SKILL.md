@@ -39,7 +39,9 @@ For a new wallet, replace the saved-manifest argument with `--refresh-public-dat
 5. Check each wallet's `data_quality.csv`. Call out target event/condition coverage, per-market completeness, source-only fills, orphan sells, `PAGINATION_INCOMPLETE`, request failures, unknown timezones, unknown relative days, identity conflicts, and invalid fills.
 6. Read `pattern_report_status` before reporting any pattern. If it is `BLOCKED_INCOMPLETE_EVIDENCE`, report that the evidence is incomplete and the pattern analysis is paused; do not state main times, price preferences, or temperature-combination conclusions from the partial data.
 7. If `pattern_report_status` is `READY`, read each wallet's `summary.json` and the root `trader_comparison.csv`/`.md`.
-8. Return plain-language findings, the output directory, and the evidence limitations.
+8. Choose the analysis depth. The default is `basic`; preserve the basic files and statistics exactly. Use `advanced` when the user passes `--analysis-depth advanced`, sets `analysis_depth: advanced` in the JSON-compatible input, or asks for “深度分析”, “高级交易模式分析”, or “分析逐资产交易路径”.
+9. For `advanced`, reuse the formal advanced core in `src/polymarket_highest_temperature_trader_pattern_advanced.py`. It adds per-wallet `advanced_summary.md`, `advanced_summary.json`, `asset_path_summary.csv`, `high_sell_path_fills.csv`, `high_sell_path_assets.csv`, `daily_temperature_structure.csv`, and `trader_style_metrics.csv`, plus root `advanced_trader_comparison.md` and `.json`. Do not overwrite the basic `summary.*` or basic CSVs.
+10. Return plain-language findings, the output directory, and the evidence limitations.
 
 ## Guardrails
 
@@ -50,5 +52,6 @@ For a new wallet, replace the saved-manifest argument with `--refresh-public-dat
 - Exclude `EARLIER_THAN_D2` from core strategy distributions and report it as a data-quality condition.
 - Do not output complete PnL, ROI, win rate, realized/unrealized/on-chain profit, profitability rankings, subjective intent, or claims that a strategy is profitable.
 - Never connect an account, request credentials, sign, order, cancel, POST, PUT, PATCH, or DELETE.
+- Without maker/taker fields, never assign `POSSIBLE_MARKET_MAKER`; at most emit `MARKET_MAKER_LIKE_ACTIVITY=true` with the Chinese caveat that the behavior resembles high-frequency two-way trading but maker/taker evidence is unavailable.
 
 The fixed implementation is `src/polymarket_highest_temperature_trader_pattern_v1.py`. The bundled runner only translates the input file into that module's command-line interface.

@@ -2509,11 +2509,15 @@ def analyze(
     refresh_public_data: bool = False,
     saved_public_evidence_manifest: Path | None = None,
     city_timezone_overrides: Iterable[str] | None = None,
+    analysis_depth: str = "basic",
 ) -> dict[str, Any]:
     global NETWORK_CALL_COUNT
     with NETWORK_CALL_COUNT_LOCK:
         NETWORK_CALL_COUNT = 0
     normalized_wallets = normalize_wallets(wallets)
+    analysis_depth = str(analysis_depth or "basic").lower()
+    if analysis_depth not in {"basic", "advanced"}:
+        raise ValueError("analysis_depth must be basic or advanced")
     requested_cities = normalize_cities(cities)
     start_date, end_date = parse_date_range(date_from, date_to)
     if refresh_public_data == bool(saved_public_evidence_manifest):
@@ -2543,6 +2547,9 @@ def analyze(
             date_from=start_date, date_to=end_date,
         )
     summaries: list[dict[str, Any]] = []
+    normalized_rows_by_wallet: dict[str, list[dict[str, Any]]] = {}
+    quality_by_wallet: dict[str, dict[str, Any]] = {}
+    advanced_evidence_payloads: dict[str, list[dict[str, Any]]] | None = None
     for wallet in normalized_wallets:
         manifest, payloads = loaded[wallet]
         combined = (
@@ -2562,6 +2569,10 @@ def analyze(
             len(payloads["activity"]), len(payloads["trades"]), discovery,
             counters, manifest, payloads,
         )
+        normalized_rows_by_wallet[wallet] = fills
+        quality_by_wallet[wallet] = quality
+        if advanced_evidence_payloads is None:
+            advanced_evidence_payloads = payloads
         collection_start = str(manifest.get("collection_start_utc") or manifest.get("analysis_started_at_utc") or "UNKNOWN")
         collection_end = str(manifest.get("collection_end_utc") or manifest.get("analysis_cutoff_utc") or "UNKNOWN")
         summary = _summary(
@@ -2640,7 +2651,28 @@ def analyze(
         "formal_started": False, "network_call_count": NETWORK_CALL_COUNT,
     }
     write_json(output_root / "run_manifest.json", run_manifest)
-    return {"run_manifest": run_manifest, "summaries": summaries, "comparison": comparison}
+    result = {"run_manifest": run_manifest, "summaries": summaries, "comparison": comparison}
+    if analysis_depth == "advanced":
+        from .polymarket_highest_temperature_trader_pattern_advanced import (
+            event_records_from_payloads,
+            run_advanced_analysis,
+        )
+
+        payloads = advanced_evidence_payloads or {}
+        advanced_events = event_records_from_payloads(
+            payloads.get("event_audit", []), payloads.get("target_markets", []),
+        )
+        result["advanced"] = run_advanced_analysis(
+            normalized_wallets,
+            normalized_rows_by_wallet,
+            advanced_events,
+            output_root,
+            start_date,
+            end_date,
+            requested_cities[0] if len(requested_cities) == 1 else "all-cities",
+            quality_by_wallet,
+        )
+    return result
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -2653,6 +2685,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     command.add_argument("--city", action="append", default=[])
     command.add_argument("--city-timezone", action="append", default=[])
     command.add_argument("--output-root", required=True)
+    command.add_argument("--analysis-depth", choices=("basic", "advanced"), default="basic")
     source = command.add_mutually_exclusive_group(required=True)
     source.add_argument("--refresh-public-data", action="store_true")
     source.add_argument("--saved-public-evidence-manifest")
@@ -2669,6 +2702,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.saved_public_evidence_manifest else None
         ),
         city_timezone_overrides=args.city_timezone,
+        analysis_depth=args.analysis_depth,
     )
     return 0
 

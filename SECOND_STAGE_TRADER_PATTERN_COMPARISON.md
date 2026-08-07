@@ -612,6 +612,7 @@ LOW_BUY_HIGH_SELL_PATTERN=PROVEN_IN_OBSERVED_FILLS
 | 每个有成交天气日平均成交笔数 | 82.67 |
 | YES和NO都活跃的天气日数 | 56 |
 | maker/taker | NOT_AVAILABLE |
+| MARKET_MAKER_LIKE_ACTIVITY | false |
 
 成交最密集的10个天气日：
 | 天气日期 | fills | BUY fills | SELL fills | trade USD |
@@ -646,6 +647,7 @@ YES和NO同时有公开成交的天气日数：56。maker/taker字段：NOT_AVAI
 | 每个有成交天气日平均成交笔数 | 70.47 |
 | YES和NO都活跃的天气日数 | 68 |
 | maker/taker | NOT_AVAILABLE |
+| MARKET_MAKER_LIKE_ACTIVITY | false |
 
 成交最密集的10个天气日：
 | 天气日期 | fills | BUY fills | SELL fills | trade USD |

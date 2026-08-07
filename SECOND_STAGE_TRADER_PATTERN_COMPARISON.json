@@ -1,4 +1,5 @@
 {
+  "analysis_depth": "advanced",
   "denominator": {
     "duplicate_event_count": 2,
     "duplicate_event_date_count": 1,
@@ -833,7 +834,10 @@
       "active_min_same_hour_two_way": 10,
       "active_min_sell_rebuy_ratio": 0.2,
       "buy_dominant_max_sell_to_buy_fill_ratio": 0.2,
-      "buy_dominant_min_buy_fill_share": 0.8
+      "buy_dominant_min_buy_fill_share": 0.8,
+      "market_maker_like_min_same_hour_two_way": 20,
+      "market_maker_like_min_sell_rebuy_ratio": 0.3,
+      "market_maker_like_min_short_hold_ratio": 0.5
     }
   },
   "wallets": {
@@ -1385,6 +1389,7 @@
         "buy_fill_share": 0.6332035595105673,
         "buy_sell_transitions": 570,
         "maker_taker": null,
+        "market_maker_like_activity": false,
         "matched_buy_then_sell_assets": 370,
         "median_hold_seconds": 35053.5,
         "repeated_asset_share": 0.5785288270377733,
@@ -2724,6 +2729,7 @@
         "buy_fill_share": 0.986766581632653,
         "buy_sell_transitions": 41,
         "maker_taker": null,
+        "market_maker_like_activity": false,
         "matched_buy_then_sell_assets": 41,
         "median_hold_seconds": 138618,
         "repeated_asset_share": 0.027932960893854747,

@@ -239,7 +239,7 @@ def test_low_buy_weighted_price_uses_only_zero_to_thirty_cent_buys() -> None:
     [
         ({"buy_fill_share": 0.90, "sell_to_buy_fill_ratio": 0.10, "repeated_asset_share": 0.0, "sell_then_rebuy_ratio_decimal": 0.0, "same_hour_two_way": 0, "short_hold_ratio_decimal": 0.0}, "BUY_DOMINANT_ACCUMULATOR"),
         ({"buy_fill_share": 0.50, "sell_to_buy_fill_ratio": 1.0, "repeated_asset_share": 0.30, "sell_then_rebuy_ratio_decimal": 0.25, "same_hour_two_way": 10, "short_hold_ratio_decimal": 0.0}, "ACTIVE_REBALANCER"),
-        ({"buy_fill_share": 0.50, "sell_to_buy_fill_ratio": 1.0, "repeated_asset_share": 0.0, "sell_then_rebuy_ratio_decimal": 0.40, "same_hour_two_way": 20, "short_hold_ratio_decimal": 0.60}, "POSSIBLE_MARKET_MAKER"),
+        ({"buy_fill_share": 0.50, "sell_to_buy_fill_ratio": 1.0, "repeated_asset_share": 0.0, "sell_then_rebuy_ratio_decimal": 0.40, "same_hour_two_way": 20, "short_hold_ratio_decimal": 0.60}, "MIXED_OR_UNCLEAR"),
         ({"buy_fill_share": 0.50, "sell_to_buy_fill_ratio": 1.0, "repeated_asset_share": 0.10, "sell_then_rebuy_ratio_decimal": 0.10, "same_hour_two_way": 1, "short_hold_ratio_decimal": 0.10}, "MIXED_OR_UNCLEAR"),
     ],
 )
@@ -248,7 +248,7 @@ def test_style_classifier_uses_metrics_not_wallet_identity(metrics: dict, expect
 
 
 def test_style_classifier_source_has_no_wallet_address_hardcoding() -> None:
-    source = Path(analysis.SCRIPT_PATH if hasattr(analysis, "SCRIPT_PATH") else SCRIPT_PATH).read_text(encoding="utf-8")
+    source = (SCRIPT_PATH.parents[1] / "src" / "polymarket_highest_temperature_trader_pattern_advanced.py").read_text(encoding="utf-8")
     assert "0x7c63520c2ca9b336af0c205b9ccf68217bb393d4" not in analysis.classify_trader_style.__code__.co_consts
     assert "0x8fbd7cf5f806f563080864694415829f7229a959" not in analysis.classify_trader_style.__code__.co_consts
     assert "BUY_DOMINANT_ACCUMULATOR" in source
