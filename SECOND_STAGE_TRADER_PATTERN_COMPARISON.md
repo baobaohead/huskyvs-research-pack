@@ -22,6 +22,7 @@ REQUESTED_CITY_COUNT=1
 UNIQUE_WEATHER_DATE_COUNT=96
 UNIQUE_CALENDAR_DATE_COUNT=96
 CITY_WEATHER_DAY_COUNT=96
+MARKET_WEATHER_DAY_COUNT=96
 EVENT_COUNT=97
 DUPLICATE_EVENT_DATE_COUNT=1
 DUPLICATE_CITY_WEATHER_DAY_COUNT=1
@@ -612,7 +613,8 @@ LOW_BUY_HIGH_SELL_PATTERN=PROVEN_IN_OBSERVED_FILLS
 | BUY后6小时内SELL的资产比例 | 37.30% (138/370) |
 | SELL后重新BUY的资产比例 | 39.46% (146/370) |
 | 首次BUY至首次SELL中位持有 | 9.74h |
-| 每个请求日历天气日平均成交笔数 | 74.92 |
+| 每个自然日平均成交笔数 | 74.92 |
+| 每个真实市场天气日平均成交笔数 | 74.92 |
 | 每个有成交天气日平均成交笔数 | 82.67 |
 | YES和NO都活跃的天气日数 | 56 |
 | maker/taker | NOT_AVAILABLE |
@@ -647,7 +649,8 @@ YES和NO同时有公开成交的天气日数：56。maker/taker字段：NOT_AVAI
 | BUY后6小时内SELL的资产比例 | 12.20% (5/41) |
 | SELL后重新BUY的资产比例 | 2.44% (1/41) |
 | 首次BUY至首次SELL中位持有 | 38.51h |
-| 每个请求日历天气日平均成交笔数 | 65.33 |
+| 每个自然日平均成交笔数 | 65.33 |
+| 每个真实市场天气日平均成交笔数 | 65.33 |
 | 每个有成交天气日平均成交笔数 | 70.47 |
 | YES和NO都活跃的天气日数 | 68 |
 | maker/taker | NOT_AVAILABLE |

@@ -360,9 +360,87 @@ def test_advanced_comparison_supports_three_wallets_and_lists_cities(tmp_path: P
 
 def test_requested_city_filter_does_not_add_unrequested_temperature_days() -> None:
     rows = [synthetic_row("beijing", "2026-05-01", 0), synthetic_row("shanghai", "2026-05-01", 1)]
-    data = advanced.analyze_wallet_rows(rows, [], [date(2026, 5, 1)], {}, ["beijing"])
+    events = [synthetic_event("beijing", "2026-05-01"), synthetic_event("shanghai", "2026-05-01")]
+    data = advanced.analyze_wallet_rows(rows, events, [date(2026, 5, 1)], {}, ["beijing"])
     assert len(data["temperature_days"]) == 1
     assert data["temperature_days"][0]["canonical_city"] == "beijing"
+
+
+def test_all_cities_universe_includes_zero_activity_cities() -> None:
+    rows = [synthetic_row("beijing", "2026-05-01", 0)]
+    events = [synthetic_event(city, "2026-05-01") for city in ("beijing", "shanghai", "tokyo")]
+    denominator = advanced.date_denominator(Path("/unused"), date(2026, 5, 1), date(2026, 5, 1), events, [])
+    keys = [(city, date.fromisoformat(day)) for city, day in denominator["market_weather_day_keys"]]
+    data = advanced.analyze_wallet_rows(rows, events, [date(2026, 5, 1)], {}, [], keys)
+    assert [day["canonical_city"] for day in data["temperature_days"]] == ["beijing", "shanghai", "tokyo"]
+    assert data["category_counts"]["SINGLE_YES_ONLY"] == 1
+    assert data["category_counts"]["NO_BUY"] == 2
+
+
+def test_nonexistent_market_date_is_not_a_no_buy_day() -> None:
+    rows = [synthetic_row("beijing", "2026-05-01", 0)]
+    events = [
+        synthetic_event("beijing", "2026-05-01"),
+        synthetic_event("beijing", "2026-05-02"),
+        synthetic_event("tokyo", "2026-05-01"),
+    ]
+    denominator = advanced.date_denominator(Path("/unused"), date(2026, 5, 1), date(2026, 5, 2), events, ["beijing", "tokyo"])
+    assert denominator["market_weather_day_count"] == 3
+    keys = [(city, date.fromisoformat(day)) for city, day in denominator["market_weather_day_keys"]]
+    data = advanced.analyze_wallet_rows(rows, events, [date(2026, 5, 1), date(2026, 5, 2)], {}, ["beijing", "tokyo"], keys)
+    assert {(day["canonical_city"], day["weather_date"]) for day in data["temperature_days"]} == {
+        ("beijing", "2026-05-01"), ("beijing", "2026-05-02"), ("tokyo", "2026-05-01"),
+    }
+    assert all(day["weather_date"] != "2026-05-02" or day["canonical_city"] == "beijing" for day in data["temperature_days"])
+
+
+def test_market_universe_deduplicates_arch_and_new_events() -> None:
+    events = [
+        synthetic_event("beijing", "2026-05-01", "-arch"),
+        synthetic_event("beijing", "2026-05-01"),
+    ]
+    keys = advanced.market_weather_day_universe(date(2026, 5, 1), date(2026, 5, 1), events, ["beijing"])
+    assert keys == [("beijing", date(2026, 5, 1))]
+
+
+def test_comparison_scope_uses_market_cities_even_when_wallet_has_no_fills(tmp_path: Path) -> None:
+    events = [synthetic_event(city, "2026-05-01") for city in ("beijing", "shanghai", "tokyo")]
+    result = advanced.run_advanced_analysis(
+        ["wallet-a"], {"wallet-a": [synthetic_row("beijing", "2026-05-01", 0)]}, events,
+        tmp_path, date(2026, 5, 1), date(2026, 5, 1), "all-cities", {"wallet-a": {}}, [],
+    )
+    comparison = json.loads((tmp_path / "advanced_trader_comparison.json").read_text(encoding="utf-8"))
+    assert comparison["scope"]["cities"] == ["beijing", "shanghai", "tokyo"]
+    assert len(result["wallet_data"]["wallet-a"]["temperature_days"]) == 3
+
+
+def test_style_averages_use_calendar_and_market_weather_day_denominators(tmp_path: Path) -> None:
+    events = [
+        synthetic_event("beijing", "2026-05-01"),
+        synthetic_event("beijing", "2026-05-02"),
+        synthetic_event("tokyo", "2026-05-01"),
+    ]
+    rows = [
+        synthetic_row("beijing", "2026-05-01", 0),
+        synthetic_row("beijing", "2026-05-01", 1),
+    ]
+    result = advanced.run_advanced_analysis(
+        ["wallet-a"], {"wallet-a": rows}, events, tmp_path,
+        date(2026, 5, 1), date(2026, 5, 2), "all-cities", {"wallet-a": {}}, [],
+    )
+    style = result["wallet_data"]["wallet-a"]["style"]
+    assert result["denominator"]["market_weather_day_count"] == 3
+    assert style["average_fills_per_calendar_day"] == pytest.approx(1.0)
+    assert style["average_fills_per_market_weather_day"] == pytest.approx(2 / 3)
+    assert style["average_fills_per_requested_day"] == style["average_fills_per_calendar_day"]
+
+
+def test_beijing_market_weather_day_regression_is_96() -> None:
+    payload = json.loads((ROOT / "SECOND_STAGE_TRADER_PATTERN_COMPARISON.json").read_text(encoding="utf-8"))
+    denominator = payload["denominator"]
+    assert denominator["requested_calendar_day_count"] == 96
+    assert denominator["market_weather_day_count"] == 96
+    assert denominator["duplicate_city_weather_day_count"] == 1
 
 
 def test_basic_regression_summary_remains_unchanged_with_advanced_city_support(tmp_path: Path) -> None:

@@ -364,6 +364,37 @@ def event_records(root: Path, wallet: str) -> list[dict[str, Any]]:
     )
 
 
+def market_weather_day_universe(
+    start: date,
+    end: date,
+    events: Iterable[dict[str, Any]],
+    requested_cities: Iterable[str] | None = None,
+) -> list[tuple[str, date]]:
+    """Return the real highest-temperature market days in scope.
+
+    The event/audit evidence is the authority for whether a city/date exists.
+    Wallet fills are deliberately not consulted, and duplicate event slugs
+    for one city/date collapse to one market weather day.
+    """
+    requested = {str(city) for city in requested_cities or ()}
+    keys: set[tuple[str, date]] = set()
+    for event in events:
+        city = str(event.get("canonical_city") or "")
+        slug = str(event.get("event_slug") or "")
+        raw_date = event.get("weather_date")
+        if not city or not slug or not raw_date:
+            continue
+        if requested and city not in requested:
+            continue
+        try:
+            weather_date = parse_date(str(raw_date))
+        except ValueError:
+            continue
+        if start <= weather_date <= end:
+            keys.add((city, weather_date))
+    return sorted(keys)
+
+
 def date_denominator(
     root: Path,
     start: date,
@@ -372,8 +403,13 @@ def date_denominator(
     requested_cities: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     requested = set(date_range(start, end))
-    in_range = [event for event in events if start <= parse_date(event["weather_date"]) <= end]
-    out_of_range = [event for event in events if event not in in_range]
+    requested_city_set = {str(city) for city in requested_cities or ()}
+    in_range_all = [event for event in events if start <= parse_date(event["weather_date"]) <= end]
+    in_range = [
+        event for event in in_range_all
+        if not requested_city_set or str(event.get("canonical_city") or "") in requested_city_set
+    ]
+    out_of_range = [event for event in events if event not in in_range_all]
     event_keys = [(str(event.get("canonical_city") or ""), parse_date(event["weather_date"])) for event in in_range]
     in_range_counts = Counter(day for _, day in event_keys)
     city_day_counts = Counter(event_keys)
@@ -394,8 +430,10 @@ def date_denominator(
         slugs = [event["event_slug"] for event in day_events]
         if any(slug.startswith("arch-") for slug in slugs) and any(not slug.startswith("arch-") for slug in slugs):
             old_new_duplicate.append(day.isoformat())
-    city_names = tuple(requested_cities) if requested_cities else tuple(sorted({city for city, _ in event_keys if city}))
-    city_weather_day_keys = set(city_day_counts)
+    market_weather_day_keys = market_weather_day_universe(start, end, in_range, None)
+    market_cities = sorted({city for city, _ in market_weather_day_keys})
+    city_names = tuple(requested_cities) if requested_city_set else tuple(market_cities)
+    city_weather_day_keys = set(market_weather_day_keys)
     duplicate_city_weather_days = len(duplicate_dates)
     unique_calendar_dates = len({day for _, day in event_keys})
     return {
@@ -403,9 +441,13 @@ def date_denominator(
         "requested_calendar_day_count": len(requested),
         "requested_city_count": len(city_names),
         "requested_cities": list(city_names),
+        "market_cities": market_cities,
+        "market_city_count": len(market_cities),
         "unique_weather_dates": unique_calendar_dates,
         "unique_calendar_date_count": unique_calendar_dates,
         "city_weather_day_count": len(city_weather_day_keys),
+        "market_weather_day_count": len(city_weather_day_keys),
+        "market_weather_day_keys": [[city, day.isoformat()] for city, day in market_weather_day_keys],
         "event_count": len(in_range),
         "duplicate_event_date_count": duplicate_city_weather_days,
         "duplicate_city_weather_day_count": duplicate_city_weather_days,
@@ -588,23 +630,13 @@ def exact_numeric_bucket(row: dict[str, Any]) -> float | None:
     return low if low is not None and high is not None and low == high else None
 
 
-def requested_weather_days(
-    rows: list[dict[str, Any]],
-    requested_dates: list[date],
-    requested_cities: Iterable[str] | None = None,
-) -> list[tuple[str, date]]:
-    cities = tuple(requested_cities) if requested_cities else tuple(sorted({row["canonical_city"] for row in rows}))
-    return [(city, day) for city in cities for day in requested_dates]
-
-
 def temperature_day_summary(
     rows: list[dict[str, Any]],
-    requested_dates: list[date],
-    requested_cities: Iterable[str] | None = None,
+    market_weather_day_keys: Iterable[tuple[str, date]],
 ) -> list[dict[str, Any]]:
     by_date = group_by_date(rows)
     result = []
-    for city, day in requested_weather_days(rows, requested_dates, requested_cities):
+    for city, day in sorted(set(market_weather_day_keys)):
         scoped = [row for row in by_date.get((city, day), []) if row["_side"] == "BUY"]
         yes_rows = [row for row in scoped if row["_outcome"] == "YES"]
         no_rows = [row for row in scoped if row["_outcome"] == "NO"]
@@ -925,15 +957,16 @@ def wallet_style(
     paths: list[dict[str, Any]],
     rows: list[dict[str, Any]],
     requested_dates: list[date],
-    requested_cities: Iterable[str] | None = None,
+    market_weather_day_keys: Iterable[tuple[str, date]],
 ) -> dict[str, Any]:
     both = [path for path in paths if path["buy_count"] and path["sell_count"]]
     matched = [path for path in both if path["sell_after_buy"]]
     repeat = [path for path in paths if path["buy_count"] >= 2 and path["sell_count"] >= 2]
     active_dates = sorted({weather_day_key(row) for row in rows})
     daily = group_by_date(rows)
+    market_days = sorted(set(market_weather_day_keys))
     top_days = []
-    for city, day in requested_weather_days(rows, requested_dates, requested_cities):
+    for city, day in market_days:
         scoped = daily.get((city, day), [])
         if not scoped:
             continue
@@ -947,7 +980,7 @@ def wallet_style(
         })
     top_days.sort(key=lambda item: (item["fills"], item["usd"], item["weather_date"]), reverse=True)
     yes_no_days = []
-    for city, day in requested_weather_days(rows, requested_dates, requested_cities):
+    for city, day in market_days:
         scoped = daily.get((city, day), [])
         if {row["_outcome"] for row in scoped} >= {"YES", "NO"}:
             yes_no_days.append(f"{city}|{day.isoformat()}")
@@ -974,6 +1007,9 @@ def wallet_style(
         "sell_then_rebuy_ratio": pct(len(sell_then_buy), len(both)),
         "sell_then_rebuy_ratio_decimal": len(sell_then_buy) / len(both) if both else 0.0,
         "median_hold_seconds": statistics.median(hold_values) if hold_values else None,
+        "average_fills_per_calendar_day": len(rows) / len(requested_dates) if requested_dates else None,
+        "average_fills_per_market_weather_day": len(rows) / len(market_days) if market_days else None,
+        # Compatibility alias retained for consumers of the previous advanced JSON.
         "average_fills_per_requested_day": len(rows) / len(requested_dates) if requested_dates else None,
         "average_fills_per_active_day": len(rows) / len(active_dates) if active_dates else None,
         "active_days": len(active_dates),
@@ -1337,10 +1373,16 @@ def analyze_wallet_rows(
     requested_dates: list[date],
     quality: dict[str, Any] | None = None,
     requested_cities: Iterable[str] | None = None,
+    market_weather_day_keys: Iterable[tuple[str, date]] | None = None,
 ) -> dict[str, Any]:
     rows = normalize_fills(raw_rows)
     paths = asset_paths(rows)
-    daily_temperature = temperature_day_summary(rows, requested_dates, requested_cities)
+    if market_weather_day_keys is None and requested_dates:
+        market_weather_day_keys = market_weather_day_universe(
+            min(requested_dates), max(requested_dates), events, requested_cities,
+        )
+    market_weather_day_keys = tuple(market_weather_day_keys or ())
+    daily_temperature = temperature_day_summary(rows, market_weather_day_keys)
     wallet_data = {
         "rows": rows,
         "quality": quality or {},
@@ -1353,7 +1395,7 @@ def analyze_wallet_rows(
         "category_counts": Counter(day["category"] for day in daily_temperature),
         "multi_yes": multi_yes_analysis(daily_temperature),
         "no": no_analysis(daily_temperature),
-        "style": wallet_style(paths, rows, requested_dates, requested_cities),
+        "style": wallet_style(paths, rows, requested_dates, market_weather_day_keys),
     }
     for side, outcome in (("BUY", "YES"), ("BUY", "NO"), ("SELL", "YES"), ("SELL", "NO")):
         scoped = [row for row in rows if row["_side"] == side and row["_outcome"] == outcome]
@@ -1376,11 +1418,19 @@ def make_report(
         raise ValueError("at least one wallet is required")
     requested_dates = date_range(start, end)
     events = event_records(root, wallets[0])
-    denominator = date_denominator(root, start, end, events)
+    requested_cities = [city] if city != "all-cities" else []
+    denominator = date_denominator(root, start, end, events, requested_cities)
+    market_weather_day_keys = [
+        (city_name, parse_date(weather_date))
+        for city_name, weather_date in denominator["market_weather_day_keys"]
+    ]
     wallet_data = {}
     for wallet in wallets:
         quality = quality_summary(root, wallet)
-        wallet_data[wallet] = analyze_wallet_rows(read_csv(root / wallet / "all_fills.csv"), events, requested_dates, quality, [city] if city != "all-cities" else None)
+        wallet_data[wallet] = analyze_wallet_rows(
+            read_csv(root / wallet / "all_fills.csv"), events, requested_dates, quality,
+            requested_cities, market_weather_day_keys,
+        )
     high_analyses = {wallet: high_sell_analysis(wallet_data[wallet]["paths"]) for wallet in wallets}
     comparison_high = high_analyses[wallets[1]] if len(wallets) > 1 else high_analyses[wallets[0]]
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1536,7 +1586,8 @@ def render_style(style: dict[str, Any]) -> str:
             [f"BUY后{SHORT_HOLD_HOURS:.0f}小时内SELL的资产比例", f"{style['short_hold_ratio']:.2f}% ({style['short_hold_assets']}/{style['matched_buy_then_sell_assets']})"],
             ["SELL后重新BUY的资产比例", f"{style['sell_then_rebuy_ratio']:.2f}% ({style['sell_then_rebuy_assets']}/{style['both_buy_sell_assets']})"],
             ["首次BUY至首次SELL中位持有", fmt_hours(style["median_hold_seconds"])],
-            ["每个请求日历天气日平均成交笔数", fmt_num(style["average_fills_per_requested_day"])],
+            ["每个自然日平均成交笔数", fmt_num(style["average_fills_per_calendar_day"])],
+            ["每个真实市场天气日平均成交笔数", fmt_num(style["average_fills_per_market_weather_day"])],
             ["每个有成交天气日平均成交笔数", fmt_num(style["average_fills_per_active_day"])],
             ["YES和NO都活跃的天气日数", len(style["yes_no_active_days"])],
             ["maker/taker", "NOT_AVAILABLE" if style["maker_taker"] is None else ", ".join(style["maker_taker"])],
@@ -1772,6 +1823,7 @@ def render_report(
         f"UNIQUE_WEATHER_DATE_COUNT={denominator['unique_weather_dates']}",
         f"UNIQUE_CALENDAR_DATE_COUNT={denominator.get('unique_calendar_date_count', denominator['unique_weather_dates'])}",
         f"CITY_WEATHER_DAY_COUNT={denominator.get('city_weather_day_count', denominator['unique_weather_dates'])}",
+        f"MARKET_WEATHER_DAY_COUNT={denominator.get('market_weather_day_count', denominator.get('city_weather_day_count', denominator['unique_weather_dates']))}",
         f"EVENT_COUNT={denominator['event_count']}",
         f"DUPLICATE_EVENT_DATE_COUNT={denominator['duplicate_event_date_count']}",
         f"DUPLICATE_CITY_WEATHER_DAY_COUNT={denominator.get('duplicate_city_weather_day_count', denominator['duplicate_event_date_count'])}",
@@ -1866,7 +1918,7 @@ def render_report(
     lines.extend(["", "风格标签采用参数化规则：", style_threshold_sentence, "", md_table(["钱包", "标签", "理由"], [
         [wallet, data[wallet]["style"]["style_label"], style_reason(data[wallet]["style"])] for wallet in wallets
     ])])
-    lines.extend(["", "## 8. 温度组合：互斥主分类", "", f"每个{calendar_day_count}日历天气日严格分入一个类别；重复天气日期的多个 event 在天气日级合并，重复 event 不重复计日。yes_bucket_count/no_bucket_count 是该天气日 BUY 记录中的唯一温度桶数。"])
+    lines.extend(["", "## 8. 温度组合：互斥主分类", "", f"每个{calendar_day_count}个真实市场天气日严格分入一个类别；没有真实市场的城市/日期不生成NO_BUY。重复天气日期的多个 event 在天气日级合并，重复 event 不重复计日。yes_bucket_count/no_bucket_count 是该天气日 BUY 记录中的唯一温度桶数。"])
     for wallet in wallets:
         lines.extend(["", f"### {wallet}", "", render_category_table(data[wallet], calendar_day_count)])
         lines.extend(["", "辅助特征统计：", "", md_table(["特征", "天气日数", "比例"], [
@@ -1924,7 +1976,7 @@ def render_wallet_summary(
     advanced_status: str = "READY",
 ) -> str:
     """Render the Chinese, plain-language advanced report for one wallet."""
-    city_names = sorted({row.get("canonical_city", "") for row in wallet_data.get("rows", []) if row.get("canonical_city", "")})
+    city_names = sorted({day.get("canonical_city", "") for day in wallet_data.get("temperature_days", []) if day.get("canonical_city", "")})
     scope_city = "全部已识别城市" if len(city_names) > 1 else (city_names[0] if city_names else city)
     if advanced_status != "READY":
         return "\n".join([
@@ -1937,6 +1989,7 @@ def render_wallet_summary(
             f"REQUESTED_CITY_COUNT={denominator.get('requested_city_count', 0)}",
             f"UNIQUE_WEATHER_DATE_COUNT={denominator['unique_weather_dates']}",
             f"CITY_WEATHER_DAY_COUNT={denominator.get('city_weather_day_count', denominator['unique_weather_dates'])}",
+            f"MARKET_WEATHER_DAY_COUNT={denominator.get('market_weather_day_count', denominator.get('city_weather_day_count', denominator['unique_weather_dates']))}",
             f"EVENT_COUNT={denominator['event_count']}",
             f"DUPLICATE_EVENT_DATE_COUNT={denominator['duplicate_event_date_count']}",
             "",
@@ -1975,6 +2028,7 @@ def render_wallet_summary(
         f"REQUESTED_CITY_COUNT={denominator.get('requested_city_count', 0)}",
         f"UNIQUE_WEATHER_DATE_COUNT={denominator['unique_weather_dates']}",
         f"CITY_WEATHER_DAY_COUNT={denominator.get('city_weather_day_count', denominator['unique_weather_dates'])}",
+        f"MARKET_WEATHER_DAY_COUNT={denominator.get('market_weather_day_count', denominator.get('city_weather_day_count', denominator['unique_weather_dates']))}",
         f"EVENT_COUNT={denominator['event_count']}",
         f"DUPLICATE_EVENT_DATE_COUNT={denominator['duplicate_event_date_count']}",
         f"OUT_OF_RANGE_EVENT_COUNT={denominator['out_of_range_event_count']}",
@@ -2064,7 +2118,7 @@ def advanced_comparison_payload(
     high_analyses: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     wallets = tuple(data)
-    cities = sorted({row.get("canonical_city", "") for item in data.values() for row in item.get("rows", []) if row.get("canonical_city", "")})
+    cities = list(denominator.get("market_cities", []))
     return jsonable({
         "schema_version": "polymarket_highest_temperature_trader_pattern_advanced_v1",
         "analysis_depth": "advanced",
@@ -2078,6 +2132,7 @@ def advanced_comparison_payload(
             "cities": cities,
             "requested_calendar_day_count": len(requested_dates),
             "city_weather_day_count": denominator.get("city_weather_day_count", denominator.get("unique_weather_dates", 0)),
+            "market_weather_day_count": denominator.get("market_weather_day_count", denominator.get("city_weather_day_count", 0)),
         },
         "denominator": denominator,
         "wallets": {
@@ -2113,7 +2168,7 @@ def render_advanced_comparison(
     high_analyses: dict[str, dict[str, Any]],
 ) -> str:
     wallets = tuple(data)
-    cities = sorted({row.get("canonical_city", "") for item in data.values() for row in item.get("rows", []) if row.get("canonical_city", "")})
+    cities = list(denominator.get("market_cities", []))
     scope_city = "全部已识别城市" if len(cities) > 1 else (cities[0] if cities else city)
     blocked = [wallet for wallet in wallets if data[wallet].get("quality", {}).get("pattern_report_status", "READY") != "READY"]
     if blocked:
@@ -2173,13 +2228,19 @@ def run_advanced_analysis(
     """Run the same advanced core for Skill output and research replay."""
     wallets = tuple(wallets)
     requested_dates = date_range(start, end)
-    analysis_cities = tuple(requested_cities) if requested_cities else tuple(
-        sorted({str(row.get("canonical_city") or row.get("city") or row.get("original_city_slug") or "") for rows in raw_rows_by_wallet.values() for row in rows if row.get("canonical_city") or row.get("city") or row.get("original_city_slug")})
-    )
-    denominator = date_denominator(output_root, start, end, events, analysis_cities)
+    requested_city_scope = tuple(requested_cities or ())
+    denominator = date_denominator(output_root, start, end, events, requested_city_scope)
+    market_weather_day_keys = [
+        (city_name, parse_date(weather_date))
+        for city_name, weather_date in denominator["market_weather_day_keys"]
+    ]
     quality_by_wallet = quality_by_wallet or {}
     data = {
-        wallet: analyze_wallet_rows(raw_rows_by_wallet[wallet], events, requested_dates, quality_by_wallet.get(wallet, {}), analysis_cities)
+        wallet: analyze_wallet_rows(
+            raw_rows_by_wallet[wallet], events, requested_dates,
+            quality_by_wallet.get(wallet, {}), requested_city_scope,
+            market_weather_day_keys,
+        )
         for wallet in wallets
     }
     high_analyses = {wallet: high_sell_analysis(data[wallet]["paths"]) for wallet in wallets}
