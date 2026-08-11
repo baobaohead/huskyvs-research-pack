@@ -3,8 +3,10 @@
 
 This module is deliberately public-data-only and GET-only. Public trades are
 fills, not original orders: one order may create several fills, while unfilled
-and cancelled orders are normally not observable. The module does not compute
-PnL, connect an account, sign, submit, cancel, or interpret Negative Risk.
+and cancelled orders are normally not observable. The basic/advanced cores do
+not derive PnL from fills; the optional profitability core reads only official
+closed-position realizedPnl. No mode connects an account, signs, submits,
+cancels, or interprets Negative Risk.
 """
 
 from __future__ import annotations
@@ -2508,6 +2510,7 @@ def analyze(
     *,
     refresh_public_data: bool = False,
     saved_public_evidence_manifest: Path | None = None,
+    saved_profitability_evidence_manifest: Path | None = None,
     city_timezone_overrides: Iterable[str] | None = None,
     analysis_depth: str = "basic",
 ) -> dict[str, Any]:
@@ -2516,8 +2519,8 @@ def analyze(
         NETWORK_CALL_COUNT = 0
     normalized_wallets = normalize_wallets(wallets)
     analysis_depth = str(analysis_depth or "basic").lower()
-    if analysis_depth not in {"basic", "advanced"}:
-        raise ValueError("analysis_depth must be basic or advanced")
+    if analysis_depth not in {"basic", "advanced", "profitability", "full"}:
+        raise ValueError("analysis_depth must be basic, advanced, profitability, or full")
     requested_cities = normalize_cities(cities)
     start_date, end_date = parse_date_range(date_from, date_to)
     if refresh_public_data == bool(saved_public_evidence_manifest):
@@ -2549,9 +2552,11 @@ def analyze(
     summaries: list[dict[str, Any]] = []
     normalized_rows_by_wallet: dict[str, list[dict[str, Any]]] = {}
     quality_by_wallet: dict[str, dict[str, Any]] = {}
+    payloads_by_wallet: dict[str, dict[str, Any]] = {}
     advanced_evidence_payloads: dict[str, list[dict[str, Any]]] | None = None
     for wallet in normalized_wallets:
         manifest, payloads = loaded[wallet]
+        payloads_by_wallet[wallet] = payloads
         combined = (
             payloads["reconciled_fills"]
             if "reconciled_fills" in payloads
@@ -2650,9 +2655,8 @@ def analyze(
         "account_connection": False, "signing": False, "real_order": False,
         "formal_started": False, "network_call_count": NETWORK_CALL_COUNT,
     }
-    write_json(output_root / "run_manifest.json", run_manifest)
     result = {"run_manifest": run_manifest, "summaries": summaries, "comparison": comparison}
-    if analysis_depth == "advanced":
+    if analysis_depth in {"advanced", "full"}:
         from .polymarket_highest_temperature_trader_pattern_advanced import (
             event_records_from_payloads,
             run_advanced_analysis,
@@ -2673,6 +2677,126 @@ def analyze(
             quality_by_wallet,
             requested_cities,
         )
+    if analysis_depth in {"profitability", "full"}:
+        from .polymarket_highest_temperature_trader_profitability import (
+            PNL_SOURCE,
+            collect_profitability_evidence,
+            load_profitability_evidence,
+            run_profitability_analysis,
+            save_multi_wallet_profitability_manifest,
+            save_profitability_evidence,
+        )
+
+        if saved_profitability_evidence_manifest:
+            profitability_evidence = load_profitability_evidence(
+                Path(saved_profitability_evidence_manifest), normalized_wallets,
+                start_date, end_date,
+            )
+        else:
+            profitability_evidence: dict[str, dict[str, Any]] = {}
+            profitability_root = output_root / "_profitability_public_evidence"
+            child_manifests: list[str] = []
+            for wallet in normalized_wallets:
+                target_markets = payloads_by_wallet[wallet].get("target_markets") or []
+                evidence_root = profitability_root / wallet
+                client = PublicGetClient(evidence_root)
+                if not target_markets:
+                    positions: list[dict[str, Any]] = []
+                    event_audit: list[dict[str, Any]] = []
+                    collection_meta = {
+                        "schema_version": "polymarket_highest_temperature_trader_profitability_v1",
+                        "wallet": wallet,
+                        "profitability_status": "BLOCKED",
+                        "profitability_status_reasons": ["TARGET_MARKET_EVIDENCE_MISSING"],
+                        "pnl_source": PNL_SOURCE,
+                        "official_public_get_only": True,
+                    }
+                elif os.environ.get(NO_NETWORK_ENV) == "1":
+                    positions = []
+                    event_audit = []
+                    collection_meta = {
+                        "schema_version": "polymarket_highest_temperature_trader_profitability_v1",
+                        "wallet": wallet,
+                        "profitability_status": "BLOCKED",
+                        "profitability_status_reasons": ["PROFITABILITY_NETWORK_REFRESH_REQUIRED"],
+                        "pnl_source": PNL_SOURCE,
+                        "official_public_get_only": True,
+                    }
+                else:
+                    positions, event_audit, collection_meta = collect_profitability_evidence(
+                        client, wallet, target_markets, start_date, end_date,
+                        requested_cities,
+                    )
+                collection_meta["api_request_count"] = len(client.requests)
+                collection_meta["api_request_failure_count"] = sum(
+                    not bool(row.get("success")) for row in client.requests
+                )
+                profitability_evidence[wallet] = {
+                    "closed_positions": positions,
+                    "profitability_event_audit": event_audit,
+                    "profitability_collection_meta": collection_meta,
+                }
+                save_profitability_evidence(
+                    evidence_root, wallet, start_date, end_date, requested_cities,
+                    positions, event_audit, collection_meta, client.requests,
+                )
+                child_manifests.append((Path(wallet) / "manifest.json").as_posix())
+            if len(child_manifests) > 1:
+                save_multi_wallet_profitability_manifest(profitability_root, child_manifests)
+        result["profitability"] = run_profitability_analysis(
+            normalized_wallets, profitability_evidence, output_root,
+        )
+    if analysis_depth == "full":
+        profitability_wallets = result["profitability"]["wallets"]
+        full_wallets = {}
+        for summary in summaries:
+            wallet = summary["wallet"]
+            pattern_status = summary["pattern_report_status"]
+            profitability_status = profitability_wallets[wallet]["PROFITABILITY_STATUS"]
+            component_statuses = {
+                "PATTERN_STATUS": pattern_status,
+                "PROFITABILITY_STATUS": profitability_status,
+                "basic_pattern_status": pattern_status,
+                "advanced_pattern_status": pattern_status,
+                "profitability_status": profitability_status,
+            }
+            if pattern_status == "READY" and profitability_status == "READY":
+                full_status = "READY"
+            elif pattern_status == "READY" or profitability_status in {"READY", "PARTIAL"}:
+                full_status = "PARTIAL"
+            else:
+                full_status = "BLOCKED"
+            full_wallets[wallet] = {**component_statuses, "full_status": full_status}
+        full_report = {
+            "schema_version": "polymarket_highest_temperature_trader_full_v1",
+            "analysis_depth": "full",
+            "wallets": full_wallets,
+            "component_files": {
+                "basic": "<wallet>/summary.json",
+                "advanced": "<wallet>/advanced_summary.json",
+                "profitability": "<wallet>/profitability_summary.json",
+            },
+        }
+        write_json(output_root / "full_trader_report.json", full_report)
+        full_lines = [
+            "# 最高温交易员完整研究状态", "",
+            "basic/advanced 公开成交模式与 profitability 官方已关闭仓位证据独立判定；任一模块被阻断不会伪造另一模块的结论。", "",
+            "| wallet | basic pattern | advanced pattern | profitability | full |",
+            "|---|---|---|---|---|",
+        ]
+        for wallet, statuses in full_wallets.items():
+            full_lines.append(
+                f"| {wallet} | {statuses['basic_pattern_status']} | "
+                f"{statuses['advanced_pattern_status']} | {statuses['profitability_status']} | "
+                f"{statuses['full_status']} |"
+            )
+        (output_root / "full_trader_report.md").write_text(
+            "\n".join(full_lines) + "\n", encoding="utf-8",
+        )
+        result["full"] = full_report
+    run_manifest["analysis_depth"] = analysis_depth
+    run_manifest["network_call_count"] = NETWORK_CALL_COUNT
+    write_json(output_root / "run_manifest.json", run_manifest)
     return result
 
 
@@ -2686,7 +2810,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     command.add_argument("--city", action="append", default=[])
     command.add_argument("--city-timezone", action="append", default=[])
     command.add_argument("--output-root", required=True)
-    command.add_argument("--analysis-depth", choices=("basic", "advanced"), default="basic")
+    command.add_argument(
+        "--analysis-depth",
+        choices=("basic", "advanced", "profitability", "full"),
+        default="basic",
+    )
+    command.add_argument("--saved-profitability-evidence-manifest")
     source = command.add_mutually_exclusive_group(required=True)
     source.add_argument("--refresh-public-data", action="store_true")
     source.add_argument("--saved-public-evidence-manifest")
@@ -2701,6 +2830,10 @@ def main(argv: list[str] | None = None) -> int:
         saved_public_evidence_manifest=(
             Path(args.saved_public_evidence_manifest)
             if args.saved_public_evidence_manifest else None
+        ),
+        saved_profitability_evidence_manifest=(
+            Path(args.saved_profitability_evidence_manifest)
+            if args.saved_profitability_evidence_manifest else None
         ),
         city_timezone_overrides=args.city_timezone,
         analysis_depth=args.analysis_depth,

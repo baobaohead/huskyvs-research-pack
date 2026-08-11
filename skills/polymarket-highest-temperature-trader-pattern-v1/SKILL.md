@@ -1,6 +1,6 @@
 ---
 name: polymarket-highest-temperature-trader-pattern-v1
-description: Analyze one or more wallet addresses' observable public fill patterns in Polymarket daily highest-temperature markets over a local weather-date range, optionally filtering cities or comparing traders. Use for YES/NO, BUY/SELL, price-band, local-time, same-price cumulative-shares, temperature-combination, city, or multi-trader pattern reports. Do not use for PnL, ROI, blockchain profit closure, real trading, unfilled orders, other market types, or Negative Risk conversion economics.
+description: Analyze one or more wallets in Polymarket daily highest-temperature markets over a local weather-date range, optionally filtering cities or comparing traders. Use basic or advanced for observable YES/NO and BUY/SELL public-fill patterns, profitability for official closed-position realized PnL summaries, and full to combine those independent outputs. Do not use for ROI, full blockchain ledgers, strategy PnL attribution, real trading, unfilled orders, other market types, or Negative Risk conversion economics.
 ---
 
 # Analyze highest-temperature trader patterns
@@ -39,9 +39,18 @@ For a new wallet, replace the saved-manifest argument with `--refresh-public-dat
 5. Check each wallet's `data_quality.csv`. Call out target event/condition coverage, per-market completeness, source-only fills, orphan sells, `PAGINATION_INCOMPLETE`, request failures, unknown timezones, unknown relative days, identity conflicts, and invalid fills.
 6. Read `pattern_report_status` before reporting any pattern. If it is `BLOCKED_INCOMPLETE_EVIDENCE`, report that the evidence is incomplete and the pattern analysis is paused; do not state main times, price preferences, or temperature-combination conclusions from the partial data.
 7. If `pattern_report_status` is `READY`, read each wallet's `summary.json` and the root `trader_comparison.csv`/`.md`.
-8. Choose the analysis depth. The default is `basic`; preserve the basic files and statistics exactly. Use `advanced` when the user passes `--analysis-depth advanced`, sets `analysis_depth: advanced` in the JSON-compatible input, or asks for “深度分析”, “高级交易模式分析”, or “分析逐资产交易路径”.
-9. For `advanced`, reuse the formal advanced core in `src/polymarket_highest_temperature_trader_pattern_advanced.py`. It adds per-wallet `advanced_summary.md`, `advanced_summary.json`, `asset_path_summary.csv`, `high_sell_path_fills.csv`, `high_sell_path_assets.csv`, `daily_temperature_structure.csv`, and `trader_style_metrics.csv`, plus root `advanced_trader_comparison.md` and `.json`. Do not overwrite the basic `summary.*` or basic CSVs.
-10. Return plain-language findings, the output directory, and the evidence limitations.
+8. Choose the analysis depth. The default is `basic`; preserve the basic files and statistics exactly.
+   - Use `advanced` for “深度分析”, “高级交易模式分析”, or “分析逐资产交易路径”.
+   - Use `profitability` for PnL, 盈利能力, 累计盈亏, 日度/月度盈亏, 盈利日、亏损日、连续盈亏, 盈利集中度, or 稳定性 requests.
+   - Use `full` when the user asks for “完整分析” or explicitly wants basic + advanced + profitability. `full` is a thin composition and never recalculates a component.
+9. For `advanced`, reuse `src/polymarket_highest_temperature_trader_pattern_advanced.py`. It adds per-wallet `advanced_summary.md`, `advanced_summary.json`, `asset_path_summary.csv`, `high_sell_path_fills.csv`, `high_sell_path_assets.csv`, `daily_temperature_structure.csv`, and `trader_style_metrics.csv`, plus root `advanced_trader_comparison.md` and `.json`. Do not overwrite the basic `summary.*` or basic CSVs.
+10. For `profitability`, reuse `src/polymarket_highest_temperature_trader_profitability.py`. It obtains official unauthenticated `GET /closed-positions` records scoped through the already-discovered highest-temperature event/condition map and uses only the response's `realizedPnl`. It writes per-wallet `profitability_summary.md`/`.json`, `daily_profitability.csv`, `monthly_profitability.csv`, `profitability_data_quality.csv`, and `event_profitability_audit.csv`, plus root profitability comparison files.
+    - Reuse a matching `--saved-profitability-evidence-manifest PATH` when available. If the public-fill manifest has no matching closed-position evidence and network is allowed, refresh only the closed-position evidence into `_profitability_public_evidence`. If network is disabled, emit `PROFITABILITY_STATUS=BLOCKED`; never infer PnL from fills.
+    - Keep arch/new duplicate events separate in event audit, but aggregate daily and monthly PnL by `canonical_city + weather_date_local`; derive the month from that weather date.
+    - Keep a not-yet-closed boundary event in event audit with `settlement_status=NOT_CLOSED`, exclude it from settled PnL and profit/loss/flat days, and report `SETTLED_SCOPE_END`, `UNSETTLED_BOUNDARY_COUNT`, and boundary dates/events. This condition alone does not lower `PROFITABILITY_STATUS` from `READY` when every CLOSED event is complete.
+    - Read `PROFITABILITY_STATUS` independently from `pattern_report_status`. `PARTIAL` means affected events are isolated and excluded; `BLOCKED` means no aggregate PnL conclusion is safe.
+11. For `full`, read the component files and `full_trader_report.md`/`.json`. If advanced is blocked but profitability is ready, report the two statuses separately and retain the reliable profitability result.
+12. Return plain-language findings, the output directory, and the evidence limitations.
 
 ## Guardrails
 
@@ -50,8 +59,10 @@ For a new wallet, replace the saved-manifest argument with `--refresh-public-dat
 - Report both shares and actual observed trade USD. Do not describe cheap high-share fills as large capital unless USD is also large.
 - Determine D-2, D-1, D0, and D0 hour buckets in the market city's registered local timezone. Retain an unknown-timezone fill but label its local time and relative day `UNKNOWN`.
 - Exclude `EARLIER_THAN_D2` from core strategy distributions and report it as a data-quality condition.
-- Do not output complete PnL, ROI, win rate, realized/unrealized/on-chain profit, profitability rankings, subjective intent, or claims that a strategy is profitable.
+- In `basic` and `advanced`, do not output PnL, ROI, win rate, realized/unrealized/on-chain profit, profitability rankings, or claims that a strategy is profitable.
+- In `profitability` and the profitability component of `full`, report only official closed-position `realizedPnl`. Do not reconstruct a full ledger, compute ROI, annualized return, Sharpe, gas, rebates, unrealized PnL, wallet flows, or Negative Risk split/merge/conversion economics. Do not attribute PnL to a fill pattern or strategy.
+- Treat the profitability stability label as an internal Skill research-comparison rating, not an industry performance rating or investment recommendation.
 - Never connect an account, request credentials, sign, order, cancel, POST, PUT, PATCH, or DELETE.
 - Without maker/taker fields, never assign `POSSIBLE_MARKET_MAKER`; at most emit `MARKET_MAKER_LIKE_ACTIVITY=true` with the Chinese caveat that the behavior resembles high-frequency two-way trading but maker/taker evidence is unavailable.
 
-The fixed implementation is `src/polymarket_highest_temperature_trader_pattern_v1.py`. The bundled runner only translates the input file into that module's command-line interface.
+The fixed router/basic implementation is `src/polymarket_highest_temperature_trader_pattern_v1.py`; advanced and profitability calculations live only in their named sibling modules. The bundled runner only translates the input file into that command-line interface.

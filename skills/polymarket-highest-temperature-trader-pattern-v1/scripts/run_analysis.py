@@ -26,6 +26,7 @@ def build_command(
     refresh_public_data: bool,
     saved_public_evidence_manifest: Path | None,
     analysis_depth: str = "basic",
+    saved_profitability_evidence_manifest: Path | None = None,
 ) -> list[str]:
     command = [
         sys.executable,
@@ -45,6 +46,11 @@ def build_command(
     for override in payload.get("city_timezones") or []:
         command.extend(["--city-timezone", str(override)])
     command.extend(["--analysis-depth", str(analysis_depth or "basic")])
+    if saved_profitability_evidence_manifest:
+        command.extend([
+            "--saved-profitability-evidence-manifest",
+            str(saved_profitability_evidence_manifest),
+        ])
     if refresh_public_data:
         command.append("--refresh-public-data")
     elif saved_public_evidence_manifest:
@@ -61,7 +67,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
     parser.add_argument("--output-root", required=True)
-    parser.add_argument("--analysis-depth", choices=("basic", "advanced"))
+    parser.add_argument(
+        "--analysis-depth", choices=("basic", "advanced", "profitability", "full")
+    )
+    parser.add_argument("--saved-profitability-evidence-manifest")
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--refresh-public-data", action="store_true")
     source.add_argument("--saved-public-evidence-manifest")
@@ -83,6 +92,10 @@ def main(argv: list[str] | None = None) -> int:
             if args.saved_public_evidence_manifest else None
         ),
         analysis_depth=args.analysis_depth or str(payload.get("analysis_depth") or "basic").lower(),
+        saved_profitability_evidence_manifest=(
+            Path(args.saved_profitability_evidence_manifest).resolve()
+            if args.saved_profitability_evidence_manifest else None
+        ),
     )
     bundled_module = script_path.with_name(
         "polymarket_highest_temperature_trader_pattern_v1.py"

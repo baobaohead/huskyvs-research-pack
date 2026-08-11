@@ -1,4 +1,4 @@
 interface:
   display_name: "Polymarket Highest Temperature Trader Pattern"
-  short_description: "Analyze all-city highest-temperature fills"
-  default_prompt: "Use $polymarket-highest-temperature-trader-pattern-v1 to analyze wallets across all daily highest-temperature cities, or filter specific city slugs."
+  short_description: "Analyze highest-temperature patterns and PnL"
+  default_prompt: "Use $polymarket-highest-temperature-trader-pattern-v1 to analyze wallet fill patterns, official closed-position profitability, or both for daily highest-temperature markets."
