@@ -36,10 +36,18 @@ def target_rows(
             "canonical_city": city,
             "weather_date_local": weather_date,
             "event_slug": slug,
+            "market_id": f"market-{condition}",
             "condition_id": condition,
             "asset": f"yes-{condition}",
             "outcome": "YES",
             "market_status": status,
+            "market_closed": status == "CLOSED",
+            "market_active": status == "ACTIVE",
+            "uma_resolution_status": "RESOLVED" if status == "CLOSED" else None,
+            "outcomes": ["YES", "NO"],
+            "outcome_prices": [1, 0] if status == "CLOSED" else [],
+            "resolved": status == "CLOSED",
+            "resolved_outcome": "YES" if status == "CLOSED" else None,
             "slug": f"{slug}-30c",
         },
         {
@@ -47,10 +55,18 @@ def target_rows(
             "canonical_city": city,
             "weather_date_local": weather_date,
             "event_slug": slug,
+            "market_id": f"market-{condition}",
             "condition_id": condition,
             "asset": f"no-{condition}",
             "outcome": "NO",
             "market_status": status,
+            "market_closed": status == "CLOSED",
+            "market_active": status == "ACTIVE",
+            "uma_resolution_status": "RESOLVED" if status == "CLOSED" else None,
+            "outcomes": ["YES", "NO"],
+            "outcome_prices": [1, 0] if status == "CLOSED" else [],
+            "resolved": status == "CLOSED",
+            "resolved_outcome": "YES" if status == "CLOSED" else None,
             "slug": f"{slug}-30c",
         },
     ]
@@ -72,6 +88,10 @@ def closed_position(
         "asset": f"{normalized_outcome.lower()}-{condition}",
         "outcome": normalized_outcome.title(),
         "realizedPnl": pnl,
+        "cashPnl": 0,
+        "totalPnl": pnl,
+        "size": 0,
+        "currPrice": 1 if normalized_outcome == "YES" else 0,
         "avgPrice": 0.2,
         "totalBought": 10,
         "timestamp": 1,
@@ -86,7 +106,26 @@ class FakeClient:
 
     def get_json(self, url: str, params: dict[str, object]):
         self.calls.append((url, dict(params)))
-        response = self.responses[str(params["eventId"])]
+        source_name = "market" if url.endswith("/v1/market-positions") else "closed"
+        event_id = str(params["market"]).removeprefix("condition-") if source_name == "market" else str(params["eventId"])
+        response = self.responses[event_id]
+        if isinstance(response, dict) and any(key in response for key in ("market", "closed")):
+            response = response.get(source_name, [])
+        if url.endswith("/v1/market-positions"):
+            if isinstance(response, Exception):
+                raise response
+            rows = response[0] if response and isinstance(response, list) and isinstance(response[0], list) else response
+            market_rows = []
+            for row in rows or []:
+                market_rows.append({
+                    **row,
+                    "size": row.get("size", 0),
+                    "cashPnl": row.get("cashPnl", 0),
+                    "realizedPnl": row.get("realizedPnl"),
+                    "totalPnl": row.get("totalPnl"),
+                    "currPrice": row.get("currPrice", 1 if str(row.get("outcome", "")).upper() == "YES" else 0),
+                })
+            return [{"token": market_rows[0].get("outerToken", market_rows[0].get("asset")) if market_rows else "", "positions": market_rows}]
         if isinstance(response, Exception):
             raise response
         if response and isinstance(response, list) and isinstance(response[0], list):
@@ -106,7 +145,9 @@ def collect(
     client = FakeClient(responses)
     result = profitability.collect_profitability_evidence(
         client, wallet, targets, date(2026, 5, 1), date(2026, 8, 4), ["beijing"],
-        limit=limit, offset_cap=offset_cap, max_workers=1,
+        limit=limit, offset_cap=offset_cap,
+        market_limit=limit if limit != 50 else 500,
+        market_offset_cap=offset_cap, max_workers=1,
     )
     return client, result
 
@@ -123,6 +164,14 @@ def enriched_position(wallet: str, event_id: str, city: str, weather_date: str, 
         "_asset": f"yes-condition-{event_id}",
         "_outcome": "YES",
         "_realized_pnl": str(pnl),
+        "_cash_pnl": "0",
+        "_total_pnl": str(pnl),
+        "_size": "0",
+        "_curr_price": "1",
+        "cashPnl": 0,
+        "totalPnl": pnl,
+        "size": 0,
+        "currPrice": 1,
         "_source": profitability.PNL_SOURCE,
     }
 
@@ -136,6 +185,8 @@ def complete_audit(wallet: str, event_id: str, city: str, weather_date: str) -> 
         "event_slug": f"highest-temperature-in-{city}-on-{weather_date}",
         "target_condition_count": 1,
         "closed_target_condition_count": 1,
+        "resolved_target_condition_count": 1,
+        "settlement_status": "RESOLVED",
         "request_status": "COMPLETE",
         "page_count": 1,
         "raw_position_count": 1,
@@ -151,6 +202,8 @@ def complete_audit(wallet: str, event_id: str, city: str, weather_date: str) -> 
 
 def ready_meta(wallet: str, event_count: int) -> dict[str, object]:
     return {
+        "schema_version": profitability.SCHEMA_VERSION,
+        "pnl_source": profitability.PNL_SOURCE,
         "profitability_status": "READY",
         "profitability_status_reasons": [],
         "wallet": wallet,
@@ -163,7 +216,7 @@ def ready_meta(wallet: str, event_count: int) -> dict[str, object]:
     }
 
 
-def test_official_closed_position_source_and_get_parameters_are_fixed() -> None:
+def test_official_market_position_total_pnl_source_and_get_parameters_are_fixed() -> None:
     targets = target_rows("event-1", "2026-05-01")
     client, (positions, audit, meta) = collect(HUSKY, targets, {"event-1": [closed_position(HUSKY, "event-1", 2.5)]})
     assert len(positions) == 1
@@ -173,7 +226,168 @@ def test_official_closed_position_source_and_get_parameters_are_fixed() -> None:
     assert url == "https://data-api.polymarket.com/closed-positions"
     assert params["user"] == HUSKY and params["eventId"] == "event-1"
     assert params["sortBy"] == "TIMESTAMP" and params["sortDirection"] == "ASC"
-    assert profitability.PNL_SOURCE == "OFFICIAL_DATA_API_CLOSED_POSITIONS_REALIZED_PNL"
+    market_calls = [call for call in client.calls if call[0].endswith("/v1/market-positions")]
+    assert market_calls and market_calls[0][1]["user"] == HUSKY
+    assert market_calls[0][1]["market"] == "condition-event-1"
+    assert market_calls[0][1]["status"] == "ALL" and market_calls[0][1]["limit"] == 500
+    assert profitability.PNL_SOURCE == "OFFICIAL_POLYMARKET_HYBRID_POSITION_PNL"
+
+
+def test_hybrid_uses_market_total_without_double_counting() -> None:
+    market_row = closed_position(HUSKY, "e-total", 3)
+    market_row.update({"cashPnl": 2, "totalPnl": 5, "size": 0, "currPrice": 1})
+    closed_row = dict(market_row, realizedPnl=5)
+    _, (positions, audit, meta) = collect(
+        HUSKY, target_rows("e-total", "2026-05-01"),
+        {"e-total": {"market": [market_row], "closed": [closed_row]}},
+    )
+    summary, daily, _, _ = profitability.summarize_profitability(HUSKY, positions, audit, meta)
+    assert summary["TOTAL_SETTLED_PNL_USD"] == 5
+    assert summary["CLOSED_POSITION_REALIZED_PNL_TOTAL"] == 5
+    assert daily[0]["cash_pnl_usd"] == 2
+    assert daily[0]["realized_pnl_usd"] == 3
+    assert daily[0]["total_official_pnl_usd"] == 5
+    assert daily[0]["total_pnl_usd"] == 5
+    assert audit[0]["closed_position_crosscheck_status"] == "PASS"
+    assert positions[0]["pnl_source_class"] == "BOTH_SOURCES"
+    assert positions[0]["double_count_prevented"] is True
+
+
+def test_remaining_position_and_negative_cash_use_total_pnl() -> None:
+    market_row = closed_position(HUSKY, "e-remaining", 1)
+    market_row.update({"cashPnl": -4, "totalPnl": -3, "size": 2, "currPrice": 1})
+    closed_row = dict(market_row, realizedPnl=-3)
+    _, (positions, audit, meta) = collect(
+        HUSKY, target_rows("e-remaining", "2026-05-01"),
+        {"e-remaining": {"market": [market_row], "closed": [closed_row]}},
+    )
+    summary, daily, _, _ = profitability.summarize_profitability(HUSKY, positions, audit, meta)
+    assert summary["TOTAL_SETTLED_PNL_USD"] == -3
+    assert summary["LOSS_DAYS"] == 1 and daily[0]["profitable_or_loss"] == "LOSS"
+    assert summary["REMAINING_POSITION_WEATHER_DAYS"] == 1
+    assert summary["FULLY_CLOSED_POSITION_WEATHER_DAYS"] == 0
+    assert audit[0]["closed_position_crosscheck_status"] == "PASS"
+
+
+def test_market_only_and_closed_only_are_formal_hybrid_fallbacks() -> None:
+    market_row = closed_position(HUSKY, "e-market-only", 0)
+    market_row.update({"cashPnl": 1, "realizedPnl": 2, "totalPnl": 3, "size": 1, "currPrice": 1})
+    _, (positions, audit, meta) = collect(
+        HUSKY, target_rows("e-market-only", "2026-05-01"),
+        {"e-market-only": {"market": [market_row], "closed": []}},
+    )
+    assert meta["profitability_status"] == "READY"
+    assert positions[0]["pnl_source_class"] == "MARKET_POSITION_ONLY"
+    assert positions[0]["official_position_pnl_usd"] == 3
+
+    closed_row = closed_position(HUSKY, "e-closed-only", 4)
+    _, (positions, audit, meta) = collect(
+        HUSKY, target_rows("e-closed-only", "2026-05-01"),
+        {"e-closed-only": {"market": [], "closed": [closed_row]}},
+    )
+    assert meta["profitability_status"] == "READY"
+    assert positions[0]["pnl_source_class"] == "CLOSED_POSITION_ONLY"
+    assert positions[0]["official_position_pnl_usd"] == 4
+    summary, daily, _, _ = profitability.summarize_profitability(HUSKY, positions, audit, meta)
+    assert summary["TOTAL_SETTLED_PNL_USD"] == 4
+    assert daily[0]["cash_pnl_usd"] is None
+
+
+def test_observed_traded_position_without_official_source_fails_closed() -> None:
+    targets = target_rows("e-observed", "2026-05-01")
+    fills = [{
+        "condition_id": "condition-e-observed",
+        "asset": "yes-condition-e-observed",
+        "outcome": "YES",
+        "side": "BUY",
+        "market_identity_status": "OBSERVED",
+    }]
+    client = FakeClient({"e-observed": {"market": [], "closed": []}})
+    _, audit, meta = profitability.collect_profitability_evidence(
+        client, HUSKY, targets, date(2026, 5, 1), date(2026, 8, 4), ["beijing"],
+        max_workers=1, observed_fills=fills,
+    )
+    assert audit[0]["request_status"] == "RECONCILIATION_BLOCKED"
+    assert audit[0]["traded_neither_source_count"] == 1
+    assert audit[0]["observed_traded_position_coverage_status"] == "FAIL"
+    assert meta["profitability_status"] == "BLOCKED"
+    assert meta["observed_traded_position_coverage_status"] == "FAIL"
+
+
+def test_untraded_missing_position_is_not_observed_coverage_failure() -> None:
+    targets = target_rows("e-untraded", "2026-05-01")
+    client = FakeClient({"e-untraded": {"market": [], "closed": []}})
+    _, audit, meta = profitability.collect_profitability_evidence(
+        client, HUSKY, targets, date(2026, 5, 1), date(2026, 8, 4), ["beijing"],
+        max_workers=1, observed_fills=[],
+    )
+    assert audit[0]["traded_neither_source_count"] == 0
+    assert meta["observed_traded_position_coverage_status"] == "PASS"
+    assert meta["profitability_status"] == "READY"
+
+
+def test_total_cash_realized_conflict_fails_closed() -> None:
+    row = closed_position(HUSKY, "e-conflict", 1)
+    row.update({"cashPnl": 2, "totalPnl": 99})
+    _, (positions, audit, meta) = collect(HUSKY, target_rows("e-conflict", "2026-05-01"), {"e-conflict": [row]})
+    assert positions == []
+    assert meta["profitability_status"] == "BLOCKED"
+    assert "DATA_QUALITY_CONFLICT" in audit[0]["issue_codes"]
+
+
+def test_unresolved_market_is_excluded_without_fabricating_pnl() -> None:
+    targets = target_rows("e-unresolved", "2026-05-01", status="CLOSED")
+    for row in targets:
+        row.update({"uma_resolution_status": "PROPOSED", "resolved": False, "resolved_outcome": None, "outcome_prices": [0.5, 0.5]})
+    _, (positions, audit, meta) = collect(HUSKY, targets, {"e-unresolved": [closed_position(HUSKY, "e-unresolved", 7)]})
+    assert positions == []
+    assert audit[0]["settlement_status"] == "NOT_RESOLVED"
+    assert audit[0]["request_status"] == "EXCLUDED_NOT_RESOLVED"
+    assert meta["profitability_status"] == "BLOCKED"
+
+
+def test_historical_unresolved_event_is_partial_but_tail_unresolved_can_be_ready() -> None:
+    base = {
+        "request_status": "EXCLUDED_NOT_RESOLVED",
+        "settlement_status": "NOT_RESOLVED",
+        "weather_date": "2026-05-01",
+        "issue_codes": ["RESOLUTION_NOT_CONFIRMED"],
+    }
+    later = {
+        "request_status": "COMPLETE",
+        "settlement_status": "RESOLVED",
+        "weather_date": "2026-05-02",
+        "issue_codes": [],
+    }
+    assert profitability._collection_status([base, later], [])[0] == "PARTIAL"
+    tail = {**base, "weather_date": "2026-05-03"}
+    assert profitability._collection_status([later, tail], [])[0] == "READY"
+
+
+def test_resolved_curr_price_conflict_fails_closed() -> None:
+    row = closed_position(HUSKY, "e-price", 1)
+    row.update({"currPrice": 0.5})
+    _, (positions, audit, meta) = collect(HUSKY, target_rows("e-price", "2026-05-01"), {"e-price": [row]})
+    assert positions == [] and meta["profitability_status"] == "BLOCKED"
+    assert "RESOLUTION_PNL_CONFLICT" in audit[0]["issue_codes"]
+
+
+def test_exact_duplicate_market_position_is_deduped_and_conflicting_duplicate_fails() -> None:
+    row = closed_position(HUSKY, "e-dup", 1)
+    _, (positions, audit, meta) = collect(HUSKY, target_rows("e-dup", "2026-05-01"), {"e-dup": [row, dict(row)]})
+    assert len(positions) == 1 and meta["profitability_status"] == "READY"
+    conflict = dict(row, totalPnl=2)
+    _, (positions, audit, meta) = collect(HUSKY, target_rows("e-dup", "2026-05-01"), {"e-dup": [row, conflict]})
+    assert positions == [] and meta["profitability_status"] == "BLOCKED"
+    assert "UNEXPLAINED_DUPLICATE_POSITION" in audit[0]["issue_codes"]
+
+
+def test_outer_token_asset_mismatch_fails_closed() -> None:
+    row = closed_position(HUSKY, "e-token", 1)
+    row["outerToken"] = "different-token"
+    _, (positions, audit, meta) = collect(HUSKY, target_rows("e-token", "2026-05-01"), {"e-token": [row]})
+    assert positions == [] and meta["profitability_status"] == "BLOCKED"
+    assert "TOKEN_ASSET_MAPPING_CONFLICT" in audit[0]["issue_codes"]
 
 
 def test_scope_keeps_only_requested_city_date_and_highest_temperature() -> None:
@@ -193,9 +407,9 @@ def test_scope_keeps_only_requested_city_date_and_highest_temperature() -> None:
 def test_active_events_are_excluded_without_fabricating_pnl() -> None:
     targets = target_rows("closed", "2026-05-01") + target_rows("active", "2026-05-02", status="ACTIVE")
     client, (positions, audit, meta) = collect(HUSKY, targets, {"closed": []})
-    assert len(client.calls) == 1
+    assert len(client.calls) == 2
     assert {row["event_id"]: row["request_status"] for row in audit} == {
-        "closed": "COMPLETE", "active": "EXCLUDED_NOT_CLOSED"
+        "closed": "COMPLETE", "active": "EXCLUDED_NOT_RESOLVED"
     }
     assert positions == [] and meta["profitability_status"] == "READY"
     assert meta["unsettled_event_count"] == 1
@@ -212,7 +426,7 @@ def test_no_closed_target_event_blocks_profitability() -> None:
     targets = target_rows("active", "2026-05-01", status="ACTIVE")
     _, (_, _, meta) = collect(HUSKY, targets, {})
     assert meta["profitability_status"] == "BLOCKED"
-    assert "NO_CLOSED_TARGET_EVENTS" in meta["profitability_status_reasons"]
+    assert "NO_RESOLVED_TARGET_EVENTS" in meta["profitability_status_reasons"]
 
 
 def test_duplicate_arch_new_events_stay_in_audit_but_merge_daily() -> None:
@@ -233,8 +447,12 @@ def test_duplicate_arch_new_events_stay_in_audit_but_merge_daily() -> None:
         "canonical_city": "beijing",
         "weather_date": "2026-07-30",
         "event_count": 2,
+        "position_count": 2,
         "settled_position_count": 2,
+        "cash_pnl_usd": 0.0,
         "realized_pnl_usd": 7.0,
+        "total_official_pnl_usd": 7.0,
+        "total_pnl_usd": 7.0,
         "profitable_or_loss": "PROFIT",
         "source": profitability.PNL_SOURCE,
     }]
@@ -378,7 +596,7 @@ def test_pagination_incomplete_blocks_and_discards_partial_pages() -> None:
     ("mutation", "issue"),
     [
         (lambda row: row.update({"conditionId": "foreign"}), "CONDITION_MAPPING_CONFLICT"),
-        (lambda row: row.pop("realizedPnl"), "POSITION_KEY_OR_PNL_MISSING"),
+        (lambda row: row.pop("totalPnl"), "MARKET_POSITION_REQUIRED_FIELD_MISSING"),
         (lambda row: row.update({"proxyWallet": "0x" + "1" * 40}), "WALLET_MAPPING_CONFLICT"),
     ],
 )
@@ -398,7 +616,7 @@ def test_unexplained_duplicate_pnl_blocks_event_but_exact_duplicate_is_deduped()
     conflict = dict(exact, realizedPnl=6)
     _, (positions, audit, meta) = collect(HUSKY, target_rows("e1", "2026-05-01"), {"e1": [exact, conflict]})
     assert positions == [] and meta["profitability_status"] == "BLOCKED"
-    assert "UNEXPLAINED_DUPLICATE_PNL" in audit[0]["issue_codes"]
+    assert "UNEXPLAINED_DUPLICATE_POSITION" in audit[0]["issue_codes"]
 
 
 def test_condition_mapped_to_two_events_blocks_both_events() -> None:
@@ -423,6 +641,7 @@ def test_profitability_outputs_have_required_files_and_columns(tmp_path: Path) -
     audit = [complete_audit(HUSKY, "e1", "beijing", "2026-05-01")]
     evidence = {
         HUSKY: {
+            "market_positions": [position],
             "closed_positions": [position],
             "profitability_event_audit": audit,
             "profitability_collection_meta": ready_meta(HUSKY, 1),
@@ -470,15 +689,17 @@ def test_saved_profitability_evidence_replays_and_detects_tamper(tmp_path: Path)
     root = tmp_path / "evidence"
     position = enriched_position(HUSKY, "e1", "beijing", "2026-05-01", 5)
     audit = [complete_audit(HUSKY, "e1", "beijing", "2026-05-01")]
+    meta = ready_meta(HUSKY, 1)
+    meta["_closed_positions"] = [position]
     profitability.save_profitability_evidence(
         root, HUSKY, date(2026, 5, 1), date(2026, 8, 4), ["beijing"],
-        [position], audit, ready_meta(HUSKY, 1), [],
+        [position], audit, meta, [],
     )
     loaded = profitability.load_profitability_evidence(
         root / "manifest.json", [HUSKY], date(2026, 5, 1), date(2026, 8, 4)
     )
     assert loaded[HUSKY]["closed_positions"][0]["_realized_pnl"] == "5"
-    (root / "closed_positions.json").write_text("[]\n", encoding="utf-8")
+    (root / "market_positions.json").write_text("[]\n", encoding="utf-8")
     with pytest.raises(RuntimeError, match="SHA256_MISMATCH"):
         profitability.load_profitability_evidence(
             root / "manifest.json", [HUSKY], date(2026, 5, 1), date(2026, 8, 4)
@@ -506,9 +727,11 @@ def test_pattern_blocked_does_not_block_ready_profitability(tmp_path: Path, monk
     evidence_root = tmp_path / "pnl-evidence"
     position = enriched_position(HUSKY, "e1", "beijing", "2026-05-01", 5)
     audit = [complete_audit(HUSKY, "e1", "beijing", "2026-05-01")]
+    meta = ready_meta(HUSKY, 1)
+    meta["_closed_positions"] = [position]
     profitability.save_profitability_evidence(
         evidence_root, HUSKY, date(2026, 3, 21), date(2026, 7, 23), ["beijing"],
-        [position], audit, ready_meta(HUSKY, 1), [],
+        [position], audit, meta, [],
     )
     original_quality = study._quality_payload
 

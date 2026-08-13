@@ -5,7 +5,7 @@ This module is deliberately public-data-only and GET-only. Public trades are
 fills, not original orders: one order may create several fills, while unfilled
 and cancelled orders are normally not observable. The basic/advanced cores do
 not derive PnL from fills; the optional profitability core reads only official
-closed-position realizedPnl. No mode connects an account, signs, submits,
+hybrid position PnL. No mode connects an account, signs, submits,
 cancels, or interprets Negative Risk.
 """
 
@@ -1480,6 +1480,8 @@ class PublicGetClient:
         encoded = urllib.parse.urlencode(params, doseq=True)
         full_url = f"{url}?{encoded}" if encoded else url
         last_error = ""
+        last_error_type = ""
+        last_http_status: int | None = None
         for retry in range(self.attempts):
             received = datetime.now(timezone.utc).isoformat()
             try:
@@ -1506,14 +1508,22 @@ class PublicGetClient:
                 return payload
             except (OSError, ValueError, json.JSONDecodeError, urllib.error.HTTPError) as exc:
                 last_error = repr(exc)
-                if retry + 1 < self.attempts:
-                    time.sleep(0.5 * (2 ** retry))
+                last_error_type = type(exc).__name__
+                last_http_status = getattr(exc, "code", None)
+                retryable = not isinstance(exc, urllib.error.HTTPError) or (
+                    exc.code == 429 or exc.code >= 500
+                )
+                if not retryable or retry + 1 >= self.attempts:
+                    break
+                time.sleep(0.5 * (2 ** retry))
         with self._evidence_lock:
             self.requests.append({
                 "method": "GET", "url": url, "params": dict(params),
                 "requested_at_utc": datetime.now(timezone.utc).isoformat(),
-                "record_count": 0, "success": False, "retries": self.attempts - 1,
+                "record_count": 0, "success": False, "retries": retry,
                 "error": last_error,
+                "error_type": last_error_type,
+                "http_status": last_http_status,
             })
         raise RuntimeError(f"public GET failed after retries: {full_url}: {last_error}")
 
@@ -1610,12 +1620,23 @@ def discover_target_markets(
                     "ACTIVE" if market.get("active") is True else
                     "UNKNOWN"
                 )
+                outcome_prices = _json_list(market.get("outcomePrices"))
+                uma_resolution_status = str(market.get("umaResolutionStatus") or "").upper() or None
+                resolved_outcome = None
+                if len(outcomes) == len(outcome_prices):
+                    resolved_candidates = [
+                        outcome for outcome, price in zip(outcomes, outcome_prices)
+                        if str(price) in {"1", "1.0", "1.00"}
+                    ]
+                    if len(resolved_candidates) == 1 and all(str(price) in {"0", "0.0", "0.00", "1", "1.0", "1.00"} for price in outcome_prices):
+                        resolved_outcome = resolved_candidates[0]
                 for token, outcome in zip(tokens, outcomes):
                     result.append({
                         "canonical_city": identity["canonical_city"],
                         "weather_date_local": identity["weather_date_local"],
                         "event_id": str(event.get("id") or ""),
                         "event_slug": event_slug,
+                        "market_id": str(market.get("id") or ""),
                         "condition_id": condition_id,
                         "asset": token,
                         "token_id": token,
@@ -1626,6 +1647,15 @@ def discover_target_markets(
                         "unit": identity["unit"],
                         "outcome": outcome,
                         "market_status": market_status,
+                        "market_closed": market.get("closed") is True,
+                        "market_active": market.get("active") is True,
+                        "accepting_orders": market.get("acceptingOrders"),
+                        "uma_resolution_status": uma_resolution_status,
+                        "outcomes": outcomes,
+                        "outcome_prices": outcome_prices,
+                        "resolved": bool(uma_resolution_status == "RESOLVED" and resolved_outcome),
+                        "resolved_outcome": resolved_outcome,
+                        "resolution_source": "GAMMA_EVENT_MARKET_EVIDENCE",
                         "slug": str(market.get("slug") or ""),
                         "title": str(market_probe["title"]),
                     })
@@ -2700,11 +2730,12 @@ def analyze(
                 target_markets = payloads_by_wallet[wallet].get("target_markets") or []
                 evidence_root = profitability_root / wallet
                 client = PublicGetClient(evidence_root)
+                closed_positions: list[dict[str, Any]] = []
                 if not target_markets:
                     positions: list[dict[str, Any]] = []
                     event_audit: list[dict[str, Any]] = []
                     collection_meta = {
-                        "schema_version": "polymarket_highest_temperature_trader_profitability_v1",
+                        "schema_version": "polymarket_highest_temperature_trader_profitability_v1_1",
                         "wallet": wallet,
                         "profitability_status": "BLOCKED",
                         "profitability_status_reasons": ["TARGET_MARKET_EVIDENCE_MISSING"],
@@ -2715,7 +2746,7 @@ def analyze(
                     positions = []
                     event_audit = []
                     collection_meta = {
-                        "schema_version": "polymarket_highest_temperature_trader_profitability_v1",
+                        "schema_version": "polymarket_highest_temperature_trader_profitability_v1_1",
                         "wallet": wallet,
                         "profitability_status": "BLOCKED",
                         "profitability_status_reasons": ["PROFITABILITY_NETWORK_REFRESH_REQUIRED"],
@@ -2723,16 +2754,23 @@ def analyze(
                         "official_public_get_only": True,
                     }
                 else:
+                    observed_fills = (
+                        normalized_rows_by_wallet[wallet]
+                        if analysis_depth in {"advanced", "full"}
+                        and quality_by_wallet[wallet].get("pattern_report_status") == "READY"
+                        else None
+                    )
                     positions, event_audit, collection_meta = collect_profitability_evidence(
                         client, wallet, target_markets, start_date, end_date,
-                        requested_cities,
+                        requested_cities, observed_fills=observed_fills,
                     )
                 collection_meta["api_request_count"] = len(client.requests)
                 collection_meta["api_request_failure_count"] = sum(
                     not bool(row.get("success")) for row in client.requests
                 )
                 profitability_evidence[wallet] = {
-                    "closed_positions": positions,
+                    "market_positions": positions,
+                    "closed_positions": collection_meta.get("_closed_positions") or [],
                     "profitability_event_audit": event_audit,
                     "profitability_collection_meta": collection_meta,
                 }

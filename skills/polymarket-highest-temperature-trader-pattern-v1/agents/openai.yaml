@@ -1,4 +1,4 @@
 interface:
   display_name: "Polymarket Highest Temperature Trader Pattern"
   short_description: "Analyze highest-temperature patterns and PnL"
-  default_prompt: "Use $polymarket-highest-temperature-trader-pattern-v1 to analyze wallet fill patterns, official closed-position profitability, or both for daily highest-temperature markets."
+  default_prompt: "Use $polymarket-highest-temperature-trader-pattern-v1 to analyze wallet fill patterns, official hybrid position profitability, or both for daily highest-temperature markets."
